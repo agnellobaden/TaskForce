@@ -1,0 +1,62 @@
+{
+    "name": "TaskForce - Alltags-Organizer",
+    "short_name": "TaskForce",
+    "description": "Der Alltags-Organizer, der nicht locker lässt bis alles erledigt ist!",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0f0f1a",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "id": "/",
+    "scope": "./",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "screenshot-mobile.png",
+            "sizes": "1170x2532",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Mobile Dashboard"
+        },
+        {
+            "src": "screenshot-desktop.png",
+            "sizes": "1920x1080",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Desktop Dashboard"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Neue Aufgabe",
+            "short_name": "Neu",
+            "url": "./index.html?action=new",
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "categories": [
+        "productivity",
+        "utilities"
+    ],
+    "lang": "de",
+    "dir": "ltr",
+    "prefer_related_applications": false
+}
