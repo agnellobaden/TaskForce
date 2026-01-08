@@ -5,10 +5,11 @@
 /* Base Styles for the Navigation Bar */
 .header-actions {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    background: rgba(15, 15, 15, 0.98);
-    backdrop-filter: blur(25px);
+    background: transparent;
+    padding: 0.5rem 1rem;
+    gap: 1rem;
     z-index: 1000;
     transition: all 0.3s ease;
 }
@@ -52,14 +53,18 @@ body.nav-top-mode .header {
 
 /* Base button styles in nav bar */
 .header-actions .btn-sync-mini {
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 2px;
-    padding: 6px;
+    padding: 2px 4px;
     flex: 1;
     background: transparent;
     border: none;
     box-shadow: none;
     color: var(--text-secondary);
+    min-width: 45px;
 }
 
 .header-actions .btn-sync-mini:hover {
@@ -129,9 +134,107 @@ body.nav-top-mode #mainClock {
     left: 0;
     width: 100%;
     z-index: 1001;
-    background: var(--bg-dark);
+    background: rgba(15, 15, 26, 0.3);
+    backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     padding: 0 15px;
-    border-bottom: 1px solid var(--border-glass);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* =========================================
+   FIXED FOOTER NAVIGATION BAR
+   ========================================= */
+
+.fixed-footer-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(15, 15, 26, 0.98);
+    backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 12px 15px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    animation: slideUpNav 0.3s ease-out;
+    min-height: 75px;
+}
+
+.btn-footer-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 6px;
+    flex: 1;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--text-secondary);
+    min-width: 45px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: var(--radius-md);
+}
+
+.btn-footer-icon:hover,
+.btn-footer-icon:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    color: var(--text-primary);
+}
+
+.btn-footer-icon .lucide {
+    width: 1.6rem;
+    height: 1.6rem;
+}
+
+.btn-footer-icon .icon-label {
+    font-size: 0.65rem;
+    display: block;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.voice-status-footer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 50px;
+}
+
+.voice-status-footer .voice-pulse {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.voice-status-footer .voice-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+/* Add bottom padding to app container to prevent content being hidden behind footer */
+.app-container {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+}
+
+/* Header Clock Styling */
+.header-clock {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    flex: 1;
+    text-align: center;
 }

@@ -100,8 +100,7 @@ let appSettings = Object.assign({
     headerIconScan: true,
     headerIconAlarm: true,
     headerIconDrive: true,
-    headerIconNight: true,
-    navBottom: false // Default Top
+    headerIconNight: true
 }, JSON.parse(localStorage.getItem('taskforce_settings')) || {});
 
 let userPos = null;
@@ -110,9 +109,6 @@ let installPrompt, installBtn, dismissInstall, installBanner, installAppBtn, clo
 
 let currentFileBase64 = null;
 let currentFileName = null;
-
-// AI Profile Elements
-let aiProfileModal, closeProfileBtn, saveProfileBtn, aiNameInput, aiGenderInput, aiBirthdateInput, aiJobInput, aiHobbiesInput, sideProfileBtn;
 
 // Keyword Detection for smart questions
 const keywordPatterns = {
@@ -164,8 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         startLocationTracking();
     }, { once: true });
-
-    setTimeout(checkAIProfileStatus, 2500); // Check for profile setup after short delay
 
     checkUrlActions();
 
@@ -752,24 +746,6 @@ function initDOMElements() {
             openAppointmentModalWithData(data, type);
         });
     }
-
-    // AI Profile Initialization
-    aiProfileModal = document.getElementById('aiProfileModal');
-    closeProfileBtn = document.getElementById('closeProfileBtn');
-    saveProfileBtn = document.getElementById('saveProfileBtn');
-    aiNameInput = document.getElementById('aiName');
-    aiGenderInput = document.getElementById('aiGender');
-    aiBirthdateInput = document.getElementById('aiBirthdate');
-    aiJobInput = document.getElementById('aiJob');
-    aiHobbiesInput = document.getElementById('aiHobbies');
-    sideProfileBtn = document.getElementById('sideProfileBtn');
-
-    if (closeProfileBtn) closeProfileBtn.addEventListener('click', () => aiProfileModal.classList.add('hidden'));
-    if (saveProfileBtn) saveProfileBtn.addEventListener('click', saveAIProfile);
-    if (sideProfileBtn) sideProfileBtn.addEventListener('click', () => {
-        openAIProfile();
-        toggleSideMenu();
-    });
 
     // Toast Container
     toastContainer = document.createElement('div');
@@ -4488,9 +4464,6 @@ function openSettings() {
     if (document.getElementById('homeAddressInput')) document.getElementById('homeAddressInput').value = appSettings.homeAddress || '';
     if (document.getElementById('reminderLeadTimeSelect')) document.getElementById('reminderLeadTimeSelect').value = appSettings.reminderLeadTime || 60;
 
-    // Nav Bottom Mode
-    if (document.getElementById('navBottomToggle')) document.getElementById('navBottomToggle').checked = !!appSettings.navBottom;
-
     // Header Icons
     if (document.getElementById('headerIconCalendar')) document.getElementById('headerIconCalendar').checked = appSettings.headerIconCalendar !== false;
     if (document.getElementById('headerIconExpense')) document.getElementById('headerIconExpense').checked = appSettings.headerIconExpense !== false;
@@ -4636,9 +4609,6 @@ function saveAppSettings() {
     appSettings.locationTracking = document.getElementById('locationToggle') ? document.getElementById('locationToggle').checked : true;
     appSettings.homeAddress = document.getElementById('homeAddressInput') ? document.getElementById('homeAddressInput').value : '';
     appSettings.reminderLeadTime = document.getElementById('reminderLeadTimeSelect') ? document.getElementById('reminderLeadTimeSelect').value : 60;
-
-    // NAV POSITION
-    appSettings.navBottom = document.getElementById('navBottomToggle') ? document.getElementById('navBottomToggle').checked : false;
 
     // Header Icons
     appSettings.headerIconCalendar = !!document.getElementById('headerIconCalendar')?.checked;
@@ -4822,15 +4792,6 @@ function applyAppSettings() {
         document.body.classList.add('business-mode');
     }
     // 'dark' is default (no class)
-
-    // CHECK NAV MODE
-    if (appSettings.navBottom) {
-        document.body.classList.add('nav-bottom-mode');
-        document.body.classList.remove('nav-top-mode');
-    } else {
-        document.body.classList.remove('nav-bottom-mode');
-        document.body.classList.add('nav-top-mode');
-    }
 
     // Apply header icon visibility
     const buttonsToToggle = [
@@ -6239,22 +6200,9 @@ function toggleExpenseSection() {
     }
 }
 
-let editingExpenseId = null;
-
-function openExpenseModal(editId = null) {
-    editingExpenseId = editId; // Set ID if editing
+function openExpenseModal() {
     expenseModal.classList.remove('hidden');
-
-    const saveBtn = document.getElementById('saveExpenseBtn');
-    if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = editingExpenseId ? 'Änderungen speichern' : 'Ausgabe speichern';
-    }
-
-    if (!editingExpenseId) {
-        // Only reset if NEW
-        resetExpenseModal();
-    }
+    resetExpenseModal();
 }
 window.openExpenseModal = openExpenseModal;
 
@@ -6520,10 +6468,7 @@ function handleSaveExpense() {
     const date = expDate.value;
     const store = expStore.value.trim();
     const category = expCategory.value;
-
-    // Better amount parsing for German comma vs Dot
-    const amountStr = expAmount.value.toString().replace(',', '.');
-    const amount = parseFloat(amountStr);
+    const amount = parseFloat(expAmount.value);
 
     if (!date || !store || isNaN(amount)) {
         showToast('Bitte alle Felder korrekt ausfüllen', 'error');
@@ -6531,11 +6476,8 @@ function handleSaveExpense() {
         return;
     }
 
-    // Determine ID: either keep existing (edit) or generate new
-    const expenseId = editingExpenseId ? editingExpenseId : ('exp_' + Date.now());
-
-    const expenseData = {
-        id: expenseId,
+    const expenseId = 'exp_' + Date.now();
+    const newExpense = {
         date,
         store,
         category,
@@ -6543,42 +6485,29 @@ function handleSaveExpense() {
         createdAt: new Date().toISOString(),
         userId: currentUser.id,
         userName: currentUser.name,
-        sessionId: appSessionId,
-        lastModified: new Date().toISOString()
+        sessionId: appSessionId
     };
 
-    const finishSave = () => {
-        showToast(editingExpenseId ? 'Ausgabe aktualisiert' : 'Ausgabe gespeichert', 'success');
-        closeExpenseModal();
-        editingExpenseId = null;
-        if (saveBtn) {
-            saveBtn.textContent = 'Ausgabe speichern';
-            saveBtn.disabled = false;
-        }
-    };
-
-    // 1. UPDATE LOCAL IMMEDIATELY
-    const idx = expenses.findIndex(e => e.id === expenseId);
-    if (idx > -1) {
-        expenses[idx] = { ...expenses[idx], ...expenseData };
-    } else {
-        expenses.unshift(expenseData);
-    }
-    saveExpenses(); // This will also call renderExpenses()
-
-    // 2. SYNC TO CLOUD IF DB AVAILABLE
+    // Store in Firestore if available
     if (db) {
         const path = currentUser.teamCode ? `teams/${currentUser.teamCode}/expenses` : `users/${currentUser.id}/expenses`;
-        db.collection(path).doc(expenseId).set(expenseData, { merge: true })
+        db.collection(path).doc(expenseId).set(newExpense)
             .then(() => {
-                console.log("Cloud sync successful");
+                showToast('Ausgabe in Cloud gesichert', 'success');
+                closeExpenseModal();
             })
             .catch(err => {
-                console.error("Cloud sync failed during save:", err);
+                console.error("Cloud save error:", err);
+                // Fallback to local only if cloud fails
+                expenses.unshift({ id: expenseId, ...newExpense });
+                saveExpenses();
+                closeExpenseModal();
             });
+    } else {
+        expenses.unshift({ id: expenseId, ...newExpense });
+        saveExpenses();
+        closeExpenseModal();
     }
-
-    finishSave();
 }
 
 function renderExpenses(filterQuery = '') {
@@ -6598,7 +6527,7 @@ function renderExpenses(filterQuery = '') {
     const sorted = displayExpenses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     expenseTableBody.innerHTML = sorted.map(exp => `
-        <tr style="position:relative;">
+        <tr>
             <td>
                 <div style="font-size: 0.8rem; opacity: 0.6;">${formatDateShort(exp.date)}</div>
                 <div style="font-weight: 600;">${escapeHtml(exp.store)}</div>
@@ -6608,10 +6537,7 @@ function renderExpenses(filterQuery = '') {
             </td>
             <td style="font-weight: 700; color: #10b981; text-align: right;">${exp.amount.toFixed(2).replace('.', ',')} €</td>
             <td style="text-align:right;">
-                <div style="display:flex; justify-content:flex-end; gap:5px;">
-                    <button class="btn-icon-mini" onclick="editExpense('${exp.id}')" title="Bearbeiten" style="background:rgba(255,255,255,0.1); border:none; border-radius:4px; padding:4px;">✏️</button>
-                    <button class="btn-delete-mini" onclick="deleteExpense('${exp.id}')" title="Löschen" style="background:rgba(255,0,0,0.1); border:none; border-radius:4px; padding:4px;">🗑️</button>
-                </div>
+                <button class="btn-delete-mini" onclick="deleteExpense('${exp.id}')">🗑️</button>
             </td>
         </tr>
     `).join('');
@@ -6619,50 +6545,20 @@ function renderExpenses(filterQuery = '') {
     updateExpenseStats();
 }
 
-window.editExpense = (id) => {
-    const exp = expenses.find(e => e.id === id);
-    if (!exp) return;
-
-    // Show form directly
-    document.getElementById('receiptScannerBox').classList.add('hidden');
-    document.getElementById('expenseResultForm').classList.remove('hidden');
-
-    // Pre-fill
-    document.getElementById('expDate').value = exp.date;
-    document.getElementById('expStore').value = exp.store;
-    document.getElementById('expCategory').value = exp.category;
-    document.getElementById('expAmount').value = exp.amount;
-
-    // Open Modal in Edit Mode
-    openExpenseModal(id);
-};
-
-window.deleteExpense = (id) => {
-    if (!confirm('Eintrag wirklich löschen?')) return;
+function deleteExpense(id) {
+    if (!confirm('Diese Ausgabe wirklich löschen?')) return;
 
     if (db) {
         const path = currentUser.teamCode ? `teams/${currentUser.teamCode}/expenses` : `users/${currentUser.id}/expenses`;
         db.collection(path).doc(id).delete()
-            .then(() => {
-                showToast('Eintrag gelöscht', 'success');
-                expenses = expenses.filter(e => e.id !== id);
-                saveExpenses();
-            })
-            .catch(err => {
-                console.error("Delete error", err);
-                showToast('Fehler beim Löschen (Cloud)', 'error');
-                // Try local anyway
-                expenses = expenses.filter(e => e.id !== id);
-                saveExpenses();
-            });
+            .then(() => showToast('Ausgabe entfernt', 'info'))
+            .catch(err => showToast('Fehler beim Löschen', 'error'));
     } else {
         expenses = expenses.filter(e => e.id !== id);
         saveExpenses();
-        showToast('Eintrag gelöscht', 'success');
+        showToast('Ausgabe lokal entfernt', 'info');
     }
-};
-
-
+}
 
 function updateExpenseStats() {
     const now = new Date();
@@ -7070,173 +6966,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAiResearchModal);
 } else {
     initAiResearchModal();
-}
-
-// ==========================================
-// AI PROFILE SYSTEM
-// ==========================================
-
-function checkAIProfileStatus() {
-    if (!currentUser) return; // Only for logged in users
-
-    const profile = JSON.parse(localStorage.getItem('taskforce_ai_profile'));
-    if (!profile) {
-        // No profile found, show setup modal automatically
-        console.log("No AI profile found, prompting user...");
-        setTimeout(() => {
-            if (aiProfileModal && currentUser) {
-                // Pre-fill Name if known
-                if (aiNameInput && currentUser.name) aiNameInput.value = currentUser.name;
-                aiProfileModal.classList.remove('hidden');
-                showToast('Hi! 👋 Beantworte mir kurz ein paar Fragen...', 'info');
-            }
-        }, 1000);
-    } else {
-        // Profile exists, maybe ask a proactive question after a delay
-        setTimeout(runProactiveAdvisor, 5000);
-    }
-}
-
-function openAIProfile() {
-    const profile = JSON.parse(localStorage.getItem('taskforce_ai_profile')) || {};
-
-    if (aiNameInput) aiNameInput.value = profile.name || (currentUser ? currentUser.name : '');
-    if (aiGenderInput) aiGenderInput.value = profile.gender || '';
-    if (aiBirthdateInput) aiBirthdateInput.value = profile.birthdate || '';
-    if (aiJobInput) aiJobInput.value = profile.job || '';
-    if (aiHobbiesInput) aiHobbiesInput.value = profile.hobbies || '';
-
-    if (aiProfileModal) aiProfileModal.classList.remove('hidden');
-}
-
-function saveAIProfile() {
-    const profile = {
-        name: aiNameInput ? aiNameInput.value.trim() : '',
-        gender: aiGenderInput ? aiGenderInput.value : '',
-        birthdate: aiBirthdateInput ? aiBirthdateInput.value : '',
-        job: aiJobInput ? aiJobInput.value.trim() : '',
-        hobbies: aiHobbiesInput ? aiHobbiesInput.value.trim() : '',
-        updatedAt: new Date().toISOString()
-    };
-
-    if (!profile.name) {
-        showToast('Bitte zumindest deinen Namen eingeben.', 'error');
-        return;
-    }
-
-    localStorage.setItem('taskforce_ai_profile', JSON.stringify(profile));
-
-    // Also update main user name if changed
-    if (currentUser && profile.name !== currentUser.name) {
-        currentUser.name = profile.name;
-        localStorage.setItem('taskforce_user', JSON.stringify(currentUser));
-        if (displayUserName) displayUserName.textContent = profile.name;
-    }
-
-    if (aiProfileModal) aiProfileModal.classList.add('hidden');
-    showToast('Profil gespeichert! Deine KI lernt... 🧠', 'success');
-
-    // Trigger a small "AI Thought" or similar if we had a chat interface
-    setTimeout(runProactiveAdvisor, 2000);
-}
-
-// Proactive Advisor Logic - Asks questions or suggests apps
-async function runProactiveAdvisor() {
-    if (!currentUser) return;
-    const profile = JSON.parse(localStorage.getItem('taskforce_ai_profile')) || {};
-
-    // 1. Check for missing critical info
-    if (!profile.birthdate) {
-        askProactiveQuestion("Wann hast du eigentlich Geburtstag? Ich würde dir gerne gratulieren!", "date", "birthdate");
-        return;
-    }
-    if (!profile.job) {
-        askProactiveQuestion("Was machst du beruflich? So kann ich dir gezielter bei der Arbeit helfen.", "text", "job");
-        return;
-    }
-    if (!profile.hobbies) {
-        askProactiveQuestion("Was sind deine Hobbies? Ich finde gerne Freizeit-Apps für dich.", "text", "hobbies");
-        return;
-    }
-
-    // 2. Periodic lifestyle/app suggestions
-    const suggestions = [
-        { text: "Brauchst du eine neue App für Budget-Planung? Soll ich dir eine empfehlen?", type: "confirm", action: "recommend_app_finance" },
-        { text: "Es ist Zeit für eine Pause. Soll ich dir eine Meditations-App zeigen?", type: "confirm", action: "recommend_app_meditation" },
-        { text: "Für dein Business: Nutzt du schon ein CRM? Soll ich dir die besten zeigen?", type: "confirm", action: "recommend_app_crm" },
-        { text: "Hast du heute schon genug getrunken? Soll ich dich öfter daran erinnern?", type: "confirm", action: "remind_water" }
-    ];
-
-    // Pick a random suggestion if all profile data is there
-    const randomSug = suggestions[Math.floor(Math.random() * suggestions.length)];
-    askProactiveQuestion(randomSug.text, randomSug.type, randomSug.action);
-}
-
-function askProactiveQuestion(text, type, field) {
-    // Show as a special Toast with Confirmation
-    const toast = document.createElement('div');
-    toast.className = 'toast info proactive-advisor-toast visible';
-    toast.style.flexDirection = 'column';
-    toast.style.alignItems = 'flex-start';
-    toast.style.gap = '10px';
-    toast.style.maxWidth = '300px';
-
-    let inputHtml = '';
-    if (type === 'text') inputHtml = `<input type="text" id="proactiveInput" class="settings-input" style="margin:0; padding:5px;" placeholder="Antwort...">`;
-    if (type === 'date') inputHtml = `<input type="date" id="proactiveInput" class="settings-input" style="margin:0; padding:5px;">`;
-
-    toast.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-            <span class="toast-icon">🤖</span>
-            <span class="toast-message" style="font-weight:600;">KI-Berater</span>
-        </div>
-        <div style="font-size:0.9rem; margin-bottom:5px;">${text}</div>
-        ${inputHtml}
-        <div style="display:flex; justify-content:flex-end; width:100%; gap:8px;">
-            <button id="proactiveCancel" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; cursor:pointer;">Später</button>
-            <button id="proactiveConfirm" style="background:var(--primary); border:none; color:white; padding:4px 12px; border-radius:4px; font-size:0.8rem; cursor:pointer;">Bestätigen</button>
-        </div>
-    `;
-
-    toastContainer.appendChild(toast);
-
-    const confirmBtn = toast.querySelector('#proactiveConfirm');
-    const cancelBtn = toast.querySelector('#proactiveCancel');
-
-    cancelBtn.onclick = () => toast.remove();
-
-    confirmBtn.onclick = () => {
-        const input = toast.querySelector('#proactiveInput');
-        const val = input ? input.value : true;
-
-        if (type !== 'confirm' && !val) {
-            showToast("Bitte gib etwas ein oder klicke Später.", "error");
-            return;
-        }
-
-        handleProactiveResponse(field, val);
-        toast.remove();
-        showToast("Vielen Dank! Ich habe das notiert. 🧠", "success");
-    };
-}
-
-function handleProactiveResponse(field, value) {
-    const profile = JSON.parse(localStorage.getItem('taskforce_ai_profile')) || {};
-
-    if (field === 'birthdate' || field === 'job' || field === 'hobbies') {
-        profile[field] = value;
-        localStorage.setItem('taskforce_ai_profile', JSON.stringify(profile));
-    } else if (field.startsWith('recommend_app')) {
-        // Mock recommendation
-        let app = "Eine tolle App";
-        if (field.includes('finance')) app = "Finanzguru oder YNAB";
-        if (field.includes('meditation')) app = "Headspace oder Calm";
-        if (field.includes('crm')) app = "HubSpot oder Pipedrive";
-
-        setTimeout(() => {
-            alert(`KI Empfehlung: Schau dir mal "${app}" an!`);
-        }, 500);
-    } else if (field === 'remind_water') {
-        showToast("Alles klar, ich werde dich öfter an Wasser erinnern!", "success");
-    }
 }

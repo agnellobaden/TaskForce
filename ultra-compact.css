@@ -1,0 +1,293 @@
+/* =========================================
+   ULTRA COMPACT MODE - MAXIMUM SPACE
+   ========================================= */
+
+/* Ultra Compact Header - ganz oben fixiert */
+.header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    padding: 0.3rem 0 !important;
+    margin: 0 !important;
+    z-index: 1003 !important;
+    background: rgba(15, 15, 26, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.header .logo {
+    margin-bottom: 0.2rem !important;
+}
+
+.header .logo h1 {
+    font-size: 1.3rem !important;
+}
+
+.header .logo-icon {
+    font-size: 1.3rem !important;
+}
+
+.header .tagline {
+    font-size: 0.7rem !important;
+    margin: 0 !important;
+}
+
+/* Ultra Compact Input Container */
+.header-search-wrapper {
+    padding: 0 0.5rem !important;
+    margin-top: 0.3rem !important;
+}
+
+.input-container {
+    padding: 0.25rem !important;
+    min-height: 40px !important;
+    gap: 0.3rem !important;
+}
+
+#keywordInput {
+    font-size: 0.9rem !important;
+    padding: 0.5rem !important;
+    min-height: 35px !important;
+    height: 35px !important;
+}
+
+/* Ultra Compact Buttons */
+.btn-add,
+.btn-voice,
+.btn-todo,
+.btn-grok-manual {
+    width: 35px !important;
+    height: 35px !important;
+    min-width: 35px !important;
+    min-height: 35px !important;
+    padding: 0.3rem !important;
+}
+
+.btn-add .lucide,
+.btn-voice .lucide,
+.btn-todo .lucide,
+.btn-grok-manual .lucide {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+}
+
+.icon-label {
+    font-size: 0.55rem !important;
+}
+
+/* AI Selector Container */
+.ai-selector-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+}
+
+.ai-selector-arrow {
+    width: 35px !important;
+    height: 18px !important;
+    padding: 0 !important;
+    min-height: 18px !important;
+}
+
+/* Mobile Comm Bar - Ultra Compact */
+.mobile-comm-bar {
+    padding: 0.3rem !important;
+    gap: 0.3rem !important;
+    margin-top: 0.3rem !important;
+}
+
+.btn-comm-quick {
+    min-width: 38px !important;
+    padding: 0.3rem !important;
+    gap: 2px !important;
+}
+
+.btn-comm-quick .lucide {
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+.btn-comm-quick .icon-label {
+    font-size: 0.55rem !important;
+}
+
+/* App Container - More space for content */
+.app-container {
+    padding-top: 200px !important;
+    /* Weiter erhöht damit Stats Bar sichtbar ist */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
+}
+
+/* Stats Bar - Ultra Compact & Schmaler */
+.stats-bar {
+    gap: 0.3rem !important;
+    margin: 0.3rem 0 !important;
+}
+
+.stat-item {
+    padding: 0.4rem 0.3rem !important;
+    min-height: 50px !important;
+}
+
+.stat-number {
+    font-size: 1.1rem !important;
+    line-height: 1.2 !important;
+}
+
+.stat-label {
+    font-size: 0.6rem !important;
+    margin-top: 0.2rem !important;
+    line-height: 1 !important;
+}
+
+/* Filter Tabs - Ultra Compact */
+.filter-tabs {
+    margin-bottom: 0.5rem !important;
+    margin-top: 0.3rem !important;
+    padding: 0.2rem !important;
+    gap: 0.3rem !important;
+}
+
+.tab-btn {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
+}
+
+.tab-btn .lucide {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+}
+
+/* Task Cards - More compact */
+.task-card {
+    padding: 0.7rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.task-title {
+    font-size: 0.95rem !important;
+}
+
+.task-preview {
+    font-size: 0.8rem !important;
+}
+
+.task-meta {
+    font-size: 0.75rem !important;
+}
+
+/* Sections - More compact */
+.quick-todo-section,
+.alarm-section,
+.expense-section {
+    margin-bottom: 0.8rem !important;
+}
+
+.section-header {
+    margin-bottom: 0.5rem !important;
+    padding: 0.3rem 0 !important;
+}
+
+.section-header h3 {
+    font-size: 1rem !important;
+}
+
+/* Todo Items - Compact */
+.todo-item {
+    padding: 0.6rem !important;
+    margin-bottom: 0.4rem !important;
+}
+
+/* Alarm Items - Compact */
+.alarm-item {
+    padding: 0.6rem !important;
+    margin-bottom: 0.4rem !important;
+}
+
+/* Expense Stats - Compact */
+.expense-stats-grid {
+    gap: 0.4rem !important;
+}
+
+.expense-stat-card {
+    padding: 0.6rem !important;
+}
+
+.expense-stat-card label {
+    font-size: 0.65rem !important;
+}
+
+.expense-stat-card span {
+    font-size: 1.1rem !important;
+}
+
+/* Header Top Bar - Ultra Compact */
+.header-top {
+    height: 35px !important;
+    padding: 0 8px !important;
+}
+
+.user-info {
+    font-size: 0.75rem !important;
+}
+
+.user-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.9rem !important;
+}
+
+.header-clock {
+    font-size: 0.75rem !important;
+}
+
+/* Quick Add Section - Ultra Compact */
+.quick-add-section {
+    margin: 0 !important;
+}
+
+/* Mobile optimizations */
+@media (max-width: 600px) {
+    .header .logo h1 {
+        font-size: 1.1rem !important;
+    }
+
+    .header .logo-icon {
+        font-size: 1.1rem !important;
+    }
+
+    .header .tagline {
+        font-size: 0.65rem !important;
+    }
+
+    .app-container {
+        padding-top: 190px !important;
+    }
+}
+
+/* Minimize even more when scrolling */
+body.scrolling .header {
+    transform: scale(0.85) translateY(-10px) !important;
+    opacity: 0.4 !important;
+    height: 50px !important;
+}
+
+body.scrolling .header-search-wrapper {
+    transform: scale(0.7) translateY(-15px) !important;
+    opacity: 0.15 !important;
+    max-height: 40px !important;
+}
+
+body.scrolling .app-container {
+    padding-top: 110px !important;
+}
+
+/* At top/bottom - normal padding */
+body.at-top .app-container,
+body.at-bottom .app-container {
+    padding-top: 200px !important;
+}

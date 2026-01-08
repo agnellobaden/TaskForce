@@ -24,8 +24,10 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="menu-styles.css">
     <link rel="stylesheet" href="icon-styles.css">
-    <link rel="stylesheet" href="wave-backgrounds.css">
     <link rel="stylesheet" href="bottom-nav.css">
+    <link rel="stylesheet" href="personal-ai.css">
+    <link rel="stylesheet" href="compact-view.css">
+    <link rel="stylesheet" href="ultra-compact.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -39,9 +41,10 @@
         <div class="login-container">
             <div class="login-header">
                 <div class="login-logo">
+
                     <i data-lucide="zap" class="logo-icon-large"></i>
                 </div>
-                <h1>TaskForce</h1>
+                <h2>TaskForce</h2>
                 <p class="login-tagline">Dein persönlicher Alltags-Organizer</p>
             </div>
 
@@ -411,50 +414,15 @@
                         <span class="team-badge hidden" id="teamBadge">TEAM: <span id="teamCodeName"></span></span>
                     </div>
                 </div>
-
-                <!-- Main Clock - Fixed at Top -->
-                <div id="mainClock" class="header-clock"
-                    style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0 15px; letter-spacing: 1px;">
-                    --:--
-                </div>
-
-                <div id="syncIndicator" class="sync-indicator hidden"></div>
-
-                <button class="btn-sync-mini" id="hamburgerBtn" title="Menü" style="font-size: 1.5rem;">
-                    <i data-lucide="menu"></i>
-                </button>
-            </div>
-
-            <!-- Navigation Bar - Can be fixed top or bottom -->
-            <div class="header-actions" id="mainNavBar">
-                <button class="btn-sync-mini" id="calendarBtn" title="Kalender öffnen">
-                    <i data-lucide="calendar"></i>
-                    <span class="icon-label">Kalender</span>
-                </button>
-                <button class="btn-sync-mini" id="expenseBtn" title="Kostenkontrolle" style="color: #10b981;">
-                    <i data-lucide="dollar-sign"></i>
-                    <span class="icon-label">Kosten</span>
-                </button>
-                <button class="btn-sync-mini" id="addExpenseBtnHeader" title="Beleg scannen" style="color: #10b981;">
-                    <i data-lucide="camera"></i>
-                    <span class="icon-label">Beleg</span>
-                </button>
-                <button class="btn-sync-mini" id="sideNightstandBtnHeader" title="Nachtmodus">
-                    <i data-lucide="moon"></i>
-                    <span class="icon-label">Nacht</span>
-                </button>
-                <button class="btn-sync-mini" id="alarmBtn" title="Wecker / Alarme" style="color: #fbbf24;">
-                    <i data-lucide="bell"></i>
-                    <span class="icon-label">Wecker</span>
-                </button>
-                <button class="btn-sync-mini" id="manualDriveBtn" title="Fahrt-Modus starten"
-                    style="color: var(--secondary);">
-                    <i data-lucide="car"></i>
-                    <span class="icon-label">Fahrt</span>
-                </button>
-                <div id="voiceStatus" class="voice-status">
-                    <span class="voice-pulse"></span>
-                    <span class="voice-label">...</span>
+                <div class="header-actions">
+                    <div id="mainClock" class="header-clock" style="font-size: 1rem; color: var(--text-secondary);">
+                        --:--</div>
+                    <button class="btn-sync-mini" id="hamburgerBtn" title="Menü" style="font-size: 1.5rem;">
+                        <i data-lucide="menu"></i>
+                        <span class="icon-label">Menü</span>
+                    </button>
+                    <!-- Small indicator for pending syncs if any -->
+                    <span id="syncIndicator" class="sync-indicator hidden"></span>
                 </div>
             </div>
 
@@ -466,11 +434,6 @@
                         <button id="closeSideMenu" class="btn-close-small">✕</button>
                     </div>
                     <div class="side-menu-items">
-                        <div class="menu-group"
-                            style="padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-glass);">
-                            <button class="menu-item" id="sideProfileBtn" style="color: var(--primary-light);"><i
-                                    data-lucide="user-check"></i> Mein KI-Profil</button>
-                        </div>
                         <div class="menu-group">
                             <label>Navigation & Planung</label>
                             <button class="menu-item" id="sideCalendarBtn"><i data-lucide="calendar"></i> Kalender
@@ -513,12 +476,14 @@
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
                 <section class="quick-add-section">
-                    <div class="input-container flowing-border-anim">
+                    <div class="input-container">
                         <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..."
                             autocomplete="off" rows="1"></textarea>
                         <div class="ai-selector-container">
-                            <button id="grokManualBtn" class="btn-grok-manual"
-                                title="Ausgewählte KI (Original) öffnen"><i data-lucide="bot"></i></button>
+                            <button id="grokManualBtn" class="btn-grok-manual" title="Ausgewählte KI (Original) öffnen">
+                                <i data-lucide="bot"></i>
+                                <span class="icon-label">KI</span>
+                            </button>
                             <button id="aiSelectorArrow" class="ai-selector-arrow" title="KI wählen"><i
                                     data-lucide="chevron-down"></i></button>
                             <div id="aiSelectionMenu" class="ai-selection-menu hidden">
@@ -532,75 +497,46 @@
                                 </div>
                             </div>
                         </div>
-                        <button id="voiceBtn" class="btn-voice" title="Spracheingabe"><i data-lucide="mic"></i></button>
-                        <button id="addTodoBtn" class="btn-todo" title="Schnell-Notiz / To-do"><i
-                                data-lucide="file-text"></i></button>
+                        <button id="voiceBtn" class="btn-voice" title="Spracheingabe">
+                            <i data-lucide="mic"></i>
+                            <span class="icon-label">Sprache</span>
+                        </button>
+                        <button id="addTodoBtn" class="btn-todo" title="Schnell-Notiz / To-do">
+                            <i data-lucide="file-text"></i>
+                            <span class="icon-label">Notiz</span>
+                        </button>
                         <button id="addTaskBtn" class="btn-add" title="Aufgabe mit Details">
                             <span>+</span>
+                            <span class="icon-label">Neu</span>
                         </button>
                     </div>
                 </section>
                 <!-- Mobile Quick Comm Bar - Permanently Visible -->
                 <div class="mobile-comm-bar" id="mobileCommBar">
-                    <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen"><i
-                            data-lucide="phone"></i></button>
-                    <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp"><i
-                            data-lucide="message-square"></i></button>
-                    <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail"><i data-lucide="mail"></i></button>
-                    <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle"><i
-                            data-lucide="dollar-sign"></i></button>
-                    <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen"><i
-                            data-lucide="camera"></i></button>
+                    <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen">
+                        <i data-lucide="phone"></i>
+                        <span class="icon-label">Anruf</span>
+                    </button>
+                    <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp">
+                        <i data-lucide="message-square"></i>
+                        <span class="icon-label">WA</span>
+                    </button>
+                    <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
+                        <i data-lucide="mail"></i>
+                        <span class="icon-label">E-Mail</span>
+                    </button>
+                    <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
+                        <i data-lucide="dollar-sign"></i>
+                        <span class="icon-label">Kosten</span>
+                    </button>
+                    <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
+                        <i data-lucide="camera"></i>
+                        <span class="icon-label">Scan</span>
+                    </button>
 
                 </div>
             </div>
         </header>
-
-        <!-- AI Profile Setup Modal -->
-        <div id="aiProfileModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2><i data-lucide="user-plus"></i> Dein KI-Berater Profil</h2>
-                    <button class="modal-close-icon" id="closeProfileBtn">✕</button>
-                </div>
-                <div class="modal-body">
-                    <p
-                        style="color: var(--text-secondary); margin-bottom: 1rem; text-align: center; font-size: 0.9rem;">
-                        Erzähl mir mehr über dich, damit ich dich im Privat- und Geschäftsleben optimal unterstützen
-                        kann!
-                    </p>
-                    <div class="form-group">
-                        <label><i data-lucide="user"></i> Wie heißt du?</label>
-                        <input type="text" id="aiName" class="settings-input" placeholder="Dein Name">
-                    </div>
-                    <div class="form-group">
-                        <label><i data-lucide="venus-mars"></i> Geschlecht</label>
-                        <select id="aiGender" class="settings-select">
-                            <option value="">Bitte wählen...</option>
-                            <option value="m">Männlich</option>
-                            <option value="f">Weiblich</option>
-                            <option value="d">Divers</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label><i data-lucide="calendar"></i> Geburtsdatum</label>
-                        <input type="date" id="aiBirthdate" class="settings-input">
-                    </div>
-                    <div class="form-group">
-                        <label><i data-lucide="briefcase"></i> Beruf / Geschäftlich</label>
-                        <input type="text" id="aiJob" class="settings-input" placeholder="Was arbeitest du?">
-                    </div>
-                    <div class="form-group">
-                        <label><i data-lucide="heart"></i> Hobbies / Privat</label>
-                        <textarea id="aiHobbies" class="settings-input" rows="2"
-                            placeholder="Was machst du in deiner Freizeit gerne?"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="saveProfileBtn" class="btn-primary" style="width: 100%;">Bestätigen & Speichern</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Communication Modal -->
         <div id="commModal" class="modal hidden">
@@ -878,6 +814,43 @@
             <button id="installAppBtn" class="btn-small">Installieren</button>
             <button id="closeInstallBanner" class="btn-close-small"><i data-lucide="x"></i></button>
         </div>
+
+        <!-- Fixed Footer Navigation -->
+        <div id="fixedFooterNav" class="fixed-footer-nav">
+            <button class="btn-footer-icon" id="personalAIBtn" title="Persönliche KI" style="color: #a78bfa;">
+                <i data-lucide="bot"></i>
+                <span class="icon-label">Meine KI</span>
+            </button>
+            <button class="btn-footer-icon" id="calendarBtnFooter" title="Kalender öffnen">
+                <i data-lucide="calendar"></i>
+                <span class="icon-label">Kalender</span>
+            </button>
+            <button class="btn-footer-icon" id="expenseBtnFooter" title="Kostenkontrolle" style="color: #10b981;">
+                <i data-lucide="dollar-sign"></i>
+                <span class="icon-label">Kosten</span>
+            </button>
+            <button class="btn-footer-icon" id="addExpenseBtnFooter" title="Beleg scannen" style="color: #10b981;">
+                <i data-lucide="camera"></i>
+                <span class="icon-label">Scan</span>
+            </button>
+            <button class="btn-footer-icon" id="sideNightstandBtnFooter" title="Nachtmodus">
+                <i data-lucide="moon"></i>
+                <span class="icon-label">Nacht</span>
+            </button>
+            <button class="btn-footer-icon" id="alarmBtnFooter" title="Wecker / Alarme" style="color: #fbbf24;">
+                <i data-lucide="bell"></i>
+                <span class="icon-label">Wecker</span>
+            </button>
+            <button class="btn-footer-icon" id="manualDriveBtnFooter" title="Fahrt-Modus starten"
+                style="color: var(--secondary);">
+                <i data-lucide="car"></i>
+                <span class="icon-label">Fahrt</span>
+            </button>
+            <div id="voiceStatusFooter" class="voice-status-footer">
+                <span class="voice-pulse"></span>
+                <span class="voice-label">Höre...</span>
+            </div>
+        </div>
     </div>
 
     <!-- Audio für Benachrichtigungen (Nerviger Wecker-Ton) -->
@@ -889,7 +862,8 @@
     </audio>
 
     <!-- Firebase SDK -->
-
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
 
 
@@ -1007,18 +981,6 @@
                         </small>
                         <button id="testAiBtn" class="btn-link-small" style="margin-top: 0.5rem;">🚀 Ausgewählte KI
                             öffnen</button>
-                    </div>
-                </div>
-
-                <div class="form-group"
-                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
-                    <label>📍 Navigation & Layout</label>
-                    <div class="setting-toggle-row">
-                        <span>Navigation unten fixieren</span>
-                        <label class="switch">
-                            <input type="checkbox" id="navBottomToggle">
-                            <span class="slider round"></span>
-                        </label>
                     </div>
                 </div>
 
@@ -1229,6 +1191,153 @@
                 </div>
             </div> <!-- End modal-content -->
         </div> <!-- End settingsModal -->
+
+        <!-- Personal AI Assistant Modal -->
+        <div id="personalAIModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2><i data-lucide="bot"></i> Meine Persönliche KI</h2>
+                    <button class="modal-close-icon" id="closePersonalAIBtn">✕</button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- AI Greeting -->
+                    <div id="aiGreeting"
+                        style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(139, 92, 246, 0.05)); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(167, 139, 250, 0.2);">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="font-size: 2.5rem;">🤖</div>
+                            <div>
+                                <h3 id="aiGreetingText" style="margin: 0; color: var(--primary-light);">Hallo! Ich bin
+                                    deine persönliche KI.</h3>
+                                <p id="aiGreetingSubtext" style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">
+                                    Lass mich dich kennenlernen, damit ich dir besser helfen kann.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information Form -->
+                    <div class="form-group">
+                        <label><i data-lucide="user"></i> Dein vollständiger Name</label>
+                        <input type="text" id="aiUserName" class="settings-input" placeholder="z.B. Max Mustermann">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i data-lucide="cake"></i> Dein Geburtsdatum</label>
+                        <input type="date" id="aiUserBirthdate" class="settings-input">
+                        <small id="aiAgeDisplay"
+                            style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 5px;"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i data-lucide="users"></i> Geschlecht</label>
+                        <select id="aiUserGender" class="settings-select">
+                            <option value="">Bitte wählen...</option>
+                            <option value="male">Männlich</option>
+                            <option value="female">Weiblich</option>
+                            <option value="diverse">Divers</option>
+                            <option value="prefer-not-to-say">Möchte ich nicht angeben</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i data-lucide="briefcase"></i> Beruf / Tätigkeit</label>
+                        <input type="text" id="aiUserJob" class="settings-input"
+                            placeholder="z.B. Software-Entwickler, Student, Selbstständig...">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i data-lucide="heart"></i> Hobbys & Interessen</label>
+                        <textarea id="aiUserHobbies" class="settings-input" rows="3"
+                            placeholder="z.B. Fußball, Kochen, Reisen, Gaming..." style="resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- AI Features Section -->
+                    <div style="border-top: 1px solid var(--border-glass); padding-top: 20px; margin-top: 20px;">
+                        <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="sparkles"></i> KI-Features aktivieren
+                        </h3>
+
+                        <div class="setting-toggle-row">
+                            <span>🌤️ Morgendliches Wetter-Briefing</span>
+                            <label class="switch">
+                                <input type="checkbox" id="aiWeatherToggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <small
+                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Erhalte
+                            morgens eine Wettervorhersage, damit du weißt, wie du dich anziehen sollst.</small>
+
+                        <div class="setting-toggle-row">
+                            <span>📰 Tägliche Nachrichten & Weltereignisse</span>
+                            <label class="switch">
+                                <input type="checkbox" id="aiNewsToggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <small
+                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Bleibe
+                            informiert über wichtige Ereignisse auf der Welt.</small>
+
+                        <div class="setting-toggle-row">
+                            <span>💼 Geschäftliche Unterstützung</span>
+                            <label class="switch">
+                                <input type="checkbox" id="aiBusinessToggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <small
+                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Hilfe
+                            bei beruflichen Aufgaben und Terminen.</small>
+
+                        <div class="setting-toggle-row">
+                            <span>🏠 Private Unterstützung</span>
+                            <label class="switch">
+                                <input type="checkbox" id="aiPrivateToggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <small
+                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Unterstützung
+                            im Alltag und bei privaten Aufgaben.</small>
+
+                        <div class="setting-toggle-row">
+                            <span>🔔 Proaktive Erinnerungen</span>
+                            <label class="switch">
+                                <input type="checkbox" id="aiRemindersToggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <small
+                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Die
+                            KI erinnert dich proaktiv an wichtige Dinge.</small>
+                    </div>
+
+                    <!-- Morning Briefing Time -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>⏰ Morgendliches Briefing um:</label>
+                        <input type="time" id="aiMorningTime" class="settings-input" value="07:00">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Zu dieser Zeit erhältst du dein
+                            tägliches Briefing mit Wetter und Nachrichten.</small>
+                    </div>
+
+                    <!-- AI Dashboard Preview -->
+                    <div id="aiDashboardPreview" class="hidden"
+                        style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border-glass);">
+                        <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="activity"></i> Dein heutiges Briefing
+                        </h4>
+                        <div id="aiDashboardContent" style="font-size: 0.9rem; line-height: 1.6;">
+                            <!-- Dynamic content will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="testAIBriefingBtn" class="btn-secondary">🧪 Briefing testen</button>
+                    <button id="savePersonalAIBtn" class="btn-primary">Speichern</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Grok Modal -->
         <div id="grokModal" class="modal hidden">
             <div class="modal-content grok-modal-content">
@@ -1373,6 +1482,9 @@
 
         <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
         <script src="app.js"></script>
+        <script src="personal-ai.js"></script>
+        <script src="auto-hide-nav.js"></script>
+        <script src="interactive-ai.js"></script>
         <!-- AI Research Result Modal -->
         <div id="aiResearchResultModal" class="modal hidden">
             <div class="modal-content">
@@ -1456,7 +1568,65 @@
             </div>
         </div>
         <script>
+            // Wire up footer navigation buttons to existing functions
+            document.addEventListener('DOMContentLoaded', () => {
+                // Calendar Button
+                const calendarBtnFooter = document.getElementById('calendarBtnFooter');
+                const calendarBtn = document.getElementById('calendarBtn');
+                const sideCalendarBtn = document.getElementById('sideCalendarBtn');
+                if (calendarBtnFooter && sideCalendarBtn) {
+                    calendarBtnFooter.addEventListener('click', () => sideCalendarBtn.click());
+                }
+
+                // Expense Button
+                const expenseBtnFooter = document.getElementById('expenseBtnFooter');
+                const sideExpenseBtn = document.getElementById('sideExpenseBtn');
+                if (expenseBtnFooter && sideExpenseBtn) {
+                    expenseBtnFooter.addEventListener('click', () => sideExpenseBtn.click());
+                }
+
+                // Add Expense (Camera) Button
+                const addExpenseBtnFooter = document.getElementById('addExpenseBtnFooter');
+                const addExpenseBtn = document.getElementById('addExpenseBtn');
+                if (addExpenseBtnFooter && addExpenseBtn) {
+                    addExpenseBtnFooter.addEventListener('click', () => addExpenseBtn.click());
+                }
+
+                // Nightstand Button
+                const sideNightstandBtnFooter = document.getElementById('sideNightstandBtnFooter');
+                const sideNightstandBtn = document.getElementById('sideNightstandBtn');
+                if (sideNightstandBtnFooter && sideNightstandBtn) {
+                    sideNightstandBtnFooter.addEventListener('click', () => sideNightstandBtn.click());
+                }
+
+                // Alarm Button
+                const alarmBtnFooter = document.getElementById('alarmBtnFooter');
+                const sideAlarmBtn = document.getElementById('sideAlarmBtn');
+                if (alarmBtnFooter && sideAlarmBtn) {
+                    alarmBtnFooter.addEventListener('click', () => sideAlarmBtn.click());
+                }
+
+                // Drive Mode Button
+                const manualDriveBtnFooter = document.getElementById('manualDriveBtnFooter');
+                const sideDriveBtn = document.getElementById('sideDriveBtn');
+                if (manualDriveBtnFooter && sideDriveBtn) {
+                    manualDriveBtnFooter.addEventListener('click', () => sideDriveBtn.click());
+                }
+            });
+        </script>
+        <script>
+            // Initialize Lucide icons immediately
             lucide.createIcons();
+
+            // Re-initialize after a short delay to catch any dynamically added elements
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
+
+            // Also re-initialize when DOM is fully loaded
+            document.addEventListener('DOMContentLoaded', () => {
+                lucide.createIcons();
+            });
         </script>
 </body>
 
