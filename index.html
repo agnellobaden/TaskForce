@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="menu-styles.css">
     <link rel="stylesheet" href="icon-styles.css">
+    <link rel="stylesheet" href="wave-backgrounds.css">
+    <link rel="stylesheet" href="bottom-nav.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -409,29 +411,50 @@
                         <span class="team-badge hidden" id="teamBadge">TEAM: <span id="teamCodeName"></span></span>
                     </div>
                 </div>
-                <div class="header-actions">
-                    <button class="btn-sync-mini" id="calendarBtn" title="Kalender öffnen" style="font-size: 1.2rem;"><i
-                            data-lucide="calendar"></i></button>
-                    <button class="btn-sync-mini" id="expenseBtn" title="Kostenkontrolle"
-                        style="font-size: 1.2rem; color: #10b981;"><i data-lucide="dollar-sign"></i></button>
-                    <button class="btn-sync-mini" id="addExpenseBtnHeader" title="Beleg scannen"
-                        style="font-size: 1.2rem; color: #10b981;"><i data-lucide="camera"></i></button>
-                    <button class="btn-sync-mini" id="sideNightstandBtnHeader" title="Nachtmodus"
-                        style="font-size: 1.2rem;"><i data-lucide="moon"></i></button>
-                    <div id="mainClock" class="header-clock" style="font-size: 1rem; color: var(--text-secondary);">
-                        --:--</div>
-                    <button class="btn-sync-mini" id="alarmBtn" title="Wecker / Alarme"
-                        style="font-size: 1.2rem; color: #fbbf24;"><i data-lucide="bell"></i></button>
-                    <button class="btn-sync-mini" id="manualDriveBtn" title="Fahrt-Modus starten"
-                        style="font-size: 1.2rem; color: var(--secondary);"><i data-lucide="car"></i></button>
-                    <div id="voiceStatus" class="voice-status">
-                        <span class="voice-pulse"></span>
-                        <span class="voice-label">Höre zu...</span>
-                    </div>
-                    <button class="btn-sync-mini" id="hamburgerBtn" title="Menü" style="font-size: 1.5rem;"><i
-                            data-lucide="menu"></i></button>
-                    <!-- Small indicator for pending syncs if any -->
-                    <span id="syncIndicator" class="sync-indicator hidden"></span>
+
+                <!-- Main Clock - Fixed at Top -->
+                <div id="mainClock" class="header-clock"
+                    style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0 15px; letter-spacing: 1px;">
+                    --:--
+                </div>
+
+                <div id="syncIndicator" class="sync-indicator hidden"></div>
+
+                <button class="btn-sync-mini" id="hamburgerBtn" title="Menü" style="font-size: 1.5rem;">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Bar - Can be fixed top or bottom -->
+            <div class="header-actions" id="mainNavBar">
+                <button class="btn-sync-mini" id="calendarBtn" title="Kalender öffnen">
+                    <i data-lucide="calendar"></i>
+                    <span class="icon-label">Kalender</span>
+                </button>
+                <button class="btn-sync-mini" id="expenseBtn" title="Kostenkontrolle" style="color: #10b981;">
+                    <i data-lucide="dollar-sign"></i>
+                    <span class="icon-label">Kosten</span>
+                </button>
+                <button class="btn-sync-mini" id="addExpenseBtnHeader" title="Beleg scannen" style="color: #10b981;">
+                    <i data-lucide="camera"></i>
+                    <span class="icon-label">Beleg</span>
+                </button>
+                <button class="btn-sync-mini" id="sideNightstandBtnHeader" title="Nachtmodus">
+                    <i data-lucide="moon"></i>
+                    <span class="icon-label">Nacht</span>
+                </button>
+                <button class="btn-sync-mini" id="alarmBtn" title="Wecker / Alarme" style="color: #fbbf24;">
+                    <i data-lucide="bell"></i>
+                    <span class="icon-label">Wecker</span>
+                </button>
+                <button class="btn-sync-mini" id="manualDriveBtn" title="Fahrt-Modus starten"
+                    style="color: var(--secondary);">
+                    <i data-lucide="car"></i>
+                    <span class="icon-label">Fahrt</span>
+                </button>
+                <div id="voiceStatus" class="voice-status">
+                    <span class="voice-pulse"></span>
+                    <span class="voice-label">...</span>
                 </div>
             </div>
 
@@ -443,6 +466,11 @@
                         <button id="closeSideMenu" class="btn-close-small">✕</button>
                     </div>
                     <div class="side-menu-items">
+                        <div class="menu-group"
+                            style="padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-glass);">
+                            <button class="menu-item" id="sideProfileBtn" style="color: var(--primary-light);"><i
+                                    data-lucide="user-check"></i> Mein KI-Profil</button>
+                        </div>
                         <div class="menu-group">
                             <label>Navigation & Planung</label>
                             <button class="menu-item" id="sideCalendarBtn"><i data-lucide="calendar"></i> Kalender
@@ -485,7 +513,7 @@
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
                 <section class="quick-add-section">
-                    <div class="input-container">
+                    <div class="input-container flowing-border-anim">
                         <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..."
                             autocomplete="off" rows="1"></textarea>
                         <div class="ai-selector-container">
@@ -527,6 +555,52 @@
                 </div>
             </div>
         </header>
+
+        <!-- AI Profile Setup Modal -->
+        <div id="aiProfileModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i data-lucide="user-plus"></i> Dein KI-Berater Profil</h2>
+                    <button class="modal-close-icon" id="closeProfileBtn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p
+                        style="color: var(--text-secondary); margin-bottom: 1rem; text-align: center; font-size: 0.9rem;">
+                        Erzähl mir mehr über dich, damit ich dich im Privat- und Geschäftsleben optimal unterstützen
+                        kann!
+                    </p>
+                    <div class="form-group">
+                        <label><i data-lucide="user"></i> Wie heißt du?</label>
+                        <input type="text" id="aiName" class="settings-input" placeholder="Dein Name">
+                    </div>
+                    <div class="form-group">
+                        <label><i data-lucide="venus-mars"></i> Geschlecht</label>
+                        <select id="aiGender" class="settings-select">
+                            <option value="">Bitte wählen...</option>
+                            <option value="m">Männlich</option>
+                            <option value="f">Weiblich</option>
+                            <option value="d">Divers</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i data-lucide="calendar"></i> Geburtsdatum</label>
+                        <input type="date" id="aiBirthdate" class="settings-input">
+                    </div>
+                    <div class="form-group">
+                        <label><i data-lucide="briefcase"></i> Beruf / Geschäftlich</label>
+                        <input type="text" id="aiJob" class="settings-input" placeholder="Was arbeitest du?">
+                    </div>
+                    <div class="form-group">
+                        <label><i data-lucide="heart"></i> Hobbies / Privat</label>
+                        <textarea id="aiHobbies" class="settings-input" rows="2"
+                            placeholder="Was machst du in deiner Freizeit gerne?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveProfileBtn" class="btn-primary" style="width: 100%;">Bestätigen & Speichern</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Communication Modal -->
         <div id="commModal" class="modal hidden">
@@ -815,8 +889,7 @@
     </audio>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
 
 
 
@@ -934,6 +1007,18 @@
                         </small>
                         <button id="testAiBtn" class="btn-link-small" style="margin-top: 0.5rem;">🚀 Ausgewählte KI
                             öffnen</button>
+                    </div>
+                </div>
+
+                <div class="form-group"
+                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <label>📍 Navigation & Layout</label>
+                    <div class="setting-toggle-row">
+                        <span>Navigation unten fixieren</span>
+                        <label class="switch">
+                            <input type="checkbox" id="navBottomToggle">
+                            <span class="slider round"></span>
+                        </label>
                     </div>
                 </div>
 

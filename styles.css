@@ -1,22 +1,42 @@
 :root {
-    --primary: #6366f1;
-    --primary-rgb: 99, 102, 241;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #22d3ee;
-    --accent: #f472b6;
+    /* Minimal Colorful Accents - Only for Important Elements */
+    --primary: #3b82f6;
+    /* Blue for buttons */
+    --primary-rgb: 59, 130, 246;
+    --primary-dark: #2563eb;
+    --primary-light: #60a5fa;
+    --secondary: #10b981;
+    /* Green for success */
+    --accent: #f59e0b;
+    /* Amber for highlights */
     --urgent: #ef4444;
-    --urgent-glow: rgba(239, 68, 68, 0.4);
+    /* Red for urgent */
+    --urgent-glow: rgba(239, 68, 68, 0.5);
     --success: #10b981;
-    --bg-dark: #0f0f1a;
-    --bg-card: rgba(30, 30, 50, 0.8);
-    --bg-glass: rgba(255, 255, 255, 0.05);
-    --bg-glass-hover: rgba(255, 255, 255, 0.1);
+
+    /* 90% Black & Gray Backgrounds */
+    --bg-dark: #000000;
+    /* Pure black */
+    --bg-card: #0a0a0a;
+    /* Almost black */
+    --bg-glass: #121212;
+    /* Dark gray */
+    --bg-glass-hover: #1a1a1a;
+    /* Slightly lighter gray */
+
+    /* White Text */
     --text-primary: #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.7);
-    --text-muted: rgba(255, 255, 255, 0.4);
-    --border-glass: rgba(255, 255, 255, 0.1);
-    --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
+    /* Pure white */
+    --text-secondary: #e5e5e5;
+    /* Light gray */
+    --text-muted: #9ca3af;
+    /* Medium gray */
+
+    /* Gray Borders & Shadows */
+    --border-glass: #2a2a2a;
+    /* Dark gray border */
+    --shadow-glow: 0 0 20px rgba(255, 255, 255, 0.05);
+
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
@@ -139,6 +159,198 @@
 .business-mode .task-card.urgent {
     animation: none;
 }
+
+/* ===== BRILLIANT BLACK MODE ===== */
+.brilliant-black-mode {
+    --primary: #6366f1;
+    --primary-rgb: 99, 102, 241;
+    --primary-dark: #4f46e5;
+    --primary-light: #818cf8;
+    --secondary: #22d3ee;
+    --accent: #f472b6;
+    --urgent: #ef4444;
+    --urgent-glow: rgba(239, 68, 68, 0.5);
+    --success: #10b981;
+
+    /* Deep Black Backgrounds */
+    --bg-dark: #000000;
+    --bg-card: rgba(15, 15, 15, 0.9);
+    --bg-glass: rgba(20, 20, 20, 0.8);
+    --bg-glass-hover: rgba(30, 30, 30, 0.9);
+
+    /* Brilliant White Text */
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+    --text-muted: rgba(255, 255, 255, 0.5);
+
+    /* Brilliant Borders */
+    --border-glass: rgba(255, 255, 255, 0.12);
+    --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.4);
+
+    /* Smooth Rounded Corners */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+}
+
+/* Brilliant Black - Enhanced Shadows */
+.brilliant-black-mode .task-card,
+.brilliant-black-mode .stat-item,
+.brilliant-black-mode .input-container,
+.brilliant-black-mode .modal-content,
+.brilliant-black-mode .login-container {
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) saturate(180%);
+}
+
+.brilliant-black-mode .task-card:hover,
+.brilliant-black-mode .stat-item:hover {
+    background: rgba(25, 25, 25, 0.95);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+/* Brilliant Black - Header */
+.brilliant-black-mode .header {
+    background: linear-gradient(180deg,
+            rgba(20, 20, 20, 0.95) 0%,
+            rgba(10, 10, 10, 0.9) 50%,
+            transparent 100%);
+    backdrop-filter: blur(30px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Brilliant Black - Buttons */
+.brilliant-black-mode .btn-primary,
+.brilliant-black-mode .btn-add,
+.brilliant-black-mode .btn-login {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    box-shadow:
+        0 4px 20px rgba(99, 102, 241, 0.3),
+        0 0 40px rgba(99, 102, 241, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.brilliant-black-mode .btn-primary:hover,
+.brilliant-black-mode .btn-add:hover,
+.brilliant-black-mode .btn-login:hover {
+    box-shadow:
+        0 8px 30px rgba(99, 102, 241, 0.5),
+        0 0 60px rgba(99, 102, 241, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Brilliant Black - Inputs */
+.brilliant-black-mode input,
+.brilliant-black-mode textarea,
+.brilliant-black-mode select {
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.brilliant-black-mode input:focus,
+.brilliant-black-mode textarea:focus,
+.brilliant-black-mode select:focus {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(99, 102, 241, 0.2),
+        inset 0 1px 0 rgba(99, 102, 241, 0.15);
+}
+
+/* Brilliant Black - Stats Bar */
+.brilliant-black-mode .stats-bar {
+    background: linear-gradient(135deg,
+            rgba(30, 30, 30, 0.6) 0%,
+            rgba(20, 20, 20, 0.7) 50%,
+            rgba(25, 25, 25, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Brilliant Black - Filter Tabs */
+.brilliant-black-mode .filter-tabs {
+    background: rgba(20, 20, 20, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Brilliant Black - Modals */
+.brilliant-black-mode .modal {
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(40px);
+}
+
+.brilliant-black-mode .modal-content {
+    background: rgba(10, 10, 10, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 80px rgba(255, 255, 255, 0.05);
+}
+
+/* Brilliant Black - Side Menu */
+.brilliant-black-mode .side-menu-content {
+    background: linear-gradient(180deg,
+            rgba(20, 20, 20, 0.95) 0%,
+            rgba(10, 10, 10, 0.98) 30%,
+            rgba(10, 10, 10, 0.98) 70%,
+            rgba(15, 15, 15, 0.95) 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        -20px 0 60px rgba(0, 0, 0, 0.9),
+        inset 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Brilliant Black - Text Shadows */
+.brilliant-black-mode h1,
+.brilliant-black-mode h2,
+.brilliant-black-mode h3 {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.brilliant-black-mode button:hover,
+.brilliant-black-mode .menu-item:hover {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Brilliant Black - Login Screen */
+.brilliant-black-mode .login-screen {
+    background:
+        radial-gradient(ellipse at 50% 20%, rgba(30, 30, 30, 0.4) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 80%, rgba(25, 25, 25, 0.4) 0%, transparent 60%),
+        #000000;
+}
+
+.brilliant-black-mode .login-container {
+    background: rgba(10, 10, 10, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 100px rgba(255, 255, 255, 0.05);
+}
+
+
 
 /* BUSINESS BUTTON STYLES */
 .business-mode .btn-primary,
@@ -362,8 +574,8 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 80%, rgba(244, 114, 182, 0.1) 0%, transparent 50%);
+    background: #000000;
+    /* Pure black - no gradients */
     pointer-events: none;
     z-index: -1;
 }
@@ -679,14 +891,17 @@ body::before {
 
 .task-card {
     background: var(--bg-glass);
-    backdrop-filter: blur(20px);
     border: 1px solid var(--border-glass);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    cursor: pointer;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px) saturate(180%);
 }
 
 .task-card::before {
@@ -694,15 +909,19 @@ body::before {
     position: absolute;
     left: 0;
     top: 0;
-    height: 100%;
     width: 4px;
+    height: 100%;
     background: var(--primary);
 }
 
 .task-card:hover {
     background: var(--bg-glass-hover);
     transform: translateX(4px);
-    border-color: var(--primary);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 30px rgba(255, 255, 255, 0.08);
 }
 
 .task-card.urgent::before {
@@ -5690,4 +5909,130 @@ input[type="password"]::placeholder {
     50% {
         opacity: 0.02;
     }
+}/* Header Actions Scrollable */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    width: 100%;
+    justify-content: flex-start;
 }
+.header-actions::-webkit-scrollbar {
+    display: none;
+}
+
+/* Button Layout with Labels */
+.btn-sync-mini {
+    flex-direction: column;
+    height: auto;
+    padding: 0.4rem 0.6rem;
+    gap: 2px;
+    min-width: 60px;
+}
+
+.btn-sync-mini .lucide {
+    margin-bottom: 2px;
+}
+
+.icon-label {
+    font-size: 0.65rem;
+    line-height: 1;
+    font-weight: 500;
+    opacity: 0.9;
+    display: block;
+}
+
+/* Flowing Border Animation */
+@keyframes borderFlow {
+    0% { border-color: var(--primary); box-shadow: 0 0 5px var(--primary-dark); }
+    33% { border-color: var(--secondary); box-shadow: 0 0 5px var(--secondary); }
+    66% { border-color: var(--accent); box-shadow: 0 0 5px var(--accent); }
+    100% { border-color: var(--primary); box-shadow: 0 0 5px var(--primary-dark); }
+}
+
+.flowing-border-anim {
+    animation: borderFlow 6s infinite linear;
+    border-width: 2px;
+}
+
+/* BOTTOM NAVIGATION BAR */
+.bottom-nav {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 500px;
+    height: 65px;
+    background: rgba(10, 10, 10, 0.85); /* Dark semi-transparent */
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 35px; /* Pill shape */
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 9000;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    padding: 0 10px;
+}
+
+.app-container {
+    padding-bottom: 100px; /* Space for nav */
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+}
+
+.nav-btn .lucide {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke-width: 2px;
+}
+
+.nav-btn.active {
+    color: var(--primary-light);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.nav-btn:hover {
+    color: var(--text-primary);
+}
+
+/* CENTER ADD BUTTON (Floating) */
+.nav-btn.center-add-btn {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border-radius: 50%;
+    transform: translateY(-20px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+    border: 4px solid var(--bg-dark); /* Simulate cutout */
+}
+
+.nav-btn.center-add-btn:active {
+    transform: translateY(-15px) scale(0.95);
+}
+
+.nav-btn.center-add-btn .lucide {
+    width: 2rem;
+    height: 2rem;
+}
+

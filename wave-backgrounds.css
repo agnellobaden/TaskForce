@@ -1,0 +1,1181 @@
+/* ===== BRILLIANT BLACK WAVE SYSTEM ===== */
+
+/* Deep Black Base with Subtle Gray Waves */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        linear-gradient(180deg,
+            #000000 0%,
+            #0a0a0a 15%,
+            #141414 30%,
+            #1a1a1a 45%,
+            #0f0f0f 60%,
+            #050505 75%,
+            #000000 90%,
+            #000000 100%);
+    background-size: 100% 200%;
+    animation: deepBlackWave 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -2;
+}
+
+@keyframes deepBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 0% 100%;
+    }
+}
+
+/* Brilliant Gray Wave Overlays - Subtle but Visible */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 40%),
+        radial-gradient(ellipse at 80% 30%, rgba(200, 200, 200, 0.04) 0%, transparent 45%),
+        radial-gradient(ellipse at 40% 50%, rgba(150, 150, 150, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(180, 180, 180, 0.04) 0%, transparent 45%),
+        radial-gradient(ellipse at 30% 90%, rgba(160, 160, 160, 0.03) 0%, transparent 40%);
+    background-size: 200% 200%;
+    animation: grayWaveMovement 25s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 1;
+}
+
+@keyframes grayWaveMovement {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 0%, 50% 50%, 100% 100%, 0% 100%;
+        transform: translateY(0) scale(1);
+    }
+
+    25% {
+        background-position: 50% 25%, 75% 25%, 25% 75%, 75% 75%, 25% 25%;
+        transform: translateY(-30px) scale(1.08);
+    }
+
+    50% {
+        background-position: 100% 50%, 50% 50%, 0% 100%, 50% 50%, 50% 50%;
+        transform: translateY(-50px) scale(1.15);
+    }
+
+    75% {
+        background-position: 50% 75%, 25% 75%, 75% 25%, 25% 25%, 75% 75%;
+        transform: translateY(-30px) scale(1.08);
+    }
+}
+
+/* Header - Deep Black with Brilliant Glow */
+.header {
+    position: relative;
+    background: linear-gradient(180deg,
+            rgba(20, 20, 20, 0.95) 0%,
+            rgba(10, 10, 10, 0.9) 50%,
+            transparent 100%);
+    backdrop-filter: blur(30px);
+    overflow: visible;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: 0;
+    width: 100%;
+    height: 120px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    animation: headerBrilliantWave 8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes headerBrilliantWave {
+
+    0%,
+    100% {
+        transform: translateY(0) scaleX(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: translateY(-15px) scaleX(1.2);
+        opacity: 1;
+    }
+}
+
+/* Stats Bar - Brilliant Black Glass */
+.stats-bar {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(30, 30, 30, 0.6) 0%,
+            rgba(20, 20, 20, 0.7) 50%,
+            rgba(25, 25, 25, 0.6) 100%);
+    background-size: 200% 200%;
+    animation: statsBlackWave 12s ease-in-out infinite;
+    border-radius: var(--radius-xl);
+    padding: 2rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@keyframes statsBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Filter Tabs - Flowing Gray Wave */
+.filter-tabs {
+    position: relative;
+    background: linear-gradient(90deg,
+            rgba(25, 25, 25, 0.8) 0%,
+            rgba(30, 30, 30, 0.85) 25%,
+            rgba(20, 20, 20, 0.8) 50%,
+            rgba(28, 28, 28, 0.85) 75%,
+            rgba(25, 25, 25, 0.8) 100%);
+    background-size: 300% 100%;
+    animation: tabsGrayFlow 15s linear infinite;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@keyframes tabsGrayFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 300% 50%;
+    }
+}
+
+/* Task Cards - Brilliant Black with Shimmer */
+.task-card {
+    position: relative;
+    overflow: hidden;
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.task-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            transparent 100%);
+    animation: brilliantShimmer 4s ease-in-out infinite;
+}
+
+@keyframes brilliantShimmer {
+    0% {
+        left: -100%;
+    }
+
+    50%,
+    100% {
+        left: 100%;
+    }
+}
+
+.task-card:hover::after {
+    animation-duration: 2s;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.15) 50%,
+            transparent 100%);
+}
+
+/* Modal - Deep Black with Brilliant Edges */
+.modal {
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(40, 40, 40, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(50, 50, 50, 0.3) 0%, transparent 50%),
+        rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(40px);
+    animation: modalBlackWave 10s ease-in-out infinite;
+}
+
+@keyframes modalBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 100%;
+    }
+
+    50% {
+        background-position: 100% 100%, 0% 0%;
+    }
+}
+
+.modal-content {
+    background: rgba(10, 10, 10, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 80px rgba(255, 255, 255, 0.05);
+}
+
+/* Urgent Overlay - Brilliant Red Glow on Black */
+.urgent-overlay {
+    background:
+        radial-gradient(ellipse at 50% 50%, rgba(239, 68, 68, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 80%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
+        rgba(0, 0, 0, 0.98);
+    backdrop-filter: blur(40px);
+    animation: urgentBlackWave 2.5s ease-in-out infinite;
+}
+
+@keyframes urgentBlackWave {
+
+    0%,
+    100% {
+        background-size: 100% 100%, 100% 100%;
+    }
+
+    50% {
+        background-size: 130% 130%, 120% 120%;
+    }
+}
+
+/* Quick Todo Section - Subtle Gray Wave */
+.quick-todo-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(25, 25, 25, 0.7) 0%,
+            rgba(20, 20, 20, 0.8) 100%);
+    background-size: 200% 200%;
+    animation: todoBlackWave 10s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@keyframes todoBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+}
+
+/* Expense Section - Brilliant Black */
+.expense-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(20, 25, 20, 0.7) 0%,
+            rgba(15, 20, 15, 0.8) 100%);
+    background-size: 200% 200%;
+    animation: expenseBlackWave 12s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(16, 185, 129, 0.08);
+}
+
+@keyframes expenseBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Alarm Section - Brilliant Black with Gold Hint */
+.alarm-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(25, 22, 15, 0.7) 0%,
+            rgba(20, 18, 10, 0.8) 100%);
+    background-size: 200% 200%;
+    animation: alarmBlackWave 9s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid rgba(251, 191, 36, 0.12);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(251, 191, 36, 0.06);
+}
+
+@keyframes alarmBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+}
+
+/* Input Container - Brilliant Focus */
+.input-container {
+    position: relative;
+    overflow: hidden;
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.input-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    animation: inputBrilliantRotate 15s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes inputBrilliantRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.input-container:focus-within {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(99, 102, 241, 0.2),
+        inset 0 1px 0 rgba(99, 102, 241, 0.15);
+}
+
+/* Stat Items - Brilliant Glow */
+.stat-item {
+    position: relative;
+    overflow: hidden;
+    background: rgba(18, 18, 18, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.stat-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 100%);
+    animation: statBrilliantGlow 5s ease-in-out infinite;
+}
+
+@keyframes statBrilliantGlow {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.stat-item:nth-child(2)::before {
+    animation-delay: 1.6s;
+}
+
+.stat-item:nth-child(3)::before {
+    animation-delay: 3.2s;
+}
+
+.stat-item:hover {
+    background: rgba(25, 25, 25, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+/* Login Screen - Deep Brilliant Black */
+.login-screen {
+    position: relative;
+    background:
+        radial-gradient(ellipse at 50% 20%, rgba(30, 30, 30, 0.4) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 80%, rgba(25, 25, 25, 0.4) 0%, transparent 60%),
+        #000000;
+    animation: loginBlackWave 15s ease-in-out infinite;
+}
+
+@keyframes loginBlackWave {
+
+    0%,
+    100% {
+        background-position: 50% 0%, 50% 100%;
+    }
+
+    50% {
+        background-position: 50% 30%, 50% 70%;
+    }
+}
+
+.login-container {
+    background: rgba(10, 10, 10, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 100px rgba(255, 255, 255, 0.05);
+}
+
+/* Drive Mode Overlay - Brilliant Black Dashboard */
+.drive-overlay {
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(30, 30, 30, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(25, 25, 25, 0.3) 0%, transparent 50%),
+        #000000;
+    animation: driveBlackWave 12s ease-in-out infinite;
+}
+
+@keyframes driveBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 100%;
+        background-size: 100% 100%, 100% 100%;
+    }
+
+    50% {
+        background-position: 100% 100%, 0% 0%;
+        background-size: 130% 130%, 130% 130%;
+    }
+}
+
+/* Nightstand Overlay - Pure Black with Subtle Glow */
+.nightstand-overlay {
+    background:
+        radial-gradient(ellipse at 50% 50%, rgba(40, 40, 40, 0.15) 0%, transparent 70%),
+        #000000;
+    animation: nightBlackWave 18s ease-in-out infinite;
+}
+
+@keyframes nightBlackWave {
+
+    0%,
+    100% {
+        background-size: 100% 100%;
+    }
+
+    50% {
+        background-size: 160% 160%;
+    }
+}
+
+/* Side Menu - Brilliant Black Glass */
+.side-menu-content {
+    position: relative;
+    background:
+        linear-gradient(180deg,
+            rgba(20, 20, 20, 0.95) 0%,
+            rgba(10, 10, 10, 0.98) 30%,
+            rgba(10, 10, 10, 0.98) 70%,
+            rgba(15, 15, 15, 0.95) 100%);
+    animation: menuBlackWave 10s ease-in-out infinite;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        -20px 0 60px rgba(0, 0, 0, 0.9),
+        inset 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+@keyframes menuBlackWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 0% 100%;
+    }
+}
+
+/* Brilliant Accent Glows */
+.btn-primary,
+.btn-add,
+.tab-btn.active {
+    box-shadow:
+        0 4px 20px rgba(99, 102, 241, 0.3),
+        0 0 40px rgba(99, 102, 241, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary:hover,
+.btn-add:hover {
+    box-shadow:
+        0 8px 30px rgba(99, 102, 241, 0.5),
+        0 0 60px rgba(99, 102, 241, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Brilliant Borders */
+.task-card,
+.stat-item,
+.modal-content,
+.input-container,
+.filter-tabs {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced Glass Effect */
+.task-card,
+.stat-item,
+.quick-todo-section,
+.expense-section,
+.alarm-section {
+    backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Smooth Wave Transitions */
+body {
+    position: relative;
+    overflow-x: hidden;
+    background: #000000;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    body::after {
+        animation-duration: 20s;
+    }
+
+    .header::before {
+        height: 80px;
+        bottom: -60px;
+    }
+}
+
+/* Brilliant Text Shadows for Headers */
+h1,
+h2,
+h3 {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Subtle Glow on Hover */
+button:hover,
+.menu-item:hover {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+
+/* Animated Wave Background - Flows from Header to Bottom */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        linear-gradient(180deg,
+            #0f0f1a 0%,
+            #1a1a2e 15%,
+            #16213e 30%,
+            #0f3460 45%,
+            #533483 60%,
+            #7b2cbf 75%,
+            #240046 90%,
+            #0f0f1a 100%);
+    background-size: 100% 200%;
+    animation: gradientWaveFlow 15s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -2;
+}
+
+@keyframes gradientWaveFlow {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 0% 100%;
+    }
+}
+
+/* Flowing Wave Overlay - Creates Wave Effect */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse at 20% 10%, rgba(99, 102, 241, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 30%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 40% 50%, rgba(34, 211, 238, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(244, 114, 182, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 30% 90%, rgba(251, 191, 36, 0.2) 0%, transparent 50%);
+    background-size: 200% 200%;
+    animation: waveMovement 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.8;
+}
+
+@keyframes waveMovement {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 0%, 50% 50%, 100% 100%, 0% 100%;
+        transform: translateY(0) scale(1);
+    }
+
+    25% {
+        background-position: 50% 25%, 75% 25%, 25% 75%, 75% 75%, 25% 25%;
+        transform: translateY(-20px) scale(1.05);
+    }
+
+    50% {
+        background-position: 100% 50%, 50% 50%, 0% 100%, 50% 50%, 50% 50%;
+        transform: translateY(-40px) scale(1.1);
+    }
+
+    75% {
+        background-position: 50% 75%, 25% 75%, 75% 25%, 25% 25%, 75% 75%;
+        transform: translateY(-20px) scale(1.05);
+    }
+}
+
+/* SVG Wave Dividers Between Sections */
+.wave-divider {
+    position: relative;
+    width: 100%;
+    height: 80px;
+    overflow: hidden;
+    margin: 2rem 0;
+}
+
+.wave-divider svg {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    animation: waveSVG 8s ease-in-out infinite;
+}
+
+@keyframes waveSVG {
+
+    0%,
+    100% {
+        transform: translateX(0) scaleY(1);
+    }
+
+    50% {
+        transform: translateX(-25%) scaleY(1.2);
+    }
+}
+
+/* Header Wave Effect */
+.header {
+    position: relative;
+    background: linear-gradient(180deg,
+            rgba(99, 102, 241, 0.1) 0%,
+            rgba(139, 92, 246, 0.08) 50%,
+            transparent 100%);
+    backdrop-filter: blur(20px);
+    overflow: visible;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    bottom: -50px;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+    animation: headerWave 6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes headerWave {
+
+    0%,
+    100% {
+        transform: translateY(0) scaleX(1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translateY(-10px) scaleX(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Section Wave Backgrounds */
+.stats-bar {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(99, 102, 241, 0.05) 0%,
+            rgba(139, 92, 246, 0.05) 50%,
+            rgba(34, 211, 238, 0.05) 100%);
+    background-size: 200% 200%;
+    animation: sectionWave 10s ease-in-out infinite;
+    border-radius: var(--radius-xl);
+    padding: 2rem 1rem;
+}
+
+@keyframes sectionWave {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Filter Tabs Wave */
+.filter-tabs {
+    position: relative;
+    background: linear-gradient(90deg,
+            rgba(99, 102, 241, 0.08) 0%,
+            rgba(139, 92, 246, 0.08) 25%,
+            rgba(34, 211, 238, 0.08) 50%,
+            rgba(244, 114, 182, 0.08) 75%,
+            rgba(99, 102, 241, 0.08) 100%);
+    background-size: 300% 100%;
+    animation: tabsWaveFlow 12s linear infinite;
+}
+
+@keyframes tabsWaveFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 300% 50%;
+    }
+}
+
+/* Task Cards Wave Effect */
+.task-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.task-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(99, 102, 241, 0.1) 50%,
+            transparent 100%);
+    animation: cardWaveShimmer 3s ease-in-out infinite;
+}
+
+@keyframes cardWaveShimmer {
+    0% {
+        left: -100%;
+    }
+
+    50%,
+    100% {
+        left: 100%;
+    }
+}
+
+.task-card:hover::after {
+    animation-duration: 1.5s;
+}
+
+/* Modal Wave Background */
+.modal {
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(244, 114, 182, 0.15) 0%, transparent 50%),
+        rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    animation: modalWave 8s ease-in-out infinite;
+}
+
+@keyframes modalWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 100%;
+    }
+
+    50% {
+        background-position: 100% 100%, 0% 0%;
+    }
+}
+
+/* Urgent Overlay Wave */
+.urgent-overlay {
+    background:
+        radial-gradient(ellipse at 50% 50%, rgba(239, 68, 68, 0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 80%, rgba(251, 146, 60, 0.2) 0%, transparent 50%),
+        rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(30px);
+    animation: urgentWaveBackground 2s ease-in-out infinite;
+}
+
+@keyframes urgentWaveBackground {
+
+    0%,
+    100% {
+        background-size: 100% 100%, 100% 100%;
+    }
+
+    50% {
+        background-size: 120% 120%, 110% 110%;
+    }
+}
+
+/* Quick Todo Section Wave */
+.quick-todo-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(56, 189, 248, 0.05) 0%,
+            rgba(125, 211, 252, 0.05) 100%);
+    background-size: 200% 200%;
+    animation: todoWave 8s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+@keyframes todoWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+}
+
+/* Expense Section Wave */
+.expense-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(16, 185, 129, 0.05) 0%,
+            rgba(52, 211, 153, 0.05) 100%);
+    background-size: 200% 200%;
+    animation: expenseWave 10s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+@keyframes expenseWave {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Alarm Section Wave */
+.alarm-section {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(251, 191, 36, 0.05) 0%,
+            rgba(252, 211, 77, 0.05) 100%);
+    background-size: 200% 200%;
+    animation: alarmWave 7s ease-in-out infinite;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+@keyframes alarmWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+}
+
+/* Input Container Wave */
+.input-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.input-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+        radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+    animation: inputWaveRotate 10s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes inputWaveRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Stat Items Wave Glow */
+.stat-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(99, 102, 241, 0.15) 50%,
+            transparent 100%);
+    animation: statWaveGlow 4s ease-in-out infinite;
+}
+
+@keyframes statWaveGlow {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.stat-item:nth-child(2)::before {
+    animation-delay: 1.3s;
+}
+
+.stat-item:nth-child(3)::before {
+    animation-delay: 2.6s;
+}
+
+/* Login Screen Wave */
+.login-screen {
+    position: relative;
+    background:
+        radial-gradient(ellipse at 50% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 60%),
+        var(--bg-dark);
+    animation: loginWave 12s ease-in-out infinite;
+}
+
+@keyframes loginWave {
+
+    0%,
+    100% {
+        background-position: 50% 0%, 50% 100%;
+    }
+
+    50% {
+        background-position: 50% 20%, 50% 80%;
+    }
+}
+
+/* Drive Mode Overlay Wave */
+.drive-overlay {
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 70%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        var(--bg-dark);
+    animation: driveWave 10s ease-in-out infinite;
+}
+
+@keyframes driveWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 100%;
+        background-size: 100% 100%, 100% 100%;
+    }
+
+    50% {
+        background-position: 100% 100%, 0% 0%;
+        background-size: 120% 120%, 120% 120%;
+    }
+}
+
+/* Nightstand Overlay Wave */
+.nightstand-overlay {
+    background:
+        radial-gradient(ellipse at 50% 50%, rgba(167, 139, 250, 0.1) 0%, transparent 70%),
+        #0a0a0f;
+    animation: nightWave 15s ease-in-out infinite;
+}
+
+@keyframes nightWave {
+
+    0%,
+    100% {
+        background-size: 100% 100%;
+    }
+
+    50% {
+        background-size: 150% 150%;
+    }
+}
+
+/* Side Menu Wave */
+.side-menu-content {
+    position: relative;
+    background:
+        linear-gradient(180deg,
+            rgba(99, 102, 241, 0.08) 0%,
+            var(--bg-card) 30%,
+            var(--bg-card) 70%,
+            rgba(139, 92, 246, 0.08) 100%);
+    animation: menuWave 8s ease-in-out infinite;
+}
+
+@keyframes menuWave {
+
+    0%,
+    100% {
+        background-position: 0% 0%;
+    }
+
+    50% {
+        background-position: 0% 100%;
+    }
+}
+
+/* Floating Wave Particles */
+@keyframes floatingParticle {
+
+    0%,
+    100% {
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: 0.3;
+    }
+
+    25% {
+        transform: translateY(-20px) translateX(10px) scale(1.1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translateY(-40px) translateX(-10px) scale(1.2);
+        opacity: 0.7;
+    }
+
+    75% {
+        transform: translateY(-20px) translateX(10px) scale(1.1);
+        opacity: 0.5;
+    }
+}
+
+/* Apply to body for overall wave effect */
+body {
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Smooth transitions for all wave elements */
+.header,
+.stats-bar,
+.filter-tabs,
+.task-card,
+.quick-todo-section,
+.expense-section,
+.alarm-section,
+.stat-item,
+.input-container {
+    transition: all 0.3s ease;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    body::after {
+        animation-duration: 15s;
+    }
+
+    .wave-divider {
+        height: 50px;
+    }
+}

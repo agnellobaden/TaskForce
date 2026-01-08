@@ -1,0 +1,137 @@
+/* =========================================
+   NAVIGATION BAR STYLING (TOP & BOTTOM)
+   ========================================= */
+
+/* Base Styles for the Navigation Bar */
+.header-actions {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(15, 15, 15, 0.98);
+    backdrop-filter: blur(25px);
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+/* === MODE: BOTTOM === */
+body.nav-bottom-mode .header-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 15px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    animation: slideUpNav 0.3s ease-out;
+}
+
+body.nav-bottom-mode {
+    padding-bottom: 100px;
+    /* Space for bottom bar */
+}
+
+/* === MODE: TOP === */
+body.nav-top-mode .header-actions {
+    position: fixed;
+    top: 45px;
+    /* Right below the user/info/clock bar */
+    left: 0;
+    width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideDownNav 0.3s ease-out;
+}
+
+/* Adjust layout when icons are at top */
+body.nav-top-mode .header {
+    padding-top: 50px;
+    /* Push logo down to not be covered */
+}
+
+/* Base button styles in nav bar */
+.header-actions .btn-sync-mini {
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    flex: 1;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--text-secondary);
+}
+
+.header-actions .btn-sync-mini:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+    color: var(--text-primary);
+}
+
+.header-actions .icon-label {
+    font-size: 0.65rem;
+    display: block !important;
+    opacity: 0.8;
+}
+
+.header-actions .lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+/* Special Case: Voice Status in Nav Bar */
+.header-actions .voice-status {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animations */
+@keyframes slideUpNav {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDownNav {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Clock Centering in Header Top */
+body.nav-bottom-mode #mainClock,
+body.nav-top-mode #mainClock {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0 !important;
+}
+
+.header-top {
+    height: 45px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1001;
+    background: var(--bg-dark);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-bottom: 1px solid var(--border-glass);
+}
