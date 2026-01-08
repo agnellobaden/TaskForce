@@ -1,0 +1,518 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --bg-black: #050508;
+    --bg-dark: #0b0b14;
+    --bg-glass: rgba(15, 15, 25, 0.6);
+    --bg-glass-hover: rgba(25, 25, 45, 0.8);
+
+    --neon-blue: #00d2ff;
+    --neon-purple: #9d50ff;
+    --neon-pink: #ff00c8;
+
+    --neon-blue-glow: rgba(0, 210, 255, 0.4);
+    --neon-purple-glow: rgba(157, 80, 255, 0.4);
+    --neon-pink-glow: rgba(255, 0, 200, 0.4);
+
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0cc;
+    --text-muted: #666680;
+
+    --border-glass: rgba(255, 255, 255, 0.1);
+    --border-neon: rgba(157, 80, 255, 0.3);
+
+    --radius-lg: 20px;
+    --radius-xl: 30px;
+
+    --font-main: 'Outfit', sans-serif;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Aesthetics */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-main);
+    background: var(--bg-black);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* Neon Aura Background */
+    background-image:
+        radial-gradient(circle at 10% 20%, rgba(157, 80, 255, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 210, 255, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(255, 0, 200, 0.05) 0%, transparent 60%);
+    background-attachment: fixed;
+}
+
+/* Glassmorphism Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-glass);
+    border-radius: 10px;
+}
+
+/* Main App Container */
+.app-container {
+    max-width: 1200px;
+    /* Wider for desktop Kanban feel */
+    margin: 0 auto;
+    padding: 1rem 1.5rem 120px;
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header Redesign - Mobile & Desktop */
+.header {
+    background: transparent;
+    border: none;
+    padding: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 10px var(--neon-purple-glow));
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.logo h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(to right, var(--neon-blue), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(157, 80, 255, 0.3);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bg-glass);
+    border: 2px solid var(--neon-pink);
+    box-shadow: 0 0 20px var(--neon-pink-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+/* Search Bar Wrapper (screenshot style) */
+.header-search-wrapper {
+    width: 100%;
+    max-width: 600px;
+}
+
+.quick-add-section {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    padding: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    transition: var(--transition);
+}
+
+.quick-add-section:focus-within {
+    border-color: var(--neon-purple);
+    box-shadow: 0 0 30px var(--neon-purple-glow);
+}
+
+#keywordInput {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 1rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.btn-add {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+    border-radius: 18px;
+    border: none;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--neon-purple-glow);
+    transition: var(--transition);
+}
+
+.btn-add:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+
+/* Progress Card (Mobile Screenshot Style) */
+.progress-section {
+    margin-bottom: 2.5rem;
+}
+
+.progress-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.02));
+    pointer-events: none;
+}
+
+/* Circular Progress Simulation */
+.progress-percentage {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 8px solid rgba(255, 255, 255, 0.05);
+    border-top-color: var(--neon-blue);
+    border-right-color: var(--neon-purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    box-shadow: 0 0 20px var(--neon-blue-glow);
+}
+
+.progress-info h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.progress-label {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    text-transform: none;
+}
+
+/* Stats Bar */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.stat-item {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-item:hover {
+    background: var(--bg-glass-hover);
+    border-color: var(--neon-blue);
+    transform: translateY(-5px);
+}
+
+.stat-number {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--neon-blue);
+    text-shadow: 0 0 15px var(--neon-blue-glow);
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Filter Tabs System */
+.filter-tabs {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    padding: 6px;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    border-radius: 14px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.tab-btn.active {
+    background: rgba(157, 80, 255, 0.2);
+    border: 1px solid var(--neon-purple);
+    color: #fff;
+    box-shadow: 0 0 15px var(--neon-purple-glow);
+}
+
+/* Task Cards - THE CORE LOOK */
+.task-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(25px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: var(--neon-blue);
+    box-shadow: 0 0 15px var(--neon-blue-glow);
+}
+
+.task-card.urgent::before {
+    background: var(--neon-pink);
+    box-shadow: 0 0 15px var(--neon-pink-glow);
+}
+
+.task-card:hover {
+    transform: scale(1.02) translateX(10px);
+    background: var(--bg-glass-hover);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Icon Box for Card (screenshot style) */
+.task-icon-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-glass);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.task-card.urgent .task-icon-box {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 15px var(--neon-pink-glow);
+}
+
+.task-content-v2 {
+    flex: 1;
+}
+
+.task-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+}
+
+.task-meta-item {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Bottom Nav (Mobile Screenshot Style) */
+.mobile-comm-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(30px);
+    border: 1px solid var(--border-glass);
+    border-radius: 25px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.btn-comm-quick {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.btn-comm-quick:hover {
+    color: var(--neon-blue);
+    transform: translateY(-5px);
+    text-shadow: 0 0 15px var(--neon-blue-glow);
+}
+
+/* Desktop Sidebar Simulation (left-aligned dashboard) */
+@media (min-width: 1024px) {
+    .app-container {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 3rem;
+        padding-top: 3rem;
+    }
+
+    .header {
+        grid-column: 1 / -1;
+    }
+
+    /* Simulate Sidebar in CSS if index.html doesn't have it */
+    .sidebar-mock {
+        grid-row: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .tasks-section {
+        grid-row: 2;
+    }
+}
+
+/* Modal Redesign */
+.modal-content {
+    background: var(--bg-glass);
+    backdrop-filter: blur(40px);
+    border: 1px solid var(--border-neon);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+}
+
+/* High-End Form Inputs */
+.settings-input,
+.settings-select {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    padding: 15px;
+    color: #fff;
+    transition: var(--transition);
+}
+
+.settings-input:focus {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 15px var(--neon-blue-glow);
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    border: none;
+    border-radius: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 10px 30px var(--neon-blue-glow);
+}
+
+/* Urgent Notification Overlay */
+.urgent-overlay {
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(30px);
+}
+
+.urgent-modal {
+    border: 2px solid var(--neon-pink);
+    box-shadow: 0 0 100px var(--neon-pink-glow);
+}
+
+.urgent-icon {
+    font-size: 5rem;
+    text-shadow: 0 0 30px var(--neon-pink-glow);
+    animation: urgentPulse 1s infinite alternate;
+}
+
+@keyframes urgentPulse {
+    from {
+        transform: scale(1);
+    }
+
+    to {
+        transform: scale(1.2);
+    }
+}

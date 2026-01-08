@@ -1,0 +1,659 @@
+/* ===== PREMIUM ICON COLOR SYSTEM ===== */
+
+/* Global Icon Enhancements */
+.lucide {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== PRIMARY BRAND ICONS (Indigo/Purple Gradient) ===== */
+.logo-icon .lucide,
+.login-logo .lucide {
+    color: var(--primary-light);
+    filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.5));
+    animation: iconPulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes iconPulseGlow {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.5));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.8));
+    }
+}
+
+/* ===== NAVIGATION & MENU ICONS (Subtle Gradient) ===== */
+.menu-item .lucide {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    color: var(--primary-light);
+    opacity: 0.85;
+    transition: all 0.3s ease;
+}
+
+.menu-item:hover .lucide {
+    color: var(--secondary);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
+    transform: translateX(-3px) scale(1.15);
+}
+
+.menu-item.logout .lucide {
+    color: var(--urgent);
+    opacity: 0.9;
+}
+
+.menu-item.logout:hover .lucide {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+}
+
+/* ===== HEADER ACTION ICONS (Colorful & Contextual) ===== */
+.btn-sync-mini .lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+    opacity: 0.85;
+    transition: all 0.3s ease;
+}
+
+.btn-sync-mini:hover .lucide {
+    opacity: 1;
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Calendar Icon - Indigo */
+#calendarBtn .lucide,
+#sideCalendarBtn .lucide {
+    color: #818cf8;
+}
+
+#calendarBtn:hover .lucide {
+    color: #a5b4fc;
+}
+
+/* Money/Expense Icons - Emerald Green */
+#expenseBtn .lucide,
+#addExpenseBtnHeader .lucide,
+#mobileExpenseBtn .lucide,
+#sideExpenseBtn .lucide {
+    color: #10b981;
+}
+
+#expenseBtn:hover .lucide,
+#addExpenseBtnHeader:hover .lucide {
+    color: #34d399;
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
+}
+
+/* Camera/Scan Icons - Teal */
+#addExpenseBtnHeader .lucide,
+#mobileAddExpenseBtn .lucide {
+    color: #14b8a6;
+}
+
+/* Night Mode Icon - Purple/Indigo */
+#sideNightstandBtnHeader .lucide,
+#sideNightstandBtn .lucide {
+    color: #a78bfa;
+}
+
+#sideNightstandBtnHeader:hover .lucide {
+    color: #c4b5fd;
+    filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.6));
+}
+
+/* Alarm/Bell Icons - Amber */
+#alarmBtn .lucide,
+#sideAlarmBtn .lucide {
+    color: #fbbf24;
+}
+
+#alarmBtn:hover .lucide {
+    color: #fcd34d;
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+    animation: bellShake 0.5s ease-in-out;
+}
+
+@keyframes bellShake {
+
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1.2);
+    }
+
+    25% {
+        transform: rotate(-15deg) scale(1.2);
+    }
+
+    75% {
+        transform: rotate(15deg) scale(1.2);
+    }
+}
+
+/* Drive Mode Icon - Cyan */
+#manualDriveBtn .lucide,
+#sideDriveBtn .lucide {
+    color: var(--secondary);
+}
+
+#manualDriveBtn:hover .lucide {
+    color: #67e8f9;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.6));
+}
+
+/* Hamburger Menu - White with glow */
+#hamburgerBtn .lucide {
+    color: var(--text-primary);
+    opacity: 0.9;
+}
+
+#hamburgerBtn:hover .lucide {
+    color: var(--primary-light);
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+}
+
+/* ===== COMMUNICATION ICONS (Vibrant Colors) ===== */
+.comm-icon.lucide {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin-bottom: 0.6rem;
+    transition: all 0.3s ease;
+}
+
+/* Phone - Blue */
+#btnCall .comm-icon,
+#quickCallBtn .lucide {
+    color: #3b82f6;
+}
+
+#btnCall:hover .comm-icon,
+#quickCallBtn:hover .lucide {
+    color: #60a5fa;
+    filter: drop_shadow(0 0 12px rgba(59, 130, 246, 0.7));
+    transform: scale(1.15) rotate(-5deg);
+}
+
+/* WhatsApp - Green */
+#btnWhatsApp .comm-icon,
+#quickWaBtn .lucide {
+    color: #10b981;
+}
+
+#btnWhatsApp:hover .comm-icon,
+#quickWaBtn:hover .lucide {
+    color: #34d399;
+    filter: drop_shadow(0 0 12px rgba(16, 185, 129, 0.7));
+    transform: scale(1.15);
+}
+
+/* Email - Rose */
+#btnEmail .comm-icon,
+#quickMailBtn .lucide {
+    color: #f43f5e;
+}
+
+#btnEmail:hover .comm-icon,
+#quickMailBtn:hover .lucide {
+    color: #fb7185;
+    filter: drop_shadow(0 0 12px rgba(244, 63, 94, 0.7));
+    transform: scale(1.15);
+}
+
+/* ===== AI & VOICE ICONS (Purple/Violet) ===== */
+.btn-grok-manual .lucide,
+.btn-voice .lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+    color: var(--primary-light);
+    opacity: 0.9;
+}
+
+.btn-grok-manual:hover .lucide {
+    color: #a78bfa;
+    filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.6));
+    transform: scale(1.15);
+}
+
+.btn-voice:hover .lucide {
+    color: #f472b6;
+    filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.6));
+    animation: micPulse 1s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+/* ===== TODO & NOTES ICONS (Sky Blue) ===== */
+.btn-todo .lucide,
+#sideTodoBtn .lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+    color: #38bdf8;
+}
+
+.btn-todo:hover .lucide {
+    color: #7dd3fc;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
+}
+
+/* ===== FILTER TAB ICONS (Contextual Colors) ===== */
+.tab-btn .lucide {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-right: 0.4rem;
+}
+
+/* Urgent/Flame - Red-Orange */
+.tab-btn[data-filter="urgent"] .lucide {
+    color: var(--urgent);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+}
+
+.tab-btn[data-filter="urgent"].active .lucide,
+.tab-btn[data-filter="urgent"]:hover .lucide {
+    animation: flameFlicker 1.5s ease-in-out infinite;
+}
+
+@keyframes flameFlicker {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+        transform: scale(1);
+    }
+
+    50% {
+        filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.9));
+        transform: scale(1.1);
+    }
+}
+
+/* Normal - Indigo */
+.tab-btn[data-filter="normal"] .lucide {
+    color: var(--primary-light);
+}
+
+/* Done - Green */
+.tab-btn[data-filter="done"] .lucide {
+    color: var(--success);
+}
+
+/* Archive - Slate */
+.tab-btn[data-filter="archived"] .lucide {
+    color: #94a3b8;
+}
+
+/* ===== MODAL ACTION ICONS (Toolbar) ===== */
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.icon-btn .lucide {
+    width: 1.3rem;
+    height: 1.3rem;
+    transition: all 0.3s ease;
+}
+
+/* Success/Check - Green */
+.icon-btn.success .lucide {
+    color: var(--success);
+}
+
+.icon-btn.success:hover .lucide {
+    color: #34d399;
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.7));
+    transform: scale(1.2);
+}
+
+/* Edit - Blue */
+#editTaskBtn .lucide {
+    color: #3b82f6;
+}
+
+#editTaskBtn:hover .lucide {
+    color: #60a5fa;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.6));
+}
+
+/* Archive - Amber */
+#archiveTaskBtn .lucide {
+    color: #f59e0b;
+}
+
+#archiveTaskBtn:hover .lucide {
+    color: #fbbf24;
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.6));
+}
+
+/* Delete - Red */
+.icon-btn.danger .lucide,
+#deleteTaskBtn .lucide {
+    color: var(--urgent);
+}
+
+.icon-btn.danger:hover .lucide,
+#deleteTaskBtn:hover .lucide {
+    color: #f87171;
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7));
+    transform: scale(1.2);
+}
+
+/* ===== PRIORITY ICONS (Task Detail) ===== */
+.priority-option .lucide {
+    width: 1.6rem;
+    height: 1.6rem;
+}
+
+.priority-option.normal .lucide {
+    color: var(--primary-light);
+}
+
+.priority-option.urgent .lucide {
+    color: var(--urgent);
+}
+
+.priority-option.selected.normal .lucide {
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+
+.priority-option.selected.urgent .lucide {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+    animation: urgentIconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes urgentIconPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+/* ===== URGENT OVERLAY ICONS (Alert) ===== */
+.urgent-icon .lucide {
+    width: 4.5rem;
+    height: 4.5rem;
+    color: var(--urgent);
+    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.8));
+    animation: urgentBounce 1s ease-in-out infinite;
+}
+
+@keyframes urgentBounce {
+
+    0%,
+    100% {
+        transform: scale(1) translateY(0);
+    }
+
+    50% {
+        transform: scale(1.1) translateY(-5px);
+    }
+}
+
+/* Team Notification Icon - Cyan */
+#teamNotificationOverlay .urgent-icon .lucide {
+    color: var(--secondary);
+    filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.8));
+}
+
+/* ===== ALARM ICONS (Bell with Animation) ===== */
+.alarm-ring-icon .lucide {
+    width: 5rem;
+    height: 5rem;
+    color: #fbbf24;
+    filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.9));
+    animation: bellRingGlow 0.5s ease-in-out infinite;
+}
+
+@keyframes bellRingGlow {
+
+    0%,
+    100% {
+        transform: rotate(-15deg);
+        filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.9));
+    }
+
+    50% {
+        transform: rotate(15deg);
+        filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1));
+    }
+}
+
+/* ===== SECTION HEADER ICONS (Contextual) ===== */
+.section-header .lucide,
+.header-icon.lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Expense Section - Green */
+#expenseSection .header-icon.lucide {
+    color: #10b981;
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.4));
+}
+
+/* Alarm Section - Amber */
+#alarmSection .header-icon.lucide {
+    color: #fbbf24;
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.4));
+}
+
+/* Todo Section - Sky */
+#quickTodoSection .header-icon.lucide {
+    color: #38bdf8;
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+}
+
+/* ===== DRIVE MODE ICONS (Dashboard) ===== */
+.card-label .lucide {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Grok AI - Purple */
+.grok-card .card-label .lucide {
+    color: #a78bfa;
+    filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
+}
+
+/* Navigation - Cyan */
+.nav-card .card-label .lucide {
+    color: var(--secondary);
+    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.5));
+}
+
+/* Timeline - Indigo */
+.timeline-card .card-label .lucide {
+    color: #818cf8;
+    filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.5));
+}
+
+/* Route - Emerald */
+.route-card .card-label .lucide {
+    color: #10b981;
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
+}
+
+.drive-logo-small .lucide {
+    width: 1.4rem;
+    height: 1.4rem;
+    margin-right: 0.4rem;
+    color: var(--secondary);
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
+}
+
+/* Weather Icon - Yellow/Orange */
+.weather-icon.lucide {
+    width: 1.6rem;
+    height: 1.6rem;
+    color: #fbbf24;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+}
+
+/* ===== FORM & INPUT ICONS (Subtle) ===== */
+.form-group label .lucide {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-right: 0.4rem;
+    opacity: 0.75;
+    color: var(--primary-light);
+}
+
+.login-form label .lucide {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    opacity: 0.85;
+    color: var(--primary-light);
+}
+
+/* ===== EMPTY STATE ICONS (Large & Subtle) ===== */
+.empty-icon .lucide {
+    width: 4.5rem;
+    height: 4.5rem;
+    opacity: 0.35;
+    color: var(--text-muted);
+}
+
+/* ===== MODAL CLOSE ICONS (Subtle Red on Hover) ===== */
+.modal-close-icon .lucide {
+    width: 1.3rem;
+    height: 1.3rem;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.modal-close-icon:hover .lucide {
+    color: var(--urgent);
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+    transform: rotate(90deg) scale(1.15);
+}
+
+/* ===== INSTALL BANNER ICONS (Indigo) ===== */
+.install-icon.lucide {
+    width: 2rem;
+    height: 2rem;
+    color: var(--primary-light);
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+}
+
+/* ===== BRIGHTNESS CONTROL ICONS (Yellow) ===== */
+.brightness-control .lucide {
+    opacity: 0.8;
+    color: #fbbf24;
+}
+
+/* ===== SYNCED CONTACT ACTION ICONS ===== */
+.synced-action-btn .lucide {
+    width: 1.1rem;
+    height: 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.synced-action-btn:hover .lucide {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* ===== SETTINGS ICONS (Gear with Rotation) ===== */
+#sideSettingsBtn .lucide {
+    color: #94a3b8;
+}
+
+#sideSettingsBtn:hover .lucide {
+    color: var(--primary-light);
+    animation: settingsRotate 2s linear infinite;
+}
+
+@keyframes settingsRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== SYNC ICONS (Rotation Animation) ===== */
+#sideSyncBtn .lucide {
+    color: var(--secondary);
+}
+
+#sideSyncBtn:hover .lucide {
+    animation: syncSpin 1s linear infinite;
+}
+
+@keyframes syncSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== MOBILE RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 768px) {
+    .btn-comm-quick .lucide {
+        width: 1.8rem;
+        height: 1.8rem;
+    }
+
+    .menu-item .lucide {
+        width: 1.3rem;
+        height: 1.3rem;
+    }
+
+    .comm-icon.lucide {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+}
+
+/* ===== GLOBAL HOVER ENHANCEMENT ===== */
+button:hover .lucide,
+.menu-item:hover .lucide,
+.tab-btn:hover .lucide {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure icons don't break layout */
+button .lucide,
+.menu-item .lucide {
+    flex-shrink: 0;
+}
+
+/* Login footer icon - subtle */
+.login-footer .lucide {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-right: 0.4rem;
+    color: var(--primary-light);
+    opacity: 0.7;
+}
