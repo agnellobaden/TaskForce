@@ -13,23 +13,107 @@ body {
     /* iOS smooth scrolling */
 }
 
-/* Compact Header */
+/* COMPACT HEADER - Permanent Minimal Mode */
 .header {
-    padding: 0.5rem 0 !important;
-    margin-bottom: 0.5rem !important;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background: rgba(15, 15, 26, 0.98);
+    backdrop-filter: blur(10px);
+    height: auto !important;
+    min-height: 50px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px !important;
 }
 
-.logo h1 {
-    font-size: 1.8rem !important;
+/* Hide logo elements permanently */
+.header .logo,
+.header .tagline,
+.header .header-top {
+    display: none !important;
 }
 
-.logo-icon {
-    font-size: 1.8rem !important;
+.header-search-wrapper {
+    margin-top: 0 !important;
+    padding: 0 5px !important;
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 
-.tagline {
-    font-size: 0.85rem !important;
+.header-buttons-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    padding: 0 !important;
+    gap: 5px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#keywordInput {
+    flex: 1;
+    height: 36px !important;
+    padding: 8px !important;
+    font-size: 0.9rem !important;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.btn-toggle-actions {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.btn-toggle-actions:hover {
+    background: var(--primary);
+}
+
+.input-container.expanded .btn-toggle-actions {
+    transform: rotate(45deg);
+    background: var(--urgent);
+    border-color: var(--urgent);
+}
+
+.collapsible-actions {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.collapsible-actions.hidden {
+    display: none !important;
 }
 
 /* Compact Stats Bar */
@@ -63,7 +147,7 @@ body {
     font-size: 0.85rem !important;
 }
 
-/* Compact Input Container */
+/* Compact Input Container - Permanently Minimized default */
 .input-container {
     padding: 0.4rem !important;
 }
@@ -78,96 +162,48 @@ body {
     height: 48px !important;
 }
 
-/* Header Search Wrapper - Auto Hide */
+/* Header Search Wrapper Default */
 .header-search-wrapper {
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, max-height 0.3s ease-in-out;
-    overflow: hidden;
+    transition: none !important;
+    overflow: visible;
 }
 
-/* Minimize Header when scrolling (instead of hiding) */
-body.scrolling .header {
-    transform: scale(0.7) translateY(-20px);
-    opacity: 0.3;
-    pointer-events: none;
-    height: 60px;
+/* Ensure Header Hides when Modal is Open */
+body.modal-open .header {
+    display: none !important;
 }
 
-/* Minimize Input Container when scrolling */
-body.scrolling .header-search-wrapper {
-    transform: scale(0.8) translateY(-10px);
-    opacity: 0.2;
-    max-height: 60px;
-    pointer-events: none;
+body.modal-open .fixed-footer-nav {
+    z-index: 100 !important;
 }
 
-/* Minimize Footer on Scroll */
+/* App Container Padding - Base */
+.app-container {
+    transition: none !important;
+    padding-top: 100px !important;
+    /* Adjusted for permanently fixed thin header */
+    padding-bottom: 90px;
+}
+
+
+
+/* Footer Static - No animations */
 .fixed-footer-nav {
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, height 0.3s ease-in-out;
-    min-height: 75px !important;
-    /* Reduziert von 110px */
-    padding: 12px 15px !important;
-    /* Reduziert von 18px */
+    transition: none !important;
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 999;
+    height: auto !important;
+    min-height: 60px !important;
+    padding: 8px 10px !important;
+    background: rgba(15, 15, 26, 0.98);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-body.scrolling .fixed-footer-nav {
-    transform: scale(0.6) translateY(20px);
-    opacity: 0.2;
-    height: 40px;
-    min-height: 40px !important;
-    pointer-events: none;
-}
 
-/* Show everything normal when at top or bottom of page */
-body.at-top .fixed-footer-nav,
-body.at-bottom .fixed-footer-nav {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    height: auto;
-    pointer-events: all;
-}
-
-body.at-top .header,
-body.at-bottom .header {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    height: auto;
-    pointer-events: all;
-}
-
-body.at-top .header-search-wrapper,
-body.at-bottom .header-search-wrapper {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    max-height: 500px;
-    pointer-events: all;
-}
-
-/* Reduce padding when elements are minimized */
-body.scrolling .app-container {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-}
-
-/* Compact Header Top Bar */
-.header-top {
-    height: 40px !important;
-    padding: 0 10px !important;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, height 0.3s ease-in-out;
-}
-
-/* Minimize Header Top Bar when scrolling */
-body.scrolling .header-top {
-    transform: scale(0.8) translateY(-5px);
-    opacity: 0.3;
-    height: 25px !important;
-}
-
-body.at-top .header-top,
-body.at-bottom .header-top {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    height: 40px !important;
-}
 
 .user-info {
     font-size: 0.85rem !important;
@@ -256,17 +292,8 @@ body.at-bottom .header-top {
     font-size: 1.2rem !important;
 }
 
-/* Prevent layout shift */
-.app-container {
-    transition: padding 0.3s ease;
-}
-
 /* Mobile optimizations */
 @media (max-width: 600px) {
-    .header {
-        padding: 0.3rem 0 !important;
-    }
-
     .logo h1 {
         font-size: 1.5rem !important;
     }

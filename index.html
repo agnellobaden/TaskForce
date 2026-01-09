@@ -36,6 +36,20 @@
     <!-- Global Recording Indicator (Green Dot) -->
     <div id="globalRecordingDot" class="recording-indicator-dot"></div>
 
+    <!-- Early Login Check to prevent Flickering on Refresh -->
+    <script>
+        (function () {
+            try {
+                const user = localStorage.getItem('taskforce_user');
+                if (user && JSON.parse(user).name) {
+                    const style = document.createElement('style');
+                    style.innerHTML = '#loginScreen { display: none !important; } #mainApp { display: block !important; }';
+                    document.head.appendChild(style);
+                }
+            } catch (e) { console.error('Early auth check failed', e); }
+        })();
+    </script>
+
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
         <div class="login-container">
@@ -472,65 +486,75 @@
 
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
-                <section class="quick-add-section">
-                    <div class="input-container">
-                        <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..."
-                            autocomplete="off" rows="1"></textarea>
-                        <div class="ai-selector-container">
-                            <button id="grokManualBtn" class="btn-grok-manual" title="Ausgewählte KI (Original) öffnen">
-                                <i data-lucide="bot"></i>
-                                <span class="icon-label">KI</span>
+                <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..." autocomplete="off"
+                    rows="1"></textarea>
+                <div class="header-buttons-row">
+                    <section class="quick-add-section">
+                        <div class="input-container">
+                            <!-- Collapse Toggle Button -->
+                            <button id="toggleActionsBtn" class="btn-toggle-actions" title="Aktionen anzeigen">
+                                <i data-lucide="plus"></i>
                             </button>
-                            <button id="aiSelectorArrow" class="ai-selector-arrow" title="KI wählen"><i
-                                    data-lucide="chevron-down"></i></button>
-                            <div id="aiSelectionMenu" class="ai-selection-menu hidden">
-                                <div class="ai-option" data-provider="grok" title="Grok (xAI)">🤖 <span>Grok</span>
+
+                            <div id="collapsibleActions" class="collapsible-actions hidden">
+                                <div class="ai-selector-container">
+                                    <button id="grokManualBtn" class="btn-grok-manual"
+                                        title="Ausgewählte KI (Original) öffnen">
+                                        <i data-lucide="bot"></i>
+                                        <span class="icon-label">KI</span>
+                                    </button>
+                                    <button id="aiSelectorArrow" class="ai-selector-arrow" title="KI wählen"><i
+                                            data-lucide="chevron-down"></i></button>
+                                    <div id="aiSelectionMenu" class="ai-selection-menu hidden">
+                                        <div class="ai-option" data-provider="grok" title="Grok (xAI)">🤖
+                                            <span>Grok</span>
+                                        </div>
+                                        <div class="ai-option" data-provider="chatgpt" title="ChatGPT (OpenAI)">🧠
+                                            <span>ChatGPT</span>
+                                        </div>
+                                        <div class="ai-option" data-provider="gemini" title="Gemini (Google)">✨
+                                            <span>Gemini</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="ai-option" data-provider="chatgpt" title="ChatGPT (OpenAI)">🧠
-                                    <span>ChatGPT</span>
-                                </div>
-                                <div class="ai-option" data-provider="gemini" title="Gemini (Google)">✨
-                                    <span>Gemini</span>
-                                </div>
+                                <button id="voiceBtn" class="btn-voice" title="Spracheingabe">
+                                    <i data-lucide="mic"></i>
+                                    <span class="icon-label">Sprache</span>
+                                </button>
+                                <button id="addTodoBtn" class="btn-todo" title="Schnell-Notiz / To-do">
+                                    <i data-lucide="file-text"></i>
+                                    <span class="icon-label">Notiz</span>
+                                </button>
+                                <button id="addTaskBtn" class="btn-add" title="Aufgabe mit Details">
+                                    <span>+</span>
+                                    <span class="icon-label">Neu</span>
+                                </button>
                             </div>
                         </div>
-                        <button id="voiceBtn" class="btn-voice" title="Spracheingabe">
-                            <i data-lucide="mic"></i>
-                            <span class="icon-label">Sprache</span>
+                    </section>
+                    <!-- Mobile Quick Comm Bar - Permanently Visible -->
+                    <div class="mobile-comm-bar" id="mobileCommBar">
+                        <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen">
+                            <i data-lucide="phone"></i>
+                            <span class="icon-label">Anruf</span>
                         </button>
-                        <button id="addTodoBtn" class="btn-todo" title="Schnell-Notiz / To-do">
-                            <i data-lucide="file-text"></i>
-                            <span class="icon-label">Notiz</span>
+                        <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp">
+                            <i data-lucide="message-square"></i>
+                            <span class="icon-label">WA</span>
                         </button>
-                        <button id="addTaskBtn" class="btn-add" title="Aufgabe mit Details">
-                            <span>+</span>
-                            <span class="icon-label">Neu</span>
+                        <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
+                            <i data-lucide="mail"></i>
+                            <span class="icon-label">E-Mail</span>
+                        </button>
+                        <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
+                            <i data-lucide="dollar-sign"></i>
+                            <span class="icon-label">Kosten</span>
+                        </button>
+                        <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
+                            <i data-lucide="camera"></i>
+                            <span class="icon-label">Scan</span>
                         </button>
                     </div>
-                </section>
-                <!-- Mobile Quick Comm Bar - Permanently Visible -->
-                <div class="mobile-comm-bar" id="mobileCommBar">
-                    <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen">
-                        <i data-lucide="phone"></i>
-                        <span class="icon-label">Anruf</span>
-                    </button>
-                    <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp">
-                        <i data-lucide="message-square"></i>
-                        <span class="icon-label">WA</span>
-                    </button>
-                    <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
-                        <i data-lucide="mail"></i>
-                        <span class="icon-label">E-Mail</span>
-                    </button>
-                    <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
-                        <i data-lucide="dollar-sign"></i>
-                        <span class="icon-label">Kosten</span>
-                    </button>
-                    <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
-                        <i data-lucide="camera"></i>
-                        <span class="icon-label">Scan</span>
-                    </button>
-
                 </div>
             </div>
         </header>

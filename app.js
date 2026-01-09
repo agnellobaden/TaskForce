@@ -218,6 +218,21 @@ function initDOMElements() {
     });
 
     const aiSelectorArrow = document.getElementById('aiSelectorArrow');
+    const toggleActionsBtn = document.getElementById('toggleActionsBtn');
+    const collapsibleActions = document.getElementById('collapsibleActions');
+    const inputContainer = document.querySelector('.input-container');
+
+    if (toggleActionsBtn) {
+        toggleActionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            collapsibleActions.classList.toggle('hidden');
+            inputContainer.classList.toggle('expanded');
+            if (!collapsibleActions.classList.contains('hidden')) {
+                // Refresh Lucide icons as they might have been injected
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        });
+    }
 
     if (grokManualBtn) {
         grokManualBtn.addEventListener('click', (e) => {
@@ -262,6 +277,14 @@ function initDOMElements() {
             });
         });
     }
+
+    // Close actions on global click
+    document.addEventListener('click', (e) => {
+        if (collapsibleActions && !collapsibleActions.contains(e.target) && e.target !== toggleActionsBtn) {
+            collapsibleActions.classList.add('hidden');
+            if (inputContainer) inputContainer.classList.remove('expanded');
+        }
+    });
 
     // Expense Tracker Elements
     expenseBtn = document.getElementById('expenseBtn');
