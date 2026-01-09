@@ -5781,3 +5781,321 @@ input[type="password"]::placeholder {
         opacity: 0.02;
     }
 }
+
+/* ===== Dashboard Wrapper & Toggle ===== */
+.dashboard-wrapper {
+    margin: 2rem 0;
+}
+
+.dashboard-toggle-btn {
+    width: 100%;
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.dashboard-toggle-btn:hover {
+    background: var(--bg-glass-hover);
+    border-color: var(--primary);
+}
+
+.dashboard-toggle-btn span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dashboard-toggle-btn .chevron-icon {
+    transition: transform 0.3s ease;
+}
+
+/* ===== Dashboard Grid ===== */
+.dashboard-content {
+    margin-top: 1rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+@media (min-width: 600px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.dashboard-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+    background: var(--bg-glass-hover);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.dashboard-card-header i {
+    color: var(--primary-light);
+}
+
+.dashboard-card-header h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.dashboard-card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-light);
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-card-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Dashboard Card Stats (for tasks) */
+.dashboard-card-stats {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+}
+
+.stat-mini {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-mini-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-light);
+}
+
+.stat-mini.urgent .stat-mini-number {
+    color: var(--urgent);
+}
+
+.stat-mini.done .stat-mini-number {
+    color: var(--success);
+}
+
+.stat-mini-label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+/* ===== Todo Cards ===== */
+.todo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.todo-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.todo-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.todo-card:hover {
+    background: var(--bg-glass-hover);
+    border-color: var(--primary);
+    transform: translateX(2px);
+}
+
+.todo-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.todo-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-light);
+    margin: 0;
+}
+
+.todo-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-add-item {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-add-item:hover {
+    background: var(--primary-dark);
+    transform: scale(1.05);
+}
+
+.todo-card-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.todo-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.todo-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.todo-item.done {
+    opacity: 0.5;
+}
+
+.todo-item.done .todo-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.todo-checkbox {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid var(--border-glass);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.todo-checkbox:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.todo-checkbox.checked {
+    background: var(--success);
+    border-color: var(--success);
+}
+
+.todo-checkbox.checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.todo-text {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.todo-delete-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+}
+
+.todo-delete-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.todo-item-delete-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+    line-height: 1;
+}
+
+.todo-item:hover .todo-item-delete-btn {
+    opacity: 0.6;
+}
+
+.todo-item-delete-btn:hover {
+    opacity: 1 !important;
+    color: var(--urgent);
+    transform: scale(1.2);
+}

@@ -804,6 +804,54 @@ function initModalObservers() {
     });
 }
 
+function setupEventListeners() {
+    // Dashboard Toggle Button
+    const toggleDashboardBtn = document.getElementById('toggleDashboardBtn');
+    const dashboardContent = document.getElementById('dashboardContent');
+
+    const DEBUG = false; // Set to true for debugging
+
+    if (DEBUG) {
+        console.log('Setup Event Listeners - Dashboard Button:', toggleDashboardBtn);
+        console.log('Setup Event Listeners - Dashboard Content:', dashboardContent);
+    }
+
+    if (toggleDashboardBtn && dashboardContent) {
+        toggleDashboardBtn.addEventListener('click', () => {
+            if (DEBUG) console.log('Dashboard button clicked!');
+            dashboardContent.classList.toggle('hidden');
+            const chevron = toggleDashboardBtn.querySelector('.chevron-icon');
+            if (chevron) {
+                if (dashboardContent.classList.contains('hidden')) {
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
+            // Update dashboard when opened
+            if (!dashboardContent.classList.contains('hidden')) {
+                updateDashboard();
+                // Initialize Lucide icons for dashboard
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        });
+    } else {
+        console.error('Dashboard elements not found!');
+    }
+
+    // Add Note List Button
+    const addNoteListBtn = document.getElementById('addNoteListBtn');
+    if (addNoteListBtn) {
+        addNoteListBtn.addEventListener('click', () => {
+            promptNewNoteList();
+        });
+    } else {
+        if (DEBUG) console.warn('Add Note List button not found');
+    }
+}
+
 function openDriveMode() {
     const dm = document.getElementById('driveModeOverlay');
     if (dm) dm.classList.remove('hidden');
@@ -998,6 +1046,14 @@ function showMainApp() {
     // Ensure clock is visible immediately
     updateGlobalClock();
     applyAppSettings();
+
+    // Setup event listeners for dashboard and notes
+    setupEventListeners();
+
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 
     // Start Wake Word Recognition
     setTimeout(() => {
@@ -5895,20 +5951,50 @@ function handleAddTodo() {
         return;
     }
 
+    // Parse input: First line is title, rest are items
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const title = lines.length > 1 ? lines[0] : 'Notiz';
+    const items = lines.length > 1 ? lines.slice(1) : [lines[0]];
+
     const newTodo = {
         id: 'todo_' + Date.now(),
-        text: text,
-        done: false,
+        title: title,
+        items: items.map((item, idx) => ({
+            id: 'item_' + Date.now() + '_' + idx,
+            text: item,
+            done: false
+        })),
         createdAt: new Date().toISOString()
     };
 
     todos.unshift(newTodo);
     saveTodos();
     renderTodos();
+    updateDashboard();
 
     keywordInput.value = '';
     keywordInput.style.height = '48px';
     showToast('Notiz hinzugefügt!', 'success');
+
+    if (quickTodoSection) quickTodoSection.classList.remove('hidden');
+}
+
+function promptNewNoteList() {
+    const title = prompt('Name der Liste (z.B. "Aldi", "Rewe", "Einkaufsliste"):');
+    if (!title || !title.trim()) return;
+
+    const newTodo = {
+        id: 'todo_' + Date.now(),
+        title: title.trim(),
+        items: [],
+        createdAt: new Date().toISOString()
+    };
+
+    todos.unshift(newTodo);
+    saveTodos();
+    renderTodos();
+    updateDashboard();
+    showToast(`Liste "${title}" erstellt!`, 'success');
 
     if (quickTodoSection) quickTodoSection.classList.remove('hidden');
 }
@@ -5958,23 +6044,60 @@ function renderTodos() {
 
     quickTodoSection.classList.remove('hidden');
 
-    todoList.innerHTML = todos.map(todo => `
-        <div class="todo-item ${todo.done ? 'done' : ''}" id="${todo.id}">
-            <div class="todo-checkbox ${todo.done ? 'checked' : ''}" onclick="toggleTodo('${todo.id}')"></div>
-            <div class="todo-text">${escapeHtml(todo.text)}</div>
-            <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')" title="Löschen">🗑️</button>
-        </div>
-    `).join('');
+    todoList.innerHTML = todos.map(todo => {
+        // Support both old format (text) and new format (title + items)
+        if (todo.text) {
+            // Old format - convert on the fly
+            return `
+                <div class="todo-card" id="${todo.id}">
+                    <div class="todo-card-header">
+                        <h4 class="todo-card-title">Notiz</h4>
+                        <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')" title="Löschen">🗑️</button>
+                    </div>
+                    <div class="todo-card-items">
+                        <div class="todo-item ${todo.done ? 'done' : ''}">
+                            <div class="todo-checkbox ${todo.done ? 'checked' : ''}" onclick="toggleTodoOld('${todo.id}')"></div>
+                            <div class="todo-text">${escapeHtml(todo.text)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // New format with title and items
+            const itemsHtml = todo.items.length > 0 ? todo.items.map(item => `
+                <div class="todo-item ${item.done ? 'done' : ''}">
+                    <div class="todo-checkbox ${item.done ? 'checked' : ''}" onclick="toggleTodoItem('${todo.id}', '${item.id}')"></div>
+                    <div class="todo-text">${escapeHtml(item.text)}</div>
+                    <button class="todo-item-delete-btn" onclick="deleteTodoItem('${todo.id}', '${item.id}')" title="Entfernen">×</button>
+                </div>
+            `).join('') : '<div class="todo-empty-state">Noch keine Einträge. Klicke auf "+ Hinzufügen"</div>';
+
+            return `
+                <div class="todo-card" id="${todo.id}">
+                    <div class="todo-card-header">
+                        <h4 class="todo-card-title">${escapeHtml(todo.title)}</h4>
+                        <div class="todo-card-actions">
+                            <button class="btn-add-item" onclick="addItemToList('${todo.id}')" title="Eintrag hinzufügen">+ Hinzufügen</button>
+                            <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')" title="Liste löschen">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="todo-card-items">
+                        ${itemsHtml}
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
 }
 
-function toggleTodo(id) {
+// Old format toggle (for backwards compatibility)
+function toggleTodoOld(id) {
     const todo = todos.find(t => t.id === id);
     if (todo) {
         todo.done = !todo.done;
         saveTodos();
         renderTodos();
         if (todo.done) {
-            // Slight delay then toast
             setTimeout(() => {
                 showToast('Super! Erledigt.', 'success');
             }, 300);
@@ -5982,27 +6105,193 @@ function toggleTodo(id) {
     }
 }
 
+// New format toggle (for items within a todo)
+function toggleTodoItem(todoId, itemId) {
+    const todo = todos.find(t => t.id === todoId);
+    if (todo && todo.items) {
+        const item = todo.items.find(i => i.id === itemId);
+        if (item) {
+            item.done = !item.done;
+            saveTodos();
+            renderTodos();
+            if (item.done) {
+                setTimeout(() => {
+                    showToast('Erledigt!', 'success');
+                }, 300);
+            }
+        }
+    }
+}
+
+// Keep old function name for compatibility
+function toggleTodo(id) {
+    toggleTodoOld(id);
+}
+
 function deleteTodo(id) {
     todos = todos.filter(t => t.id !== id);
     saveTodos();
     renderTodos();
+    updateDashboard();
     showToast('Gelöscht', 'info');
 }
 
+function addItemToList(todoId) {
+    const itemText = prompt('Neuer Eintrag:');
+    if (!itemText || !itemText.trim()) return;
+
+    const todo = todos.find(t => t.id === todoId);
+    if (todo && todo.items) {
+        const newItem = {
+            id: 'item_' + Date.now(),
+            text: itemText.trim(),
+            done: false
+        };
+        todo.items.push(newItem);
+        saveTodos();
+        renderTodos();
+        updateDashboard();
+        showToast('Eintrag hinzugefügt!', 'success');
+    }
+}
+
+function deleteTodoItem(todoId, itemId) {
+    const todo = todos.find(t => t.id === todoId);
+    if (todo && todo.items) {
+        todo.items = todo.items.filter(item => item.id !== itemId);
+        saveTodos();
+        renderTodos();
+        updateDashboard();
+        showToast('Eintrag entfernt', 'info');
+    }
+}
+
 function clearDoneTodos() {
-    const count = todos.filter(t => t.done).length;
+    // Count old format done todos and new format fully done todos
+    let count = 0;
+
+    todos = todos.filter(t => {
+        if (t.text) {
+            // Old format
+            if (t.done) {
+                count++;
+                return false;
+            }
+            return true;
+        } else {
+            // New format - remove items that are done
+            const beforeCount = t.items.length;
+            t.items = t.items.filter(item => !item.done);
+            count += (beforeCount - t.items.length);
+            // Remove the whole todo if no items left
+            return t.items.length > 0;
+        }
+    });
+
     if (count === 0) return;
 
-    todos = todos.filter(t => !t.done);
     saveTodos();
     renderTodos();
-    showToast(`${count} Notizen entfernt`, 'info');
+    showToast(`${count} Einträge entfernt`, 'info');
 }
 
 // Global functions for inline handlers
 window.toggleTodo = toggleTodo;
+window.toggleTodoOld = toggleTodoOld;
+window.toggleTodoItem = toggleTodoItem;
 window.deleteTodo = deleteTodo;
+window.deleteTodoItem = deleteTodoItem;
+window.addItemToList = addItemToList;
 window.clearDoneTodos = clearDoneTodos;
+
+// Dashboard Update Function
+function updateDashboard() {
+    const DEBUG = false; // Set to true for debugging
+
+    try {
+        if (DEBUG) console.log('Updating dashboard...');
+
+        // Update note count
+        const dashNotes = document.getElementById('dashNotes');
+        if (dashNotes) {
+            dashNotes.textContent = todos.length;
+            if (DEBUG) console.log('Notes count:', todos.length);
+        }
+
+        // Update alarm count
+        const dashAlarms = document.getElementById('dashAlarms');
+        if (dashAlarms && alarms) {
+            const activeAlarms = alarms.filter(a => a.active).length;
+            dashAlarms.textContent = activeAlarms;
+            if (DEBUG) console.log('Active alarms:', activeAlarms);
+        }
+
+        // Update expenses for today
+        const dashExpenses = document.getElementById('dashExpenses');
+        if (dashExpenses && expenses) {
+            const today = new Date().toISOString().split('T')[0];
+            const todayExpenses = expenses.filter(e => e.date === today);
+            const total = todayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+            dashExpenses.textContent = total.toFixed(2) + ' €';
+            if (DEBUG) console.log('Today expenses:', total);
+        }
+
+        // Update appointments for today (if tasks have appointments)
+        const dashAppointments = document.getElementById('dashAppointments');
+        if (dashAppointments && tasks) {
+            const today = new Date().toISOString().split('T')[0];
+            const todayTasks = tasks.filter(t => {
+                if (!t.details || !t.details['📅 Wann?']) return false;
+                const taskDate = t.details['📅 Wann?'].split('T')[0];
+                return taskDate === today;
+            });
+            dashAppointments.textContent = todayTasks.length;
+            if (DEBUG) console.log('Today appointments:', todayTasks.length);
+        }
+
+        if (DEBUG) console.log('Dashboard updated successfully!');
+    } catch (error) {
+        console.error('Error updating dashboard:', error);
+    }
+}
+
+// Scroll Helper Functions
+function scrollToNotes() {
+    const section = document.getElementById('quickTodoSection');
+    if (section) {
+        section.classList.remove('hidden');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function scrollToAlarms() {
+    const section = document.getElementById('alarmSection');
+    if (section) {
+        section.classList.remove('hidden');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function scrollToExpenses() {
+    const section = document.getElementById('expenseSection');
+    if (section) {
+        section.classList.remove('hidden');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function openCalendarView() {
+    const calendarModal = document.getElementById('calendarModal');
+    if (calendarModal) {
+        calendarModal.classList.remove('hidden');
+    }
+}
+
+// Make scroll functions global
+window.scrollToNotes = scrollToNotes;
+window.scrollToAlarms = scrollToAlarms;
+window.scrollToExpenses = scrollToExpenses;
+window.openCalendarView = openCalendarView;
 
 // ===== ALARM SYSTEM =====
 

@@ -23,6 +23,138 @@ function initInteractiveAI() {
 
     // Listen for wake word "Hey KI" or "Hallo KI"
     setupWakeWordDetection();
+
+    // Start Proactive AI Advisor
+    setTimeout(initAIAdvisor, 3000);
+}
+
+// Proactive AI Advisor Questions Pool
+const advisorPrompts = [
+    {
+        type: 'business',
+        question: 'Möchtest du dein Team-Meeting für heute vorbereiten?',
+        actions: [
+            { label: 'Ja, Agenda erstellen', icon: 'file-text', cmd: 'agenda' },
+            { label: 'Später', icon: 'clock', cmd: 'skip' }
+        ]
+    },
+    {
+        type: 'private',
+        question: 'Es ist Zeit für eine kleine Pause. Soll ich deine Einkaufsliste für das Wochenende planen?',
+        actions: [
+            { label: 'Einkaufsliste öffnen', icon: 'shopping-cart', cmd: 'shopping' },
+            { label: 'Vielleicht später', icon: 'x', cmd: 'skip' }
+        ]
+    },
+    {
+        type: 'music',
+        question: 'Brauchst du etwas Fokus? Soll ich deine Lieblingsmusik zum Arbeiten spielen?',
+        actions: [
+            { label: 'Musik abspielen', icon: 'play', cmd: 'music_on' },
+            { label: 'Nein, danke', icon: 'mic-off', cmd: 'skip' }
+        ]
+    },
+    {
+        type: 'business',
+        question: 'Deine To-Do Liste sieht voll aus. Soll ich die wichtigsten Business-Tasks für dich priorisieren?',
+        actions: [
+            { label: 'Ja, bitte', icon: 'trending-up', cmd: 'prioritize' },
+            { label: 'Ich mach das selbst', icon: 'user', cmd: 'skip' }
+        ]
+    },
+    {
+        type: 'private',
+        question: 'Hast du heute schon genug Wasser getrunken? Soll ich dich später nochmal erinnern?',
+        actions: [
+            { label: 'Ja, erinnere mich', icon: 'bell', cmd: 'water_reminder' },
+            { label: 'Schon erledigt', icon: 'check', cmd: 'skip' }
+        ]
+    },
+    {
+        type: 'music',
+        question: 'Lust auf ein bisschen gute Laune? Soll ich dir ein paar neue Musik-Hits vorspielen?',
+        actions: [
+            { label: 'Hits spielen', icon: 'music', cmd: 'music_hits' },
+            { label: 'Andere Musik', icon: 'search', cmd: 'music_search' }
+        ]
+    }
+];
+
+function initAIAdvisor() {
+    const section = document.getElementById('aiAdvisorSection');
+    if (!section) return;
+
+    // Show advisor every few minutes if user is active
+    showRandomAdvisorPrompt();
+    setInterval(showRandomAdvisorPrompt, 300000); // Every 5 minutes
+}
+
+function showRandomAdvisorPrompt() {
+    const section = document.getElementById('aiAdvisorSection');
+    if (!section) return;
+
+    const randomIndex = Math.floor(Math.random() * advisorPrompts.length);
+    const prompt = advisorPrompts[randomIndex];
+
+    const questionEl = document.getElementById('aiAdvisorQuestion');
+    const actionsEl = document.getElementById('aiAdvisorActions');
+
+    if (questionEl) questionEl.textContent = prompt.question;
+    if (actionsEl) {
+        actionsEl.innerHTML = '';
+        prompt.actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-ai-action' + (action.cmd !== 'skip' ? ' primary' : '');
+            btn.innerHTML = `<i data-lucide="${action.icon}"></i> <span>${action.label}</span>`;
+            btn.onclick = () => handleAdvisorAction(action.cmd, prompt);
+            actionsEl.appendChild(btn);
+        });
+    }
+
+    section.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function handleAdvisorAction(cmd, prompt) {
+    const section = document.getElementById('aiAdvisorSection');
+
+    switch (cmd) {
+        case 'music_on':
+        case 'music_hits':
+            speakAI('Sicher! Ich starte deine Musik.');
+            window.open('https://music.youtube.com', '_blank');
+            break;
+        case 'music_search':
+            if (typeof openAISearch === 'function') openAISearch('gute musik inspiration');
+            break;
+        case 'agenda':
+            speakAI('Gute Idee. Ich öffne die Notizen für deine Agenda.');
+            if (typeof handleAddTodo === 'function') {
+                const keywordInput = document.getElementById('keywordInput');
+                if (keywordInput) keywordInput.value = 'Agenda für heute: ';
+                handleAddTodo();
+            }
+            break;
+        case 'shopping':
+            if (typeof handleAddTodo === 'function') {
+                const keywordInput = document.getElementById('keywordInput');
+                if (keywordInput) keywordInput.value = 'Einkaufsliste: ';
+                handleAddTodo();
+            }
+            break;
+        case 'prioritize':
+            speakAI('Ich analysiere deine Aufgaben und schiebe die wichtigsten nach oben.');
+            // Logic for prioritization could go here
+            break;
+        case 'water_reminder':
+            speakAI('Alles klar, ich erinnere dich in einer Stunde.');
+            break;
+        case 'skip':
+            // Just close
+            break;
+    }
+
+    section.classList.add('hidden');
 }
 
 // Create Floating AI Button

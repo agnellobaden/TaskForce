@@ -480,12 +480,13 @@
             </div>
             <div class="logo">
                 <i data-lucide="zap" class="logo-icon"></i>
-                <h1>TaskForce</h1>
+                <h1>TaskForce <span class="tiny-logo-brand"><i data-lucide="zap"></i></span></h1>
             </div>
             <p class="tagline">Ich lasse nicht locker!</p>
 
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
+                <span class="search-tiny-logo"><i data-lucide="zap"></i></span>
                 <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..." autocomplete="off"
                     rows="1"></textarea>
                 <div class="header-buttons-row">
@@ -674,7 +675,11 @@
         <section id="quickTodoSection" class="quick-todo-section hidden">
             <div class="todo-header">
                 <h3><i data-lucide="file-text" class="header-icon"></i> Meine Schnell-Notizen</h3>
-                <button id="clearDoneTodosBtn" class="btn-link-small">Erledigte löschen</button>
+                <div class="todo-header-actions">
+                    <button id="addNoteListBtn" class="btn-link-small"
+                        style="text-decoration: none; font-weight: 600;">+ Neue Liste</button>
+                    <button id="clearDoneTodosBtn" class="btn-link-small">Erledigte löschen</button>
+                </div>
             </div>
             <div id="todoList" class="todo-list">
                 <!-- Todos werden hier dynamisch eingefügt -->
@@ -744,20 +749,88 @@
             </div>
         </section>
 
-        <!-- Stats Bar -->
-        <section class="stats-bar">
-            <div class="stat-item">
-                <span class="stat-number" id="totalTasks">0</span>
-                <span class="stat-label">Gesamt</span>
-            </div>
-            <div class="stat-item urgent">
-                <span class="stat-number" id="urgentTasks">0</span>
-                <span class="stat-label">Dringend</span>
-            </div>
-            <div class="stat-item done">
-                <span class="stat-number" id="doneTasks">0</span>
-                <span class="stat-label">Erledigt</span>
-            </div>
+        <!-- Dashboard Overview -->
+        <section class="dashboard-wrapper">
+            <button id="toggleDashboardBtn" class="dashboard-toggle-btn" title="Dashboard anzeigen/verbergen">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+                <i data-lucide="chevron-down" class="chevron-icon"></i>
+            </button>
+            <section class="dashboard-content hidden" id="dashboardContent">
+                <div class="dashboard-grid">
+                    <!-- Termine -->
+                    <div class="dashboard-card" onclick="openCalendarView()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="calendar"></i>
+                            <h4>Termine</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashAppointments">0</div>
+                        <div class="dashboard-card-label">Heute</div>
+                    </div>
+
+                    <!-- Notizen -->
+                    <div class="dashboard-card" onclick="scrollToNotes()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="file-text"></i>
+                            <h4>Notizen</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashNotes">0</div>
+                        <div class="dashboard-card-label">Listen</div>
+                    </div>
+
+                    <!-- Wecker -->
+                    <div class="dashboard-card" onclick="scrollToAlarms()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="bell"></i>
+                            <h4>Wecker</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashAlarms">0</div>
+                        <div class="dashboard-card-label">Aktiv</div>
+                    </div>
+
+                    <!-- Aufgaben -->
+                    <div class="dashboard-card">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="check-circle"></i>
+                            <h4>Aufgaben</h4>
+                        </div>
+                        <div class="dashboard-card-stats">
+                            <div class="stat-mini">
+                                <span class="stat-mini-number" id="totalTasks">0</span>
+                                <span class="stat-mini-label">Gesamt</span>
+                            </div>
+                            <div class="stat-mini urgent">
+                                <span class="stat-mini-number" id="urgentTasks">0</span>
+                                <span class="stat-mini-label">Dringend</span>
+                            </div>
+                            <div class="stat-mini done">
+                                <span class="stat-mini-number" id="doneTasks">0</span>
+                                <span class="stat-mini-label">Erledigt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kosten -->
+                    <div class="dashboard-card" onclick="scrollToExpenses()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="dollar-sign"></i>
+                            <h4>Kosten</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashExpenses">0,00 €</div>
+                        <div class="dashboard-card-label">Heute</div>
+                    </div>
+
+                    <!-- Fahrten (wenn vorhanden) -->
+                    <div class="dashboard-card" onclick="openDriveMode()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="car"></i>
+                            <h4>Fahrten</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashTrips">0 km</div>
+                        <div class="dashboard-card-label">Heute</div>
+                    </div>
+                </div>
+            </section>
         </section>
 
         <!-- Filter Tabs -->
@@ -768,6 +841,25 @@
             <button class="tab-btn" data-filter="normal"><i data-lucide="clipboard-list"></i> Normal</button>
             <button class="tab-btn" data-filter="done"><i data-lucide="check-circle"></i> Erledigt</button>
             <button class="tab-btn" data-filter="archived"><i data-lucide="archive"></i> Archiv</button>
+        </section>
+
+        <!-- AI Advisor Section -->
+        <section id="aiAdvisorSection" class="ai-advisor-section hidden">
+            <div class="ai-advisor-card">
+                <div class="ai-advisor-header">
+                    <div class="ai-advisor-info">
+                        <i data-lucide="bot" class="ai-icon"></i>
+                        <span class="ai-label">Personal Advisor <span class="tiny-logo"><i
+                                    data-lucide="zap"></i></span></span>
+                    </div>
+                </div>
+                <div id="aiAdvisorQuestion" class="ai-question-text">
+                    Lade AI-Vorschläge...
+                </div>
+                <div class="ai-advisor-actions" id="aiAdvisorActions">
+                    <!-- Actions dynamically inserted here -->
+                </div>
+            </div>
         </section>
 
         <!-- Tasks List -->
