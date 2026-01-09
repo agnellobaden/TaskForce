@@ -22,15 +22,15 @@
 }
 
 .header .logo h1 {
-    font-size: 1.3rem !important;
+    font-size: 1.1rem !important;
 }
 
 .header .logo-icon {
-    font-size: 1.3rem !important;
+    font-size: 1.1rem !important;
 }
 
 .header .tagline {
-    font-size: 0.7rem !important;
+    font-size: 0.65rem !important;
     margin: 0 !important;
 }
 
@@ -58,11 +58,11 @@
 .btn-voice,
 .btn-todo,
 .btn-grok-manual {
-    width: 35px !important;
-    height: 35px !important;
-    min-width: 35px !important;
-    min-height: 35px !important;
-    padding: 0.3rem !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    padding: 1px !important;
 }
 
 .btn-add .lucide,
@@ -99,9 +99,9 @@
 }
 
 .btn-comm-quick {
-    min-width: 38px !important;
-    padding: 0.3rem !important;
-    gap: 2px !important;
+    min-width: 30px !important;
+    padding: 0.15rem !important;
+    gap: 1px !important;
 }
 
 .btn-comm-quick .lucide {
@@ -139,8 +139,8 @@
 }
 
 .stat-label {
-    font-size: 0.6rem !important;
-    margin-top: 0.2rem !important;
+    font-size: 0.55rem !important;
+    margin-top: 0.1rem !important;
     line-height: 1 !important;
 }
 
@@ -265,7 +265,43 @@
     }
 
     .app-container {
-        padding-top: 190px !important;
+        padding-top: 140px !important;
+    }
+}
+
+/* Ultra Compact Modal Positioning */
+@media (max-width: 600px) {
+    .modal {
+        top: 140px !important;
+        /* Below ultra-compact header */
+        bottom: 75px !important;
+        /* Above bottom nav */
+        height: auto !important;
+        background: rgba(0, 0, 0, 0.3) !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    .modal-content {
+        position: relative !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .modal-body {
+        padding: 0.4rem !important;
+    }
+
+    .modal-header {
+        padding: 0.5rem !important;
+    }
+
+    .modal-footer {
+        padding: 0.5rem !important;
     }
 }
 

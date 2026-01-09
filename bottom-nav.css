@@ -162,7 +162,7 @@ body.nav-top-mode #mainClock {
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
     z-index: 1000;
     animation: slideUpNav 0.3s ease-out;
-    min-height: 75px;
+    min-height: 50px;
 }
 
 .btn-footer-icon {
@@ -171,7 +171,7 @@ body.nav-top-mode #mainClock {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 6px 6px;
+    padding: 2px 4px;
     flex: 1;
     background: transparent;
     border: none;
@@ -191,8 +191,8 @@ body.nav-top-mode #mainClock {
 }
 
 .btn-footer-icon .lucide {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.2rem;
+    height: 1.2rem;
 }
 
 .btn-footer-icon .icon-label {
