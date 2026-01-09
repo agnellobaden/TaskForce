@@ -50,7 +50,7 @@ let urgentOverlay, urgentTaskText, urgentDoneBtn, urgentLaterBtn, filterTabs;
 let driveModeOverlay, driveTaskTitle, driveTaskLocation, startNavBtn, closeDriveBtn, speedValue;
 let grokModal, grokInput, grokResponse, closeGrokBtn;
 let totalTasksEl, urgentTasksEl, doneTasksEl;
-let taskFileUpload, taskFileName, toggleUploadBtn, uploadSection, removeFileBtn, voiceBtn;
+let taskFileUpload, taskFileName, toggleUploadBtn, uploadSection, removeFileBtn, voiceBtn, voiceBtnHeader;
 let hamburgerBtn, sideMenuOverlay, closeSideMenu, sideCalendarBtn, sideDriveBtn, sideSettingsBtn, sideSyncBtn, sideLogoutBtn;
 let calendarBtn, closeCalendarBtn, prevMonthBtn, nextMonthBtn;
 let teamCodeInput, voiceStatus, globalRecordingDot,
@@ -663,6 +663,7 @@ function initDOMElements() {
     uploadSection = document.getElementById('uploadSection');
     removeFileBtn = document.getElementById('removeFileBtn');
     voiceBtn = document.getElementById('voiceBtn');
+    voiceBtnHeader = document.getElementById('voiceBtnHeader');
     voiceStatus = document.getElementById('voiceStatus');
     globalRecordingDot = document.getElementById('globalRecordingDot');
 
@@ -1559,24 +1560,26 @@ function setupEventListeners() {
 
         mainRecognition.onstart = () => {
             console.log('Voice recognition started');
-            voiceBtn.classList.add('active');
+            if (voiceBtn) voiceBtn.classList.add('active');
+            if (voiceBtnHeader) voiceBtnHeader.classList.add('active');
             if (typeof voiceStatus !== 'undefined' && voiceStatus) voiceStatus.classList.add('active');
             if (globalRecordingDot) globalRecordingDot.classList.add('visible');
-            voiceBtn.textContent = '🛑';
+
             // Stop wake word while main is active
             stopWakeWord();
         };
 
         mainRecognition.onend = () => {
             console.log('Voice recognition ended');
-            voiceBtn.classList.remove('active');
+            if (voiceBtn) voiceBtn.classList.remove('active');
+            if (voiceBtnHeader) voiceBtnHeader.classList.remove('active');
             if (typeof voiceStatus !== 'undefined' && voiceStatus) {
                 voiceStatus.classList.remove('active', 'mode-grok', 'mode-task');
                 const label = voiceStatus.querySelector('.voice-label');
                 if (label) label.textContent = 'Bereit...';
             }
             if (globalRecordingDot) globalRecordingDot.classList.remove('visible');
-            voiceBtn.textContent = '🎤';
+
             // Restart wake word when main ends
             if (appSettings.wakeWordEnabled) {
                 setTimeout(startWakeWord, 800);
@@ -1592,14 +1595,14 @@ function setupEventListeners() {
             } else {
                 showToast('Sprach-Fehler: ' + event.error, 'error');
             }
-            voiceBtn.classList.remove('active');
+            if (voiceBtn) voiceBtn.classList.remove('active');
+            if (voiceBtnHeader) voiceBtnHeader.classList.remove('active');
             if (typeof voiceStatus !== 'undefined' && voiceStatus) {
                 voiceStatus.classList.remove('active', 'mode-grok', 'mode-task');
                 const label = voiceStatus.querySelector('.voice-label');
                 if (label) label.textContent = 'Bereit...';
             }
             if (globalRecordingDot) globalRecordingDot.classList.remove('visible');
-            voiceBtn.textContent = '🎤';
         };
 
         mainRecognition.onresult = (event) => {
@@ -1627,14 +1630,25 @@ function setupEventListeners() {
         if (voiceBtn) {
             voiceBtn.style.display = 'flex';
             voiceBtn.addEventListener('click', () => {
-                if (voiceBtn.classList.contains('active')) {
-                    if (!window.isAutoStarting) {
-                        mainRecognition.stop();
-                        return;
-                    }
-                }
-                startMainVoice();
+                handleVoiceButtonClick(voiceBtn);
             });
+        }
+
+        if (voiceBtnHeader) {
+            voiceBtnHeader.addEventListener('click', () => {
+                handleVoiceButtonClick(voiceBtnHeader);
+            });
+        }
+
+        // Helper for multiple buttons
+        function handleVoiceButtonClick(btn) {
+            if (btn.classList.contains('active')) {
+                if (!window.isAutoStarting) {
+                    mainRecognition.stop();
+                    return;
+                }
+            }
+            startMainVoice();
         }
     }
 
@@ -1794,6 +1808,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Restore main handler
                 mainRecognition.onresult = originalOnResult;
+            };
+
+            mainRecognition.start();
+        });
+    }
+
+    // Voice Input for Expense Form
+    const expVoiceBtn = document.getElementById('expVoiceBtn');
+    if (expVoiceBtn && mainRecognition) {
+        expVoiceBtn.addEventListener('click', () => {
+            expVoiceBtn.classList.add('active');
+            expVoiceBtn.style.background = 'rgba(255,0,0,0.2)';
+
+            const originalOnResult = mainRecognition.onresult;
+
+            mainRecognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                console.log('Expense Form Voice Input:', transcript);
+
+                const amountMatch = transcript.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)/i);
+                if (amountMatch) {
+                    document.getElementById('expAmount').value = amountMatch[1].replace(',', '.');
+                }
+
+                // Try to find a store name (words that aren't keywords)
+                const words = transcript.split(' ').filter(w => !['bei', 'von', 'in', 'euro', 'eur', '€'].includes(w.toLowerCase()));
+                if (words.length > 0) {
+                    // Use remaining words as store if they aren't the amount
+                    const storeWords = words.filter(w => !w.match(/\d/));
+                    if (storeWords.length > 0) {
+                        document.getElementById('expStore').value = storeWords.join(' ');
+                    }
+                }
+
+                expVoiceBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+                expVoiceBtn.classList.remove('active');
+                mainRecognition.onresult = originalOnResult;
+
+                // Switch to manual view if needed
+                openManualExpense();
             };
 
             mainRecognition.start();
@@ -2367,8 +2421,26 @@ function processNaturalLanguageCommand(input) {
         }
     }
 
-    // ========== CALENDAR COMMANDS ==========
-    if (lower.match(/kalender|calendar/i)) {
+    // ========== CALENDAR / APPOINTMENT COMMANDS ==========
+    if (lower.match(/termin|kalender|besprechung|arzt|meeting/i)) {
+        // "Termin morgen 10 Uhr Zahnarzt einfügen"
+        if (lower.match(/einfügen|speichern|speicher/i)) {
+            const parsed = parseSmartInput(input);
+            openAppointmentModalWithData(parsed.taskTitle || '', 'Auto');
+            // Re-fill the other fields if possible
+            if (parsed.deadline) {
+                const d = new Date(parsed.deadline);
+                document.getElementById('appDate').value = d.toISOString().split('T')[0];
+                document.getElementById('appTime').value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            }
+            if (parsed.details.location) document.getElementById('appLocation').value = parsed.details.location;
+            if (parsed.details.person) document.getElementById('appPerson').value = parsed.details.person;
+            if (parsed.details.phone) document.getElementById('appPhone').value = parsed.details.phone;
+
+            showToast('📅 Bitte Termin prüfen und speichern.', 'info');
+            return true;
+        }
+
         if (lower.match(/öffn|öffen|zeig|anzeig|starte|start/i)) {
             if (window.openCalendarModal) {
                 window.openCalendarModal();
@@ -2378,8 +2450,20 @@ function processNaturalLanguageCommand(input) {
         }
     }
 
-    // ========== TODO LIST COMMANDS ==========
+    // ========== TODO LIST / NOTE COMMANDS ==========
     if (lower.match(/todo|to-do|aufgabe|notiz/i)) {
+        if (lower.match(/einfügen|speichern|speicher/i)) {
+            const todoText = input.replace(/notiz|todo|aufgabe|einfügen|speichern|speichere|biite|mal/gi, '').trim();
+            const qts = document.getElementById('quickTodoSection');
+            if (qts) {
+                qts.classList.remove('hidden');
+                qts.scrollIntoView({ behavior: 'smooth' });
+                if (keywordInput) keywordInput.value = todoText;
+                showToast('📝 Notiz vorbereitet. Drücke Strg+Enter zum Speichern.', 'info');
+                return true;
+            }
+        }
+
         if (lower.match(/öffn|öffen|zeig|anzeig|liste/i)) {
             const todoSection = document.getElementById('quickTodoSection');
             if (todoSection) {
@@ -2389,14 +2473,16 @@ function processNaturalLanguageCommand(input) {
                 return true;
             }
         }
-        // "Füge X in die To-Do Liste ein" or "Trage X in die To-Do Liste ein"
+        // "Füge X in die To-Do Liste ein"
         if (lower.match(/füge|trage|eintrag|hinzu|add/i) && lower.match(/ein|hinzu/i)) {
-            // Extract the task text
             const taskMatch = input.match(/(?:füge|trage|eintrag)\s+(.+?)\s+(?:in|zur|zu)/i);
             if (taskMatch && taskMatch[1]) {
                 const todoText = taskMatch[1].trim();
-                addQuickTodo(todoText);
-                showToast(`✅ "${todoText}" zur To-Do Liste hinzugefügt`, 'success');
+                if (typeof handleAddTodo === 'function') {
+                    keywordInput.value = todoText;
+                    handleAddTodo();
+                    showToast(`✅ "${todoText}" hinzugefügt`, 'success');
+                }
                 return true;
             }
         }
@@ -2404,22 +2490,23 @@ function processNaturalLanguageCommand(input) {
 
     // ========== EXPENSE TRACKER COMMANDS ==========
     if (lower.match(/ausgabe|ausgaben|kosten|beleg|expense|quittung/i)) {
-        // "Füge 50 Euro Aldi in die Ausgaben ein"
-        if (lower.match(/füge|trage|eintrag|hinzu|add/i)) {
+        // "Füge 50 Euro Aldi in die Ausgaben ein" or "50 € bei Lidl speichern/einfügen"
+        if (lower.match(/füge|trage|eintrag|hinzu|add|einfügen|speichern|speicher/i)) {
             // Extract amount, store, and category
-            const amountMatch = input.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)/i);
-            const storeMatch = input.match(/(?:€|euro|eur)\s+(\w+)|(\w+)\s+in\s+(?:die\s+)?ausgabe/i);
+            const amountMatch = input.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)/i) || input.match(/(?:€|euro|eur)\s*(\d+(?:[.,]\d{1,2})?)/i);
 
             if (amountMatch) {
                 const amount = amountMatch[1].replace(',', '.');
                 let store = '';
 
-                // Try to extract store name
-                if (storeMatch) {
-                    store = storeMatch[1] || storeMatch[2] || '';
-                } else {
-                    // Look for common store names
-                    const commonStores = ['aldi', 'lidl', 'rewe', 'edeka', 'penny', 'netto', 'kaufland', 'dm', 'rossmann', 'amazon', 'ebay', 'paypal', 'tankstelle', 'shell', 'aral'];
+                // Advanced extraction: search for the word after 'bei' or 'von' or 'im'
+                const contextMatch = lower.match(/(?:bei|von|im|für)\s+([a-zA-ZäöüÄÖÜß0-9\s]+?)(?:\s+(?:in|zu|die|den|einfügen|speichern|$))/i);
+                if (contextMatch) {
+                    store = contextMatch[1].trim();
+                }
+
+                if (!store) {
+                    const commonStores = ['aldi', 'lidl', 'rewe', 'edeka', 'penny', 'netto', 'kaufland', 'dm', 'rossmann', 'amazon', 'ebay', 'paypal', 'tankstelle', 'shell', 'aral', 'bauhaus', 'obi'];
                     for (const storeName of commonStores) {
                         if (lower.includes(storeName)) {
                             store = storeName.charAt(0).toUpperCase() + storeName.slice(1);
@@ -2428,29 +2515,34 @@ function processNaturalLanguageCommand(input) {
                     }
                 }
 
-                // Create expense entry
-                const newExpense = {
-                    id: Date.now().toString(),
-                    date: new Date().toISOString().split('T')[0],
-                    store: store || 'Unbekannt',
-                    amount: parseFloat(amount),
-                    category: 'Allgemein',
-                    createdAt: new Date().toISOString()
-                };
+                // If "speichern" or "einfügen" is used, ask for confirmation by opening the modal
+                if (lower.includes('einfügen') || lower.includes('speichern')) {
+                    openExpenseModalWithData({
+                        amount: amount,
+                        store: store || 'Unbekannt',
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                    showToast('💰 Bitte Angaben prüfen und speichern klicken.', 'info');
+                } else {
+                    // Direct save for "add" style commands
+                    const newExpense = {
+                        id: Date.now().toString(),
+                        date: new Date().toISOString().split('T')[0],
+                        store: store || 'Unbekannt',
+                        amount: parseFloat(amount),
+                        category: 'Allgemein',
+                        createdAt: new Date().toISOString(),
+                        userId: currentUser.id,
+                        userName: currentUser.name,
+                        sessionId: appSessionId
+                    };
 
-                expenses.push(newExpense);
-                saveExpenses();
-                updateExpenseStats();
-                renderExpenses();
-
-                showToast(`💰 ${amount}€ ${store ? 'bei ' + store : ''} eingetragen`, 'success');
-
-                // Optionally open expense section
-                const expenseSection = document.getElementById('expenseSection');
-                if (expenseSection && expenseSection.classList.contains('hidden')) {
-                    toggleExpenseSection();
+                    expenses.unshift(newExpense);
+                    saveExpenses();
+                    updateExpenseStats();
+                    renderExpenses();
+                    showToast(`💰 ${amount}€ ${store ? 'bei ' + store : ''} eingetragen`, 'success');
                 }
-
                 return true;
             }
         }
@@ -2490,7 +2582,7 @@ function processNaturalLanguageCommand(input) {
     // ========== ALARM / WECKER COMMANDS ==========
     if (lower.match(/wecker|alarm|weck/i)) {
         // "Wecker auf 7 Uhr eintragen" or "Stelle Wecker auf 14:30"
-        if (lower.match(/auf|für|um|stelle|eintrag|setze/i)) {
+        if (lower.match(/auf|für|um|stelle|eintrag|setze|einfügen|speichern/i)) {
             // Extract time
             const timeMatch = input.match(/(\d{1,2})[:\.]?(\d{2})?\s*(?:uhr)?/i) ||
                 input.match(/um\s+(\d{1,2})[:\.]?(\d{2})?/i) ||
@@ -2501,29 +2593,27 @@ function processNaturalLanguageCommand(input) {
                 const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
 
                 if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-                    // Create alarm
-                    const newAlarm = {
-                        id: Date.now().toString(),
-                        hours: hours,
-                        minutes: minutes,
-                        label: `Wecker ${hours}:${minutes.toString().padStart(2, '0')}`,
-                        days: [],
-                        enabled: true,
-                        createdAt: new Date().toISOString()
-                    };
+                    if (lower.match(/einfügen|speichern|speicher/i)) {
+                        openAlarmSettings();
+                        document.getElementById('alarmHours').value = hours.toString().padStart(2, '0');
+                        document.getElementById('alarmMinutes').value = minutes.toString().padStart(2, '0');
+                        showToast('⏰ Bitte Wecker prüfen und speichern.', 'info');
+                    } else {
+                        // Create alarm directly
+                        const newAlarm = {
+                            id: 'alarm_' + Date.now(),
+                            hours: hours,
+                            minutes: minutes,
+                            label: `Wecker ${hours}:${minutes.toString().padStart(2, '0')}`,
+                            days: [],
+                            active: true,
+                            lastTriggeredKey: null
+                        };
 
-                    alarms.push(newAlarm);
-                    saveAlarms();
-                    renderAlarms();
-
-                    showToast(`⏰ Wecker auf ${hours}:${minutes.toString().padStart(2, '0')} Uhr gestellt`, 'success');
-
-                    // Optionally open alarm section
-                    const alarmSection = document.getElementById('alarmSection');
-                    if (alarmSection && alarmSection.classList.contains('hidden')) {
-                        alarmSection.classList.remove('hidden');
+                        alarms.push(newAlarm);
+                        saveAlarms();
+                        showToast(`⏰ Wecker auf ${hours}:${minutes.toString().padStart(2, '0')} Uhr gestellt`, 'success');
                     }
-
                     return true;
                 }
             }
@@ -2586,11 +2676,13 @@ function processNaturalLanguageCommand(input) {
         const upcoming = getUpcomingLocationTasks();
         if (upcoming.length > 0) {
             showDriveMode(upcoming[0]);
-        } else {
             showToast('🚗 Fahrt-Modus gestartet', 'info');
+            return true;
+        } else {
             showDriveMode({ keyword: 'Kein Ziel', details: { location: '' } });
+            showToast('🚗 Fahrt-Modus (Leerlauf) gestartet', 'info');
+            return true;
         }
-        return true;
     }
 
     // ========== SETTINGS COMMANDS ==========
@@ -2602,7 +2694,6 @@ function processNaturalLanguageCommand(input) {
         }
     }
 
-    // No command recognized
     return false;
 }
 
@@ -6607,6 +6698,16 @@ function openManualExpense() {
     }
 }
 window.openManualExpense = openManualExpense;
+
+function openExpenseModalWithData(data) {
+    openExpenseModal();
+    openManualExpense();
+    if (data.amount) expAmount.value = data.amount;
+    if (data.store) expStore.value = data.store;
+    if (data.date) expDate.value = data.date;
+    if (data.category) expCategory.value = data.category;
+}
+window.openExpenseModalWithData = openExpenseModalWithData;
 
 function resetExpenseModal() {
     expenseImageInput.value = '';

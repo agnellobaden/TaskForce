@@ -17,6 +17,42 @@ let personalAIData = JSON.parse(localStorage.getItem('taskforce_personal_ai')) |
     morningTime: '07:00'
 };
 
+// ChatGPT Integration
+async function callChatGPT(messages, options = {}) {
+    const apiKey = (typeof appSettings !== 'undefined' && appSettings.openaiApiKey) ? appSettings.openaiApiKey : null;
+
+    if (!apiKey) {
+        throw new Error('Kein OpenAI API-Key gefunden. Bitte in den Einstellungen eintragen.');
+    }
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: options.model || 'gpt-3.5-turbo',
+                messages: messages,
+                temperature: options.temperature || 0.7,
+                max_tokens: options.max_tokens || 1000
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error?.message || 'API Fehler');
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    } catch (err) {
+        console.error('ChatGPT API Error:', err);
+        throw err;
+    }
+}
+
 // Initialize Personal AI Modal
 function initPersonalAI() {
     const personalAIBtn = document.getElementById('personalAIBtn');
@@ -27,6 +63,7 @@ function initPersonalAI() {
 
     // Load saved data
     loadPersonalAIData();
+    loadAiChatHistory();
 
     // Event Listeners
     if (personalAIBtn) {
@@ -56,26 +93,131 @@ function initPersonalAI() {
         birthdateInput.addEventListener('change', updateAgeDisplay);
     }
 
+    // AI Chat Listeners
+    const sendAiChatBtn = document.getElementById('sendAiChatBtn');
+    const aiChatInput = document.getElementById('aiChatInput');
+
+    if (sendAiChatBtn) {
+        sendAiChatBtn.addEventListener('click', handleSendAiChat);
+    }
+    if (aiChatInput) {
+        aiChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSendAiChat();
+        });
+    }
+
     // Check for morning briefing
     checkMorningBriefing();
     setInterval(checkMorningBriefing, 60000); // Check every minute
 }
 
+let aiChatHistoryData = [];
+
+function loadAiChatHistory() {
+    const saved = localStorage.getItem('taskforce_ai_history');
+    if (saved) {
+        aiChatHistoryData = JSON.parse(saved);
+        const history = document.getElementById('aiChatHistory');
+        if (history) {
+            history.innerHTML = '';
+            aiChatHistoryData.forEach(m => addChatMessageUI(m.role, m.text));
+        }
+    }
+}
+
+function saveAiChatHistory() {
+    localStorage.setItem('taskforce_ai_history', JSON.stringify(aiChatHistoryData.slice(-50)));
+}
+
+async function handleSendAiChat() {
+    const input = document.getElementById('aiChatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Add User Message
+    addChatMessage('user', text);
+    input.value = '';
+
+    // Thinking placeholder
+    const thinkingId = 'thinking_' + Date.now();
+    addChatMessageUI('ai', '<span class="loading-dots">... denkt nach ...</span>', thinkingId);
+
+    try {
+        const systemPrompt = `Du bist ein hilfreicher persönlicher Assistent namens "Personal Advisor". 
+Dein Ziel ist es, den Nutzer optimal zu unterstützen. Sei freundlich, professionell und motivierend.
+Nutze die persönlichen Details des Nutzers: Name: ${personalAIData.name}, Job: ${personalAIData.job}, Hobbys: ${personalAIData.hobbies}.
+Du hast Zugriff auf alle Funktionen der App (Kalender, Notizen, etc.) - antworte so, als wärst du ein echter Butler.`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...aiChatHistoryData.slice(-10).map(m => ({ role: m.role, content: m.text })),
+            { role: 'user', content: text }
+        ];
+
+        const response = await callChatGPT(messages);
+
+        // Remove thinking and add real response
+        const thinkingEl = document.getElementById(thinkingId);
+        if (thinkingEl) thinkingEl.remove();
+
+        addChatMessage('ai', response);
+
+        // Speak response if enabled
+        if (personalAIData.features.reminders && typeof speakAI === 'function') {
+            speakAI(response);
+        }
+    } catch (err) {
+        const thinkingEl = document.getElementById(thinkingId);
+        if (thinkingEl) thinkingEl.innerHTML = `<span style="color:#ef4444;">Fehler: ${err.message}</span>`;
+    }
+}
+
+function addChatMessage(role, text) {
+    aiChatHistoryData.push({ role, text });
+    saveAiChatHistory();
+    addChatMessageUI(role, text);
+}
+
+function addChatMessageUI(role, text, id) {
+    const history = document.getElementById('aiChatHistory');
+    if (!history) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = role === 'user' ? 'user-msg' : 'ai-msg';
+    if (id) msgDiv.id = id;
+
+    const isUser = role === 'user';
+    msgDiv.style.padding = '10px 15px';
+    msgDiv.style.borderRadius = '18px';
+    msgDiv.style.fontSize = '0.9rem';
+    msgDiv.style.maxWidth = '85%';
+    msgDiv.style.alignSelf = isUser ? 'flex-end' : 'flex-start';
+    msgDiv.style.background = isUser ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+    msgDiv.style.color = isUser ? 'white' : 'var(--text-primary)';
+    msgDiv.style.borderBottomRightRadius = isUser ? '4px' : '18px';
+    msgDiv.style.borderBottomLeftRadius = isUser ? '18px' : '4px';
+    msgDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+
+    msgDiv.innerHTML = text;
+    history.appendChild(msgDiv);
+    history.scrollTop = history.scrollHeight;
+}
+
 // Load Personal AI Data from localStorage
 function loadPersonalAIData() {
-    document.getElementById('aiUserName').value = personalAIData.name || '';
-    document.getElementById('aiUserBirthdate').value = personalAIData.birthdate || '';
-    document.getElementById('aiUserGender').value = personalAIData.gender || '';
-    document.getElementById('aiUserJob').value = personalAIData.job || '';
-    document.getElementById('aiUserHobbies').value = personalAIData.hobbies || '';
+    if (document.getElementById('aiUserName')) document.getElementById('aiUserName').value = personalAIData.name || '';
+    if (document.getElementById('aiUserBirthdate')) document.getElementById('aiUserBirthdate').value = personalAIData.birthdate || '';
+    if (document.getElementById('aiUserGender')) document.getElementById('aiUserGender').value = personalAIData.gender || '';
+    if (document.getElementById('aiUserJob')) document.getElementById('aiUserJob').value = personalAIData.job || '';
+    if (document.getElementById('aiUserHobbies')) document.getElementById('aiUserHobbies').value = personalAIData.hobbies || '';
 
-    document.getElementById('aiWeatherToggle').checked = personalAIData.features.weather !== false;
-    document.getElementById('aiNewsToggle').checked = personalAIData.features.news !== false;
-    document.getElementById('aiBusinessToggle').checked = personalAIData.features.business !== false;
-    document.getElementById('aiPrivateToggle').checked = personalAIData.features.private !== false;
-    document.getElementById('aiRemindersToggle').checked = personalAIData.features.reminders !== false;
+    if (document.getElementById('aiWeatherToggle')) document.getElementById('aiWeatherToggle').checked = personalAIData.features.weather !== false;
+    if (document.getElementById('aiNewsToggle')) document.getElementById('aiNewsToggle').checked = personalAIData.features.news !== false;
+    if (document.getElementById('aiBusinessToggle')) document.getElementById('aiBusinessToggle').checked = personalAIData.features.business !== false;
+    if (document.getElementById('aiPrivateToggle')) document.getElementById('aiPrivateToggle').checked = personalAIData.features.private !== false;
+    if (document.getElementById('aiRemindersToggle')) document.getElementById('aiRemindersToggle').checked = personalAIData.features.reminders !== false;
 
-    document.getElementById('aiMorningTime').value = personalAIData.morningTime || '07:00';
+    if (document.getElementById('aiMorningTime')) document.getElementById('aiMorningTime').value = personalAIData.morningTime || '07:00';
 
     updateAgeDisplay();
 }
@@ -109,13 +251,15 @@ function savePersonalAIData() {
 
 // Update Age Display
 function updateAgeDisplay() {
-    const birthdate = document.getElementById('aiUserBirthdate').value;
+    const birthdateInput = document.getElementById('aiUserBirthdate');
+    if (!birthdateInput) return;
+    const birthdate = birthdateInput.value;
     const ageDisplay = document.getElementById('aiAgeDisplay');
 
-    if (birthdate) {
+    if (birthdate && ageDisplay) {
         const age = calculateAge(birthdate);
         ageDisplay.textContent = `Du bist ${age} Jahre alt`;
-    } else {
+    } else if (ageDisplay) {
         ageDisplay.textContent = '';
     }
 }
@@ -138,6 +282,7 @@ function calculateAge(birthdate) {
 function updateAIGreeting() {
     const greetingText = document.getElementById('aiGreetingText');
     const greetingSubtext = document.getElementById('aiGreetingSubtext');
+    if (!greetingText) return;
 
     if (personalAIData.name) {
         const hour = new Date().getHours();
@@ -160,21 +305,67 @@ async function testAIBriefing() {
     const preview = document.getElementById('aiDashboardPreview');
     const content = document.getElementById('aiDashboardContent');
 
-    preview.classList.remove('hidden');
-    content.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="loading-spinner"></i> Erstelle dein Briefing...</div>';
+    if (preview) preview.classList.remove('hidden');
+    if (content) content.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="loading-spinner"></i> Erstelle dein KI-Briefing mit ChatGPT...</div>';
 
-    setTimeout(() => {
-        const briefing = generateDailyBriefing();
-        content.innerHTML = briefing;
+    try {
+        const briefing = await generateDailyBriefingAI();
+        if (content) content.innerHTML = briefing;
 
         // Speak the briefing if voice is enabled
         if (personalAIData.features.reminders && 'speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(briefing.replace(/<[^>]*>/g, ''));
-            utterance.lang = 'de-DE';
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
+            const textToSpeak = briefing.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+            if (typeof speakAI === 'function') speakAI(textToSpeak);
+            else {
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'de-DE';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
         }
-    }, 1500);
+    } catch (err) {
+        if (content) content.innerHTML = `<div style="color: #ef4444; padding: 10px;">Fehler: ${err.message}</div>`;
+        if (typeof showToast === 'function') showToast('Briefing fehlgeschlagen: ' + err.message, 'error');
+    }
+}
+
+// Generate Daily Briefing using ChatGPT
+async function generateDailyBriefingAI() {
+    const now = new Date();
+    const dayName = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][now.getDay()];
+    const dateStr = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}`;
+
+    // Get current tasks
+    const openTasks = (typeof tasks !== 'undefined') ? tasks.filter(t => !t.done && !t.archived).map(t => t.keyword).join(', ') : 'Keine';
+
+    const systemPrompt = `Du bist ein hilfreicher persönlicher Assistent namens "Personal Advisor". 
+Dein Ziel ist es, den Nutzer optimal zu unterstützen. Sei freundlich, professionell und motivierend.
+Nutze die persönlichen Details des Nutzers, um die Antwort individuell zu gestalten.
+Schreibe in HTML-Format (für <div>-Container), nutze Emojis.`;
+
+    const userPrompt = `Erstelle ein kurzes, knackiges Tages-Briefing für mich.
+Meine Details:
+Name: ${personalAIData.name || 'Unbekannt'}
+Job: ${personalAIData.job || 'Nicht angegeben'}
+Hobbys: ${personalAIData.hobbies || 'Nicht angegeben'}
+Interessen: ${Object.entries(personalAIData.features).filter(([k, v]) => v).map(([k, v]) => k).join(', ')}
+
+Heute ist ${dayName}, der ${dateStr}.
+Aktuelle Aufgaben: ${openTasks}
+
+Berücksichtige Wetterinfo (simuliert als sonnig), motiviere mich für meine Hobbys oder meinen Job.`;
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+    ];
+
+    try {
+        return await callChatGPT(messages);
+    } catch (err) {
+        // Fallback to local briefing if API fails
+        return generateDailyBriefing() + `<br><small style="color:gray;">(Lokales Backup-Briefing, da API nicht erreichbar)</small>`;
+    }
 }
 
 // Generate Daily Briefing
@@ -221,8 +412,6 @@ function generateDailyBriefing() {
         briefing += `</div>`;
     }
 
-    briefing += `<div style="margin-top: 15px; font-style: italic; opacity: 0.8;">Viel Erfolg heute! 🚀</div>`;
-
     return briefing;
 }
 
@@ -243,8 +432,14 @@ function checkMorningBriefing() {
 }
 
 // Show Morning Briefing
-function showMorningBriefing() {
-    const briefing = generateDailyBriefing();
+async function showMorningBriefing() {
+    let briefing = '';
+
+    if (typeof appSettings !== 'undefined' && appSettings.openaiApiKey) {
+        briefing = await generateDailyBriefingAI();
+    } else {
+        briefing = generateDailyBriefing();
+    }
 
     // Create a notification-style modal
     const briefingModal = document.createElement('div');
@@ -272,9 +467,11 @@ function showMorningBriefing() {
     }
 
     // Speak the briefing
-    if ('speechSynthesis' in window) {
-        const text = briefing.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-        const utterance = new SpeechSynthesisUtterance(text);
+    const textToSpeak = briefing.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    if (typeof speakAI === 'function') {
+        speakAI(textToSpeak);
+    } else if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.lang = 'de-DE';
         utterance.rate = 0.9;
         window.speechSynthesis.speak(utterance);

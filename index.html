@@ -355,7 +355,11 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i data-lucide="camera"></i> Beleg erfassen</h2>
-                <button class="modal-close-icon" id="closeExpenseModalBtn">✕</button>
+                <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                    <button id="expVoiceBtn" class="btn-icon-nav"
+                        style="border-radius: 50%; width: 32px; height: 32px; background: rgba(16, 185, 129, 0.2); border: 1px solid var(--success); cursor: pointer; display: flex; align-items: center; justify-content: center;">🎤</button>
+                    <button class="modal-close-icon" id="closeExpenseModalBtn">✕</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="receipt-scanner-box" id="receiptScannerBox">
@@ -486,9 +490,14 @@
 
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
-                <span class="search-tiny-logo"><i data-lucide="zap"></i></span>
-                <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..." autocomplete="off"
-                    rows="1"></textarea>
+                <div class="keyword-row">
+                    <span class="search-tiny-logo"><i data-lucide="zap"></i></span>
+                    <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..."
+                        autocomplete="off" rows="1"></textarea>
+                    <button id="voiceBtnHeader" class="btn-voice-header" title="Spracheingabe">
+                        <i data-lucide="mic"></i>
+                    </button>
+                </div>
                 <div class="header-buttons-row">
                     <section class="quick-add-section">
                         <div class="input-container">
@@ -938,13 +947,9 @@
                 <i data-lucide="calendar"></i>
                 <span class="icon-label">Kalender</span>
             </button>
-            <button class="btn-footer-icon" id="expenseBtnFooter" title="Kostenkontrolle" style="color: #10b981;">
-                <i data-lucide="dollar-sign"></i>
-                <span class="icon-label">Kosten</span>
-            </button>
-            <button class="btn-footer-icon" id="addExpenseBtnFooter" title="Beleg scannen" style="color: #10b981;">
-                <i data-lucide="camera"></i>
-                <span class="icon-label">Scan</span>
+            <button class="btn-footer-icon" id="noteBtnFooter" title="Schnell-Notiz">
+                <i data-lucide="file-text"></i>
+                <span class="icon-label">Notiz</span>
             </button>
             <button class="btn-footer-icon" id="sideNightstandBtnFooter" title="Nachtmodus">
                 <i data-lucide="moon"></i>
@@ -1447,6 +1452,30 @@
                             <!-- Dynamic content will be inserted here -->
                         </div>
                     </div>
+
+                    <!-- Personal Advisor Chat Section -->
+                    <div class="ai-chat-section"
+                        style="margin-top: 25px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
+                        <h3
+                            style="margin-bottom: 15px; color: var(--primary-light); display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="message-circle"></i> Chatte mit deinem Advisor
+                        </h3>
+                        <div id="aiChatHistory"
+                            style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px;">
+                            <div class="ai-msg"
+                                style="background: rgba(var(--primary-rgb), 0.1); padding: 10px; border-radius: 12px; font-size: 0.9rem; align-self: flex-start; max-width: 85%;">
+                                Hallo! Ich bin dein persönlicher Berater. Wie kann ich dich heute unterstützen?
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="aiChatInput" class="settings-input" placeholder="Frage mich alles..."
+                                style="flex: 1; border-radius: 20px; padding-left: 15px;">
+                            <button id="sendAiChatBtn" class="btn-primary"
+                                style="width: 45px; height: 45px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button id="testAIBriefingBtn" class="btn-secondary">🧪 Briefing testen</button>
@@ -1605,88 +1634,6 @@
         <script src="personal-ai.js"></script>
         <script src="auto-hide-nav.js"></script>
         <script src="interactive-ai.js"></script>
-        <!-- AI Research Result Modal -->
-        <div id="aiResearchResultModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>🔎 Gefundene Informationen</h2>
-                    <button class="modal-close-icon" id="closeAiResearchResultBtn">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="ai-result-box"
-                        style="background: rgba(var(--primary-rgb), 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                        <label
-                            style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Gefunden:</label>
-                        <div id="aiResultContent" style="font-size: 1.1rem; font-weight: bold; word-break: break-word;">
-                            --</div>
-                    </div>
-
-                    <h3 style="font-size: 1rem; margin-bottom: 1rem;">Wo soll das gespeichert werden?</h3>
-
-                    <button id="saveInNewAppointmentBtn" class="btn-primary"
-                        style="width: 100%; margin-bottom: 1rem; padding: 12px; font-weight: bold;">
-                        ✨ In NEUEN Termin eintragen
-                    </button>
-
-                    <div style="text-align: center; margin: 10px 0; font-size: 0.8rem; opacity: 0.7;">— ODER WÄHLE EINEN
-                        TERMIN —</div>
-
-                    <div id="researchAppointmentList" class="research-appointment-list"
-                        style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Appointments will be listed here -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="cancelAiResearchResultBtn" class="btn-secondary">Abbrechen</button>
-                </div>
-            </div>
-        </div>
-        <!-- AI Onboarding/Profile Modal -->
-        <div id="onboardingModal" class="modal hidden" style="z-index: 20000; background: rgba(0,0,0,0.95);">
-            <div class="modal-content" style="max-width: 500px; border: 1px solid var(--secondary);">
-                <div class="modal-header" style="justify-content: center; flex-direction: column; text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">🤖</div>
-                    <h2>Dein AI-Organizer</h2>
-                    <p style="opacity: 0.8; font-size: 0.9rem;">Ich möchte dich den ganzen Tag begleiten. <br>Erzähl mir
-                        etwas über dich!</p>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Wie darf ich dich nennen?</label>
-                        <input type="text" id="profileName" class="settings-input" placeholder="Dein Name">
-                    </div>
-                    <div class="form-group">
-                        <label>Dein Alter (für passende Ansprache)</label>
-                        <input type="number" id="profileAge" class="settings-input" placeholder="z.B. 30">
-                    </div>
-                    <div class="form-group">
-                        <label>Beruf / Tätigkeit</label>
-                        <input type="text" id="profileJob" class="settings-input"
-                            placeholder="z.B. Entwickler, Student, Manager...">
-                    </div>
-                    <div class="form-group">
-                        <label>Deine Hobbys & Interessen (für Freizeit-Tipps)</label>
-                        <textarea id="profileHobbies" class="settings-input" rows="2"
-                            placeholder="z.B. Laufen, Lesen, Gaming, Kochen..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Was ist dir heute wichtig?</label>
-                        <select id="profileFocus" class="settings-select">
-                            <option value="productivity">🚀 Maximale Produktivität</option>
-                            <option value="balance">⚖️ Work-Life-Balance</option>
-                            <option value="health">💪 Gesundheit & Sport</option>
-                            <option value="learning">🧠 Lernen & Wachstum</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="saveProfileBtn" class="btn-primary"
-                        style="width: 100%; padding: 15px; font-size: 1.1rem;">
-                        ✨ Profil erstellen & Starten
-                    </button>
-                </div>
-            </div>
-        </div>
         <script>
             // Wire up footer navigation buttons to existing functions
             document.addEventListener('DOMContentLoaded', () => {
@@ -1703,18 +1650,20 @@
                     });
                 }
 
-                // Expense Button
-                const expenseBtnFooter = document.getElementById('expenseBtnFooter');
-                const sideExpenseBtn = document.getElementById('sideExpenseBtn');
-                if (expenseBtnFooter && sideExpenseBtn) {
-                    expenseBtnFooter.addEventListener('click', () => sideExpenseBtn.click());
-                }
-
-                // Add Expense (Camera) Button
-                const addExpenseBtnFooter = document.getElementById('addExpenseBtnFooter');
-                const addExpenseBtn = document.getElementById('addExpenseBtn');
-                if (addExpenseBtnFooter && addExpenseBtn) {
-                    addExpenseBtnFooter.addEventListener('click', () => addExpenseBtn.click());
+                // Note Button
+                const noteBtnFooter = document.getElementById('noteBtnFooter');
+                if (noteBtnFooter) {
+                    noteBtnFooter.addEventListener('click', () => {
+                        if (typeof window.scrollToNotes === 'function') {
+                            window.scrollToNotes();
+                        } else {
+                            const qts = document.getElementById('quickTodoSection');
+                            if (qts) {
+                                qts.classList.remove('hidden');
+                                qts.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                    });
                 }
 
                 // Nightstand Button

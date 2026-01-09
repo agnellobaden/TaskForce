@@ -89,15 +89,55 @@ function initAIAdvisor() {
     setInterval(showRandomAdvisorPrompt, 300000); // Every 5 minutes
 }
 
-function showRandomAdvisorPrompt() {
+async function showRandomAdvisorPrompt() {
     const section = document.getElementById('aiAdvisorSection');
     if (!section) return;
 
-    const randomIndex = Math.floor(Math.random() * advisorPrompts.length);
-    const prompt = advisorPrompts[randomIndex];
-
     const questionEl = document.getElementById('aiAdvisorQuestion');
     const actionsEl = document.getElementById('aiAdvisorActions');
+
+    // If ChatGPT is available, try to get a smart prompt
+    if (typeof callChatGPT === 'function' && typeof appSettings !== 'undefined' && appSettings.openaiApiKey) {
+        if (questionEl) questionEl.innerHTML = '<span class="loading-dots">Advisor denkt nach...</span>';
+
+        try {
+            const openTasks = (typeof tasks !== 'undefined') ? tasks.filter(t => !t.done && !t.archived).map(t => t.keyword).join(', ') : '';
+            const systemPrompt = `Du bist der "Personal Advisor" in einer Produktivitäts-App. 
+Erstelle EINE kurze, proaktive Frage oder einen Vorschlag (max 15 Wörter) für den Nutzer basierend auf seinen Daten.
+Nutze Name: ${personalAIData.name || 'Nutzer'}, Job: ${personalAIData.job || 'Unbekannt'}, Hobbys: ${personalAIData.hobbies || 'Unbekannt'}.
+Aktuelle Aufgaben: ${openTasks}.
+Antworte NUR mit der Frage/dem Vorschlag.`;
+
+            const advice = await callChatGPT([{ role: 'system', content: systemPrompt }], { max_tokens: 50 });
+            if (questionEl) questionEl.textContent = advice;
+
+            if (actionsEl) {
+                actionsEl.innerHTML = `
+                    <button class="btn-ai-action primary" onclick="openPersonalAdvisorChat('${advice.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                        <i data-lucide="message-circle"></i> <span>Antworten</span>
+                    </button>
+                    <button class="btn-ai-action" onclick="document.getElementById('aiAdvisorSection').classList.add('hidden')">
+                        <i data-lucide="x"></i> <span>Ignorieren</span>
+                    </button>
+                `;
+            }
+
+            section.classList.remove('hidden');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            // Proactive voice if enabled
+            if (personalAIData.features.reminders && typeof speakAI === 'function') {
+                speakAI(advice);
+            }
+            return;
+        } catch (err) {
+            console.warn('Dashboard Advisor AI error, falling back to static:', err);
+        }
+    }
+
+    // Fallback to static prompts
+    const randomIndex = Math.floor(Math.random() * advisorPrompts.length);
+    const prompt = advisorPrompts[randomIndex];
 
     if (questionEl) questionEl.textContent = prompt.question;
     if (actionsEl) {
@@ -114,6 +154,18 @@ function showRandomAdvisorPrompt() {
     section.classList.remove('hidden');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+window.openPersonalAdvisorChat = function (initialText) {
+    const personalAIModal = document.getElementById('personalAIModal');
+    if (personalAIModal) {
+        personalAIModal.classList.remove('hidden');
+        const chatInput = document.getElementById('aiChatInput');
+        if (chatInput) {
+            chatInput.value = initialText ? `Zu deinem Vorschlag "${initialText}": ` : '';
+            chatInput.focus();
+        }
+    }
+};
 
 function handleAdvisorAction(cmd, prompt) {
     const section = document.getElementById('aiAdvisorSection');
@@ -421,7 +473,8 @@ function speakAI(text) {
 function setupWakeWordDetection() {
     if (!aiRecognition) return;
 
-    const wakeWords = ['hey ki', 'hallo ki', 'hey assistant', 'hallo assistent'];
+    const customWakeWord = (typeof appSettings !== 'undefined' && appSettings.wakeWordName) ? appSettings.wakeWordName.toLowerCase() : 'taskforce';
+    const wakeWords = ['hey ki', 'hallo ki', 'hey assistant', 'hallo assistent', customWakeWord, `hey ${customWakeWord}`, `hallo ${customWakeWord}`];
 
     aiRecognition.onresult = (event) => {
         const transcript = Array.from(event.results)
