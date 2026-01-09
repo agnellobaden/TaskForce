@@ -264,8 +264,13 @@
         font-size: 0.65rem !important;
     }
 
+    .header .tagline {
+        font-size: 0.65rem !important;
+    }
+
     .app-container {
-        padding-top: 140px !important;
+        padding-top: 170px !important;
+        /* Increased for wrapped input */
     }
 }
 
@@ -303,6 +308,28 @@
     .modal-footer {
         padding: 0.5rem !important;
     }
+
+    /* Separate Input from Buttons on Mobile */
+    .input-container {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        height: auto !important;
+    }
+
+    #keywordInput {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        margin-bottom: 0.2rem !important;
+        order: -1;
+        /* Ensure it's always top */
+    }
+
+    /* Distribute buttons evenly below */
+    .input-container>button,
+    .input-container>.ai-selector-container {
+        flex: 1 !important;
+        justify-content: center !important;
+    }
 }
 
 /* Minimize even more when scrolling */
@@ -328,8 +355,16 @@ body.at-bottom .app-container {
     padding-top: 200px !important;
 }
 
-/* Dynamic Header Hiding on Mobile when Modal is Open */
+/* Dynamic Header Hiding & Scroll Locking on Mobile */
 @media (max-width: 600px) {
+
+    /* LOCK BODY SCROLL when modal is open */
+    body.modal-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+    }
+
     body.modal-open .header {
         display: none !important;
     }
@@ -341,13 +376,13 @@ body.at-bottom .app-container {
     body.modal-open .modal {
         top: 0 !important;
         bottom: 0 !important;
-        /* Start from seemingly bottom to cover nav if needed, or leave space for bottom nav? User said header disappears. */
-        /* To be safe and truly full screen/popup like: */
         height: 100% !important;
         max-height: 100% !important;
         border-radius: 0 !important;
         padding-top: env(safe-area-inset-top) !important;
         z-index: 2000 !important;
+        overflow-y: auto !important;
+        /* Allow modal itself to scroll */
     }
 
     body.modal-open .modal-content {
@@ -356,10 +391,146 @@ body.at-bottom .app-container {
         border-radius: 0 !important;
         display: flex !important;
         flex-direction: column !important;
+        border: none !important;
     }
 
     body.modal-open .modal-body {
         flex: 1 !important;
         overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Fix Header Overlap */
+    .header-top {
+        position: relative !important;
+        /* Was fixed, caused overlap with logo */
+        height: auto !important;
+        padding: 5px 10px !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .header .logo {
+        margin-top: 5px !important;
+        /* clear header-top */
+        margin-bottom: 5px !important;
+    }
+
+    .team-badge {
+        display: inline-block !important;
+        background: rgba(var(--primary-rgb), 0.2) !important;
+        padding: 2px 8px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(var(--primary-rgb), 0.4) !important;
+        margin-left: 5px !important;
+        font-size: 0.7rem !important;
+        vertical-align: middle !important;
+    }
+
+    /* Ensure user info doesn't crowd logo */
+    .user-info {
+        max-width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Specific Fix for Appointment Modal Header on Mobile */
+    #appointmentModal .modal-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px !important;
+    }
+
+    #appointmentModal .modal-header h2 {
+        font-size: 1.2rem !important;
+        flex: 1 !important;
+        margin: 0 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Ensure close button group is visible */
+    #appointmentModal .modal-header>div {
+        display: flex !important;
+        gap: 15px !important;
+        margin-left: 10px !important;
+        flex-shrink: 0 !important;
+    }
+
+    #closeAppointmentModal {
+        width: 36px !important;
+        height: 36px !important;
+        background: rgba(239, 68, 68, 0.2) !important;
+        /* Slight red tint */
+        border: 1px solid rgba(239, 68, 68, 0.5) !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.1rem !important;
+        color: white !important;
+        z-index: 2005 !important;
+    }
+
+    /* Fix Footer Visibility in Mobile Modals */
+    body.modal-open .modal-footer {
+        flex-shrink: 0 !important;
+        /* Don't shrink */
+        padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+        background: var(--bg-card) !important;
+        /* Ensure content behind doesn't show through */
+        z-index: 2010 !important;
+    }
+
+    /* Make buttons in modal footer clearly visible */
+    body.modal-open .modal-footer .btn-secondary,
+    body.modal-open .modal-footer .btn-primary,
+    body.modal-open .modal-footer #archiveTaskBtn {
+        opacity: 1 !important;
+        background-color: var(--bg-glass) !important;
+        border: 1px solid var(--border-glass) !important;
+        min-height: 48px !important;
+        /* Touch target size */
+    }
+
+    /* Specific fix for archive/unarchive to ensure text is white */
+    /* Fix Archive Button Overlay on Mobile: Hide text, show icon only */
+    #archiveTaskBtn .label {
+        display: none !important;
+    }
+
+    #archiveTaskBtn {
+        width: 48px !important;
+        /* Force to square/icon size */
+        min-width: 48px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+    }
+
+    #archiveTaskBtn .icon {
+        margin: 0 !important;
+        font-size: 1.2rem !important;
+    }
+
+    /* Ensure other buttons in footer are also square/compact if needed */
+    body.modal-open .modal-footer .icon-btn {
+        width: 48px !important;
+        min-width: 48px !important;
+    }
+
+    /* Appointment Modal Back Button */
+    .modal-header .btn-back {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-secondary) !important;
+        font-size: 1rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        padding: 5px !important;
+        margin-right: 10px !important;
     }
 }

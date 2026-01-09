@@ -417,10 +417,7 @@
                 <div class="header-actions">
                     <div id="mainClock" class="header-clock" style="font-size: 1rem; color: var(--text-secondary);">
                         --:--</div>
-                    <button class="btn-sync-mini" id="hamburgerBtn" title="Menü" style="font-size: 1.5rem;">
-                        <i data-lucide="menu"></i>
-                        <span class="icon-label">Menü</span>
-                    </button>
+
                     <!-- Small indicator for pending syncs if any -->
                     <span id="syncIndicator" class="sync-indicator hidden"></span>
                 </div>
@@ -845,6 +842,10 @@
                 style="color: var(--secondary);">
                 <i data-lucide="car"></i>
                 <span class="icon-label">Fahrt</span>
+            </button>
+            <button class="btn-footer-icon" id="hamburgerBtn" title="Menü">
+                <i data-lucide="menu"></i>
+                <span class="icon-label">Menü</span>
             </button>
             <div id="voiceStatusFooter" class="voice-status-footer">
                 <span class="voice-pulse"></span>
@@ -1380,6 +1381,9 @@
         <div id="appointmentModal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
+                    <button id="backAppointmentBtn" class="btn-back">
+                        <i data-lucide="chevron-left"></i> Zurück
+                    </button>
                     <h2>📅 Neuer Termin</h2>
                     <div style="margin-left: auto; display: flex; gap: 10px;">
                         <button id="appVoiceBtn" class="btn-icon-nav"
@@ -1572,10 +1576,15 @@
             document.addEventListener('DOMContentLoaded', () => {
                 // Calendar Button
                 const calendarBtnFooter = document.getElementById('calendarBtnFooter');
-                const calendarBtn = document.getElementById('calendarBtn');
-                const sideCalendarBtn = document.getElementById('sideCalendarBtn');
-                if (calendarBtnFooter && sideCalendarBtn) {
-                    calendarBtnFooter.addEventListener('click', () => sideCalendarBtn.click());
+                if (calendarBtnFooter) {
+                    calendarBtnFooter.addEventListener('click', () => {
+                        if (typeof window.openCalendarModal === 'function') {
+                            window.openCalendarModal();
+                        } else {
+                            const sideCalendarBtn = document.getElementById('sideCalendarBtn');
+                            if (sideCalendarBtn) sideCalendarBtn.click();
+                        }
+                    });
                 }
 
                 // Expense Button

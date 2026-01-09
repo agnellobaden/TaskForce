@@ -1606,6 +1606,13 @@ function setupEventListeners() {
 // Global Calendar Opener
 window.openCalendarModal = function () {
     console.log('Opening Calendar Modal...');
+
+    // Close sidebar if open
+    const sideMenuOverlay = document.getElementById('sideMenuOverlay');
+    if (sideMenuOverlay) {
+        sideMenuOverlay.classList.add('hidden');
+    }
+
     // Only reset to today if currentCalendarDate wasn't set or it's a fresh session
     if (!currentCalendarDate) {
         currentCalendarDate = new Date();
@@ -1655,6 +1662,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const closeAppBtn = document.getElementById('closeAppointmentModal');
     const cancelAppBtn = document.getElementById('cancelAppointmentBtn');
+    const backAppBtn = document.getElementById('backAppointmentBtn');
     const saveAppBtn = document.getElementById('saveAppointmentBtn');
     const appModal = document.getElementById('appointmentModal');
 
@@ -1664,6 +1672,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (closeAppBtn) closeAppBtn.addEventListener('click', closeApp);
     if (cancelAppBtn) cancelAppBtn.addEventListener('click', closeApp);
+    if (backAppBtn) backAppBtn.addEventListener('click', closeApp);
 
     // Voice Input for Form
     const appVoiceBtn = document.getElementById('appVoiceBtn');
@@ -3947,10 +3956,21 @@ function renderTaskDetailContent() {
 
     const archiveBtn = document.getElementById('archiveTaskBtn');
     if (archiveBtn) {
-        archiveBtn.onclick = (e) => {
-            e.stopPropagation();
-            archiveCurrentTask();
-        };
+        if (task.archived) {
+            archiveBtn.innerHTML = '<span class="icon">↩️</span><span class="label">Wiederherstellen</span>'; // Change text
+            archiveBtn.title = "Wiederherstellen";
+            archiveBtn.onclick = (e) => {
+                e.stopPropagation();
+                unarchiveCurrentTask();
+            };
+        } else {
+            archiveBtn.innerHTML = '<span class="icon">📦</span><span class="label">Archivieren</span>'; // Reset text
+            archiveBtn.title = "Archivieren";
+            archiveBtn.onclick = (e) => {
+                e.stopPropagation();
+                archiveCurrentTask();
+            };
+        }
     }
 
     if (detailTaskTitle) {
@@ -4313,6 +4333,22 @@ function archiveCurrentTask() {
         t.archived = true;
         saveTasks(); renderTasks(); updateStats(); closeTaskDetail();
         showToast('Archiviert', 'success');
+    }
+}
+
+function unarchiveCurrentTask() {
+    if (!currentTask) return;
+    const t = tasks.find(x => x.id === currentTask.id);
+    if (t) {
+        t.archived = false; // Set archived to false
+        saveTasks();
+        currentFilter = 'all'; // Switch back to 'all' filter to see the restored task
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); // clear active tabs
+        document.querySelector('.tab-btn[data-filter="all"]').classList.add('active'); // set all active
+        renderTasks();
+        updateStats();
+        closeTaskDetail();
+        showToast('Wiederhergestellt', 'success');
     }
 }
 
