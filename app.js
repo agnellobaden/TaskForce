@@ -752,6 +752,33 @@ function initDOMElements() {
     toastContainer.id = 'toastContainer';
     toastContainer.className = 'toast-container';
     document.body.appendChild(toastContainer);
+
+    // Initialize Modal Observers for Mobile Behavior
+    initModalObservers();
+}
+
+function initModalObservers() {
+    // Observe all modals to toggle header visibility on mobile
+    const modals = document.querySelectorAll('.modal');
+
+    const observer = new MutationObserver((mutations) => {
+        let anyOpen = false;
+        modals.forEach(m => {
+            if (!m.classList.contains('hidden')) {
+                anyOpen = true;
+            }
+        });
+
+        if (anyOpen) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+    });
+
+    modals.forEach(t => {
+        observer.observe(t, { attributes: true, attributeFilter: ['class'] });
+    });
 }
 
 function openDriveMode() {

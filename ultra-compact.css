@@ -327,3 +327,39 @@ body.at-top .app-container,
 body.at-bottom .app-container {
     padding-top: 200px !important;
 }
+
+/* Dynamic Header Hiding on Mobile when Modal is Open */
+@media (max-width: 600px) {
+    body.modal-open .header {
+        display: none !important;
+    }
+
+    body.modal-open .app-container {
+        padding-top: 0 !important;
+    }
+
+    body.modal-open .modal {
+        top: 0 !important;
+        bottom: 0 !important;
+        /* Start from seemingly bottom to cover nav if needed, or leave space for bottom nav? User said header disappears. */
+        /* To be safe and truly full screen/popup like: */
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        padding-top: env(safe-area-inset-top) !important;
+        z-index: 2000 !important;
+    }
+
+    body.modal-open .modal-content {
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    body.modal-open .modal-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+    }
+}
