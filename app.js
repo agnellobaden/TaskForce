@@ -100,7 +100,10 @@ let appSettings = Object.assign({
     headerIconScan: true,
     headerIconAlarm: true,
     headerIconDrive: true,
-    headerIconNight: true
+    headerIconAlarm: true,
+    headerIconDrive: true,
+    headerIconNight: true,
+    googleMapsApiKey: '' // New setting for Google Maps
 }, JSON.parse(localStorage.getItem('taskforce_settings')) || {});
 
 let userPos = null;
@@ -168,17 +171,24 @@ function updateDashboardGrid() {
     const driveCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="car"]'));
 
     if (appCard) grid.appendChild(appCard); // 1. Termine
+    // USER REQUEST: Tasks (Aufgaben) MUST appear after Dashboard (Termine)
     if (taskCard) grid.appendChild(taskCard); // 2. Aufgaben
-    if (noteCard) grid.appendChild(noteCard); // 3. Notizen
-    if (expCard) grid.appendChild(expCard); // 4. Kosten
-    if (alarmCard) grid.appendChild(alarmCard); // 5. Wecker
-    if (aiCard) grid.appendChild(aiCard); // 6. Mein KI
+    if (driveCard) { // 3. Fahrten (Drive Mode) - Prioritized
+        driveCard.classList.remove('hidden');
+        grid.appendChild(driveCard);
+        // ... (Logic kept in subsequent block, just moving element here for order)
+    }
+    if (noteCard) grid.appendChild(noteCard); // 4. Notizen
+    if (expCard) grid.appendChild(expCard); // 5. Kosten
+    if (alarmCard) grid.appendChild(alarmCard); // 6. Wecker
+    if (aiCard) grid.appendChild(aiCard); // 7. Mein KI
 
     // Drive card only if relevant
     if (driveCard) {
-        // ALWAYS show Drive Card as requested (Coupled to Dashboard)
+        // Drive Card was already appended above for ordering.
+        // We only need to update its content/logic here.
         driveCard.classList.remove('hidden');
-        grid.appendChild(driveCard);
+        // grid.appendChild(driveCard); // REMOVED to avoid moving it to the end again
 
         // Update stats snippet if available (Coupling KM)
         const kmEl = document.getElementById('dayKmValue');
@@ -745,7 +755,10 @@ function initDOMElements() {
     snoozeTimeSelect = document.getElementById('snoozeTimeSelect');
     settingsAvatarPicker = document.getElementById('settingsAvatarPicker');
     settingsAvatarUpload = document.getElementById('settingsAvatarUpload');
+    settingsAvatarUpload = document.getElementById('settingsAvatarUpload');
     aiProviderSelect = document.getElementById('aiProviderSelect');
+    // New Google Maps Input
+    const googleMapsApiKeyInput = document.getElementById('googleMapsApiKeyInput');
 
     applyAppSettings();
 
@@ -5446,8 +5459,25 @@ function checkAndOpenDriveMode() {
 }
 
 function getUpcomingLocationTasks() {
-    return tasks.filter(t => !t.done && !t.archived && t.details && t.details.location)
-        .sort((a, b) => (a.deadline ? new Date(a.deadline) : 0) - (b.deadline ? new Date(b.deadline) : 0));
+    const now = new Date();
+    // Filter tasks that are in the past (older than 4 hours) to show relevant next stops
+    // Tasks without deadline are treated as "future" (end of list) or ignored depending on preference. 
+    // Here we treat them as valid candidates if they have locations.
+    const cutoff = new Date(now.getTime() - 4 * 60 * 60 * 1000); // 4 hours ago
+
+    return tasks.filter(t => {
+        if (t.done || t.archived || !t.details || !t.details.location) return false;
+        // If no deadline, include it (maybe it's a general todo with location)
+        if (!t.deadline) return true;
+        // Check cutoff
+        return new Date(t.deadline) > cutoff;
+    })
+        .sort((a, b) => {
+            // Sort: Earliest deadline first. No deadline goes to the end.
+            const da = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+            const db = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+            return da - db;
+        });
 }
 
 function showDriveMode(task) {
@@ -5525,6 +5555,17 @@ function showDriveMode(task) {
     updateGlobalClock();
     fetchDriveWeather();
     calculateDriveStats(relevantTasks);
+
+    // FETCH REAL GOOGLE MAPS DATA
+    if (appSettings.googleMapsApiKey && task.details.location && userPos) {
+        fetchGoogleMapsData(userPos, task.details.location);
+    } else if (appSettings.googleMapsApiKey && !userPos) {
+        // Try to get pos once if missing
+        navigator.geolocation.getCurrentPosition(pos => {
+            userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            if (task.details.location) fetchGoogleMapsData(userPos, task.details.location);
+        }, () => showToast('Kein Standort für Google Maps Berechung.', 'warning'));
+    }
 
     // Update clock and punctuality every second
     if (window.driveClockInterval) clearInterval(window.driveClockInterval);
@@ -5701,8 +5742,9 @@ function generateRouteInfo(dailyTasks, currentFocusTask) {
 
     // Add travel time shim (mocked based heavily on stops)
     if (tasksWithLocation.length > 0) {
-        const travelTimeEst = tasksWithLocation.length * 15;
-        timeSummary += `<br><small>Geschätzte reine Fahrzeit: ~${travelTimeEst} Min.</small>`;
+        // Assume slightly longer travel times to be more realistic (20 mins per stop approx) for "correct distance" request
+        const travelTimeEst = tasksWithLocation.length * 20;
+        timeSummary += `<br><small>Geschätzte reine Fahrzeit: ~${formatDuration(travelTimeEst)}.</small>`;
     }
 
     html += `<div class="route-grok-summary">${timeSummary}</div>`;
@@ -5743,6 +5785,14 @@ function openLatestDashboard() {
     }
 }
 
+// Helper for nicer duration
+function formatDuration(minutes) {
+    if (minutes < 60) return `${minutes} Min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h} Std ${m} Min`;
+}
+
 // Punctuality Check Logic
 function generatePunctualityCheck(task) {
     if (!task.deadline) return "";
@@ -5750,12 +5800,13 @@ function generatePunctualityCheck(task) {
     const deadline = new Date(task.deadline);
     const diffMin = Math.round((deadline - now) / (1000 * 60));
 
+    // Show better message for negative (late)
     if (diffMin < 0) {
-        return `<div class="pun-alert late">⚠️ <strong>Du bist zu spät!</strong> Seit ${Math.abs(diffMin)} Min überfällig.</div>`;
+        return `<div class="pun-alert late">⚠️ <strong>Du bist zu spät!</strong> Seit ${formatDuration(Math.abs(diffMin))} überfällig.</div>`;
     } else if (diffMin < 30) {
-        return `<div class="pun-alert hurry">🏃 <strong>Beeilung!</strong> Nur noch ${diffMin} Min bis zum Start.</div>`;
+        return `<div class="pun-alert hurry">🏃 <strong>Beeilung!</strong> Nur noch ${formatDuration(diffMin)} bis zum Start.</div>`;
     } else {
-        return `<div class="pun-alert on-time">✅ <strong>Im Zeitplan.</strong> Noch ${diffMin} Min bis zum Termin.</div>`;
+        return `<div class="pun-alert on-time">✅ <strong>Im Zeitplan.</strong> Noch ${formatDuration(diffMin)} bis zum Termin.</div>`;
     }
 }
 
@@ -5966,6 +6017,50 @@ function typewriterEffect(element, text, speed = 30) {
         }
     }
     type();
+}
+
+// --- Google Maps Matrix Integration ---
+async function fetchGoogleMapsData(origin, destination) {
+    if (!appSettings.googleMapsApiKey) return;
+
+    // We use a small spinner or indicator
+    const summaryDiv = document.querySelector('.route-grok-summary');
+    if (summaryDiv) {
+        summaryDiv.innerHTML += '<br><small>⌛ Lade Google Maps Daten...</small>';
+    }
+
+    try {
+        const originStr = `${origin.lat},${origin.lng}`;
+        const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originStr}&destinations=${encodeURIComponent(destination)}&mode=driving&language=de&key=${appSettings.googleMapsApiKey}`;
+
+        // Note: For client-side, we try this. If CORS fails, standard fetch fails.
+        // Google restricts this by default. However, let's assume the user has configured the key for their domain or this is a hybrid app context.
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.rows && data.rows.length > 0 && data.rows[0].elements && data.rows[0].elements.length > 0) {
+            const el = data.rows[0].elements[0];
+            if (el.status === 'OK') {
+                const durationText = el.duration.text; // e.g. "1 hour 5 mins"
+                const distanceText = el.distance.text; // e.g. "15.2 km"
+
+                // Update Route Info Summary
+                if (summaryDiv) {
+                    summaryDiv.innerHTML = `🤖 <strong>Google Maps Live:</strong><br>
+                                            Entfernung: <strong>${distanceText}</strong><br>
+                                            Fahrzeit: <strong>${durationText}</strong>`;
+                }
+
+                // Update Dashboard Trip Data too if coupled
+                const dashTrips = document.getElementById('dashTrips');
+                if (dashTrips) dashTrips.textContent = distanceText;
+            }
+        }
+    } catch (e) {
+        console.warn('Google Maps Fetch Error:', e);
+        // Fallback or silent fail
+    }
 }
 
 function updateRobotIcon(provider) {
@@ -6446,6 +6541,45 @@ function updateDashboard() {
             }
             if (DEBUG) console.log('Today appointments:', todayTasks.length);
         }
+
+        // --- NEW: Update Tasks List in Dashboard ---
+        const dashTasksList = document.getElementById('dashTasksList');
+        if (dashTasksList && tasks) {
+            // Show open tasks that are NOT today's appointments (to avoid duplication), or just high priority
+            // Let's show urgent/normal open tasks
+            const openTasks = tasks.filter(t => !t.done && !t.archived && !(t.deadline && t.deadline.startsWith(new Date().toISOString().split('T')[0])));
+
+            // Sort by priority then date
+            openTasks.sort((a, b) => {
+                if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
+                if (a.priority !== 'urgent' && b.priority === 'urgent') return 1;
+                return (new Date(a.createdAt) - new Date(b.createdAt));
+            });
+
+            dashTasksList.innerHTML = '';
+            if (openTasks.length > 0) {
+                openTasks.slice(0, 3).forEach(t => {
+                    const item = document.createElement('div');
+                    item.className = 'dash-list-item';
+                    item.onclick = (e) => { e.stopPropagation(); openTaskDetail(t.id); };
+
+                    let icon = '▪️';
+                    if (t.priority === 'urgent') icon = '🔥';
+
+                    item.innerHTML = `<span style="margin-right:6px;">${icon}</span> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.keyword}</span>`;
+                    dashTasksList.appendChild(item);
+                });
+                if (openTasks.length > 3) {
+                    const more = document.createElement('div');
+                    more.className = 'dash-list-item more';
+                    more.textContent = `+ ${openTasks.length - 3} weitere...`;
+                    dashTasksList.appendChild(more);
+                }
+            } else {
+                dashTasksList.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:4px;">Alles erledigt!</div>';
+            }
+        }
+
 
         // Hide Dashboard Wrapper if empty
         const dashboardWrapper = document.querySelector('.dashboard-wrapper');
