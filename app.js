@@ -7986,3 +7986,113 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ===== Mobile Back Button Handling (Improved) =====
+// Ensures strictly one-step-back behavior for Modals/Overlays
+document.addEventListener('DOMContentLoaded', () => {
+    setupBackButtonLogic();
+});
+
+function setupBackButtonLogic() {
+    let isPoppingState = false;      // True when event comes from Back Button
+    let isProgrammaticBack = false;  // True when event comes from UI Close Button
+
+    // List of Managed Views (Modals/Overlays)
+    const managedViews = [
+        'urgentOverlay', 'teamNotificationOverlay', 'driveModeOverlay',
+        'nightstandOverlay', 'activeAlarmOverlay', 'sideMenuOverlay',
+        'paypalModal', 'commModal', 'expenseModal', 'questionsModal',
+        'taskDetailModal', 'settingsModal', 'personalAIModal',
+        'grokModal', 'calendarModal', 'appointmentModal',
+        'aiResearchResultModal', 'alarmSettingsModal', 'installBanner',
+        // Full screen sections
+        'expenseSection', 'alarmSection', 'quickTodoSection', 'aiAdvisorSection',
+        'categoryBreakdown'
+    ];
+
+    // Helper to get element by ID safely
+    const getEl = (id) => document.getElementById(id);
+
+    // 1. Listen for History Navigation (Back Button)
+    window.addEventListener('popstate', (event) => {
+        // If we triggered this via code (UI Close), ignore it
+        if (isProgrammaticBack) {
+            isProgrammaticBack = false;
+            return;
+        }
+
+        // We are handling a real Back Button press
+        isPoppingState = true;
+
+        // Determine legitimate view for this state
+        // If state is null, we are at base. If state has viewId, that view should be open.
+        // We will CLOSE anything that doesn't match the current state.
+
+        const targetViewId = event.state && event.state.viewId ? event.state.viewId : null;
+
+        managedViews.forEach(id => {
+            const el = getEl(id);
+            if (!el) return;
+
+            const isVisible = !el.classList.contains('hidden');
+
+            // If it's visible BUT it's not the target view (and not a parent/base?), close it
+            // Simple logic: If we go back, we close the topmost conflicting view.
+            if (isVisible && id !== targetViewId) {
+                // Check if this view is stacked on top of target? 
+                // For now, assume single-layer usage or standard stack unwinding.
+                // We close it.
+                el.classList.add('hidden');
+                console.log(`[Back Handler] Closing view via Back Button: ${id}`);
+            }
+
+            // Optional: If we went FORWARD to a state, we might need to open it?
+            // This happens if user Undo/Redo. Not critical for "Back button" feature but good for robustness.
+            if (!isVisible && id === targetViewId) {
+                el.classList.remove('hidden');
+            }
+        });
+
+        // Reset flag after a moment to allow Observers to fire without triggering logic
+        setTimeout(() => { isPoppingState = false; }, 100);
+    });
+
+    // 2. Observe View Class Changes (Open/Close)
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const target = mutation.target;
+                const isHidden = target.classList.contains('hidden');
+
+                if (!isHidden) {
+                    // === View OPENED ===
+                    // If this wasn't caused by undo/redo history navigation, push a new state
+                    if (!isPoppingState) {
+                        history.pushState({ viewId: target.id, timestamp: Date.now() }, '', '#' + target.id);
+                        // console.log(`[Back Handler] Pushed state for ${target.id}`);
+                    }
+                } else {
+                    // === View CLOSED ===
+                    // If closed by UI (Button), we must remove the history item manually
+                    // If closed by Back Button (isPoppingState), history is already correct
+                    if (!isPoppingState) {
+                        // Check if we have a state to pop (avoid popping base app history)
+                        if (history.state) {
+                            isProgrammaticBack = true; // Signal popstate listener to ignore this
+                            history.back();
+                            // console.log(`[Back Handler] UI Close -> Synced History for ${target.id}`);
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // Start Observing
+    managedViews.forEach(id => {
+        const el = getEl(id);
+        if (el) {
+            observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+        }
+    });
+}
