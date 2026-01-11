@@ -367,15 +367,15 @@
     }
 
     .modal-body {
-        padding: 0.4rem !important;
+        padding: 1.5rem !important;
     }
 
     .modal-header {
-        padding: 0.5rem !important;
+        padding: 1rem 1.5rem !important;
     }
 
     .modal-footer {
-        padding: 0.5rem !important;
+        padding: 1rem 1.5rem !important;
     }
 
     /* Header Search Wrapper on Mobile */

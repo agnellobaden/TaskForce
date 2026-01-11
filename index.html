@@ -636,7 +636,7 @@
                 </div>
                 <div class="modal-body comm-grid" style="display: flex; flex-direction: column; gap: 1rem;">
                     <div class="form-group" style="width: 100%;">
-                        <label <i data-lucide="phone"></i> Nummer oder <i data-lucide="mail"></i> E-Mail</label>
+                        <label><i data-lucide="phone"></i> Nummer oder <i data-lucide="mail"></i> E-Mail</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="commInput" class="settings-input" placeholder="Kontakt eingeben..."
                                 style="font-size: 1.2rem; padding: 1rem; flex: 1;">
@@ -916,6 +916,10 @@
 
         <!-- Fixed Footer Navigation -->
         <div id="fixedFooterNav" class="fixed-footer-nav">
+            <button class="btn-footer-icon" id="paypalBtnFooter" title="PayPal">
+                <span style="font-size: 1.2rem;">🅿️</span>
+                <span class="icon-label">PayPal</span>
+            </button>
             <button class="btn-footer-icon" id="personalAIBtn" title="Persönliche KI" style="color: #a78bfa;">
                 <i data-lucide="bot"></i>
                 <span class="icon-label">Meine KI</span>
@@ -1083,205 +1087,204 @@
                     </div>
                 </div>
 
-
-            </div>
-            <div class="setting-toggle-row">
-                <span>💰 Kosten-Liste</span>
-                <label class="switch">
-                    <input type="checkbox" id="headerIconExpense">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>📸 Beleg scannen</span>
-                <label class="switch">
-                    <input type="checkbox" id="headerIconScan">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>⏰ Wecker / Alarm</span>
-                <label class="switch">
-                    <input type="checkbox" id="headerIconAlarm">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>🚗 Fahrt-Modus</span>
-                <label class="switch">
-                    <input type="checkbox" id="headerIconDrive">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>🌙 Nachtmodus</span>
-                <label class="switch">
-                    <input type="checkbox" id="headerIconNight">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>🗣️ Wake-Word Aktivierung (Autostart)</label>
-            <div class="setting-toggle-row">
-                <span>Hallo-Befehl aktivieren</span>
-                <label class="switch">
-                    <input type="checkbox" id="wakeWordToggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="form-group" id="wakeWordNameGroup">
-                <label>Wake-Word Name</label>
-                <input type="text" id="wakeWordNameInput" placeholder="z.B. Taskforce">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>🚗 Fahrt-Modus</label>
-            <div class="setting-toggle-row">
-                <span>Fahrt-Modus automatisch starten</span>
-                <label class="switch">
-                    <input type="checkbox" id="driveModeToggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-        </div>
-
-        <div class="form-group"
-            style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
-            <label>⚙️ System & Automatisierung</label>
-            <div class="setting-toggle-row">
-                <span>⚠️ Dringende Aufgaben (Popup)</span>
-                <label class="switch">
-                    <input type="checkbox" id="urgentPopupToggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>Abgelaufene Termine archivieren</span>
-                <label class="switch">
-                    <input type="checkbox" id="autoArchiveToggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-toggle-row">
-                <span>Standort-Tracking</span>
-                <label class="switch">
-                    <input type="checkbox" id="locationToggle">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="setting-field" style="margin-top: 1rem;">
-                <label>🏠 Heimatadresse</label>
-                <input type="text" id="homeAddressInput" placeholder="z.B. Musterstraße 1, Berlin"
-                    class="settings-input">
-            </div>
-            <small style="color: var(--text-muted); font-size: 0.75rem;">Termine, die in der Vergangenheit
-                liegen, werden automatisch archiviert.</small>
-        </div>
-
-        <div class="form-group" style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
-            <label>🎨 Profilbild ändern</label>
-            <div class="avatar-picker-wrapper">
-                <div class="avatar-picker" id="settingsAvatarPicker">
-                    <div class="avatar-option" data-avatar="😊">😊</div>
-                    <div class="avatar-option" data-avatar="😎">😎</div>
-                    <div class="avatar-option" data-avatar="🦸">🦸</div>
-                    <div class="avatar-option" data-avatar="🦊">🦊</div>
-                    <div class="avatar-option upload-option" id="settingsCustomAvatarBtn">
-                        <span class="plus-icon">+</span>
-                        <input type="file" id="settingsAvatarUpload" accept="image/*" class="hidden-input">
+                <div class="form-group">
+                    <label>📊 Dashboard-Icons (Header)</label>
+                    <div class="setting-toggle-row">
+                        <span>💰 Kosten-Liste</span>
+                        <label class="switch">
+                            <input type="checkbox" id="headerIconExpense">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>📸 Beleg scannen</span>
+                        <label class="switch">
+                            <input type="checkbox" id="headerIconScan">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>⏰ Wecker / Alarm</span>
+                        <label class="switch">
+                            <input type="checkbox" id="headerIconAlarm">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>🚗 Fahrt-Modus</span>
+                        <label class="switch">
+                            <input type="checkbox" id="headerIconDrive">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>🌙 Nachtmodus</span>
+                        <label class="switch">
+                            <input type="checkbox" id="headerIconNight">
+                            <span class="slider round"></span>
+                        </label>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- NEW: User Profile & Sync Section -->
-        <div class="form-group"
-            style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
-            <label>👤 Benutzerkonto & Synchronisierung</label>
-
-
-            <div class="setting-field" style="margin-bottom: 1rem;">
-                <label style="font-size: 0.85em; color: var(--text-muted);">Dein Nutzername</label>
-                <input type="text" id="settingsUserName" class="settings-input" placeholder="Name ändern">
-            </div>
-
-            <div class="setting-field" style="margin-bottom: 1rem;">
-                <label style="font-size: 0.85em; color: var(--text-muted);">Dein Aktuelles Passwort
-                    (PIN)</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="visibleCurrentPin" class="settings-input" readonly
-                        style="background: rgba(0,0,0,0.2); color: var(--primary);">
+                <div class="form-group">
+                    <label>🗣️ Wake-Word Aktivierung (Autostart)</label>
+                    <div class="setting-toggle-row">
+                        <span>Hallo-Befehl aktivieren</span>
+                        <label class="switch">
+                            <input type="checkbox" id="wakeWordToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="wakeWordNameGroup">
+                        <label>Wake-Word Name</label>
+                        <input type="text" id="wakeWordNameInput" placeholder="z.B. Taskforce">
+                    </div>
                 </div>
-            </div>
 
-            <div class="setting-field" style="margin-bottom: 1rem;">
-                <label style="font-size: 0.85em; color: var(--text-muted);">👥 Wer ist gerade online?
-                    (Team)</label>
-                <div id="activeTeamMembers"
-                    style="background: rgba(0,0,0,0.1); padding: 12px; border-radius: 8px; font-size: 0.9rem; color: var(--text-primary); min-height: 40px; display: flex; flex-direction: column; gap: 8px;">
-                    <div style="color: var(--text-muted); font-style: italic;">Lade Team-Status...</div>
+                <div class="form-group">
+                    <label>🚗 Fahrt-Modus</label>
+                    <div class="setting-toggle-row">
+                        <span>Fahrt-Modus automatisch starten</span>
+                        <label class="switch">
+                            <input type="checkbox" id="driveModeToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
-            </div>
 
-            <div class="setting-field" style="margin-bottom: 1rem;">
-                <label style="font-size: 0.85em; color: var(--text-muted);">Aktive Team-Codes</label>
-                <div id="settingsTeamList"
-                    style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; font-family: monospace; color: var(--text-primary);">
-                    Lade...
+                <div class="form-group"
+                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <label>⚙️ System & Automatisierung</label>
+                    <div class="setting-toggle-row">
+                        <span>⚠️ Dringende Aufgaben (Popup)</span>
+                        <label class="switch">
+                            <input type="checkbox" id="urgentPopupToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>Abgelaufene Termine archivieren</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoArchiveToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <span>Standort-Tracking</span>
+                        <label class="switch">
+                            <input type="checkbox" id="locationToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-field" style="margin-top: 1rem;">
+                        <label>🏠 Heimatadresse</label>
+                        <input type="text" id="homeAddressInput" placeholder="z.B. Musterstraße 1, Berlin"
+                            class="settings-input">
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem;">Termine, die in der Vergangenheit
+                        liegen, werden automatisch archiviert.</small>
                 </div>
-            </div>
 
-            <div class="setting-field" style="margin-bottom: 1rem;">
-                <label style="font-size: 0.85em; color: var(--text-muted);">Neues Passwort (PIN) setzen</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="password" id="settingsUserPin" class="settings-input"
-                        placeholder="Neuer 6-stelliger PIN (Optional)" maxlength="6" inputmode="numeric"
-                        pattern="[0-9]*">
-                </div>
-                <small style="font-size: 0.7rem; color: var(--text-muted);">Lass dieses Feld leer, wenn du den
-                    PIN behalten willst.</small>
-            </div>
-
-            <div class="sync-info-box"
-                style="margin-top: 1.5rem; padding: 15px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 12px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <span style="font-size:1.5rem">☁️</span>
-                    <strong style="color: var(--primary-light);">Geräte verbinden & Daten sichern</strong>
-                </div>
-                <p style="font-size: 0.8rem; line-height: 1.4; opacity: 0.9; margin:0;">
-                    <strong>So geht's:</strong> Nutze auf deinem Laptop und Handy exakt denselben
-                    <span style="color: var(--secondary);">Benutzernamen</span> und <span
-                        style="color: var(--secondary);">PIN</span> beim Anmelden.
-                    <br><br>
-                    Deine Termine werden dann automatisch synchronisiert und sind auch nach Updates sicher!
-                </p>
-
-                <div class="connection-status-area"
-                    style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-glass);">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div id="connectionStatusDot" class="status-dot offline"
-                                style="width: 10px; height: 10px; border-radius: 50%; background: gray;"></div>
-                            <span id="connectionStatusText" style="font-size: 0.8rem; color: var(--text-muted);">Status
-                                unbekannt</span>
+                <div class="form-group" style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
+                    <label>🎨 Profilbild ändern</label>
+                    <div class="avatar-picker-wrapper">
+                        <div class="avatar-picker" id="settingsAvatarPicker">
+                            <div class="avatar-option" data-avatar="😊">😊</div>
+                            <div class="avatar-option" data-avatar="😎">😎</div>
+                            <div class="avatar-option" data-avatar="🦸">🦸</div>
+                            <div class="avatar-option" data-avatar="🦊">🦊</div>
+                            <div class="avatar-option upload-option" id="settingsCustomAvatarBtn">
+                                <span class="plus-icon">+</span>
+                                <input type="file" id="settingsAvatarUpload" accept="image/*" class="hidden-input">
+                            </div>
                         </div>
-                        <button type="button" class="btn-link-small" onclick="testConnection()">🔄 Verbindung
-                            testen</button>
                     </div>
-                    <button type="button" class="btn-small-outline full-width" onclick="forceSync()">☁️ Jetzt
-                        alles synchronisieren</button>
+                </div>
+
+                <div class="form-group"
+                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <label>👤 Benutzerkonto & Synchronisierung</label>
+
+                    <div class="setting-field" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85em; color: var(--text-muted);">Dein Nutzername</label>
+                        <input type="text" id="settingsUserName" class="settings-input" placeholder="Name ändern">
+                    </div>
+
+                    <div class="setting-field" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85em; color: var(--text-muted);">Dein Aktuelles Passwort
+                            (PIN)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="visibleCurrentPin" class="settings-input" readonly
+                                style="background: rgba(0,0,0,0.2); color: var(--primary);">
+                        </div>
+                    </div>
+
+                    <div class="setting-field" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85em; color: var(--text-muted);">👥 Wer ist gerade online?
+                            (Team)</label>
+                        <div id="activeTeamMembers"
+                            style="background: rgba(0,0,0,0.1); padding: 12px; border-radius: 8px; font-size: 0.9rem; color: var(--text-primary); min-height: 40px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="color: var(--text-muted); font-style: italic;">Lade Team-Status...</div>
+                        </div>
+                    </div>
+
+                    <div class="setting-field" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85em; color: var(--text-muted);">Aktive Team-Codes</label>
+                        <div id="settingsTeamList"
+                            style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; font-family: monospace; color: var(--text-primary);">
+                            Lade...
+                        </div>
+                    </div>
+
+                    <div class="setting-field" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85em; color: var(--text-muted);">Neues Passwort (PIN) setzen</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="password" id="settingsUserPin" class="settings-input"
+                                placeholder="Neuer 6-stelliger PIN (Optional)" maxlength="6" inputmode="numeric"
+                                pattern="[0-9]*">
+                        </div>
+                        <small style="font-size: 0.7rem; color: var(--text-muted);">Lass dieses Feld leer, wenn du den
+                            PIN behalten willst.</small>
+                    </div>
+
+                    <div class="sync-info-box"
+                        style="margin-top: 1.5rem; padding: 15px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 12px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                            <span style="font-size:1.5rem">☁️</span>
+                            <strong style="color: var(--primary-light);">Geräte verbinden & Daten sichern</strong>
+                        </div>
+                        <p style="font-size: 0.8rem; line-height: 1.4; opacity: 0.9; margin:0;">
+                            <strong>So geht's:</strong> Nutze auf deinem Laptop und Handy exakt denselben
+                            <span style="color: var(--secondary);">Benutzernamen</span> und <span
+                                style="color: var(--secondary);">PIN</span> beim Anmelden.
+                            <br><br>
+                            Deine Termine werden dann automatisch synchronisiert und sind auch nach Updates sicher!
+                        </p>
+
+                        <div class="connection-status-area"
+                            style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-glass);">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div id="connectionStatusDot" class="status-dot offline"
+                                        style="width: 10px; height: 10px; border-radius: 50%; background: gray;"></div>
+                                    <span id="connectionStatusText"
+                                        style="font-size: 0.8rem; color: var(--text-muted);">Status unbekannt</span>
+                                </div>
+                                <button type="button" class="btn-link-small" onclick="testConnection()">🔄 Verbindung
+                                    testen</button>
+                            </div>
+                            <button type="button" class="btn-small-outline full-width" onclick="forceSync()">☁️ Jetzt
+                                alles synchronisieren</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div> <!-- End modal-body -->
-        <div class="modal-footer">
-            <button id="saveSettingsBtn" class="btn-primary">Speichern</button>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn-primary">Speichern</button>
+            </div>
         </div>
-    </div> <!-- End modal-content -->
-    </div> <!-- End settingsModal -->
+    </div>
 
     <!-- Personal AI Assistant Modal -->
     <div id="personalAIModal" class="modal hidden">

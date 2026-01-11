@@ -176,12 +176,46 @@ function updateDashboardGrid() {
 
     // Drive card only if relevant
     if (driveCard) {
-        const hasDriveTasks = getUpcomingLocationTasks().length > 0;
-        if (hasDriveTasks) {
-            driveCard.classList.remove('hidden');
-            grid.appendChild(driveCard);
-        } else {
-            driveCard.classList.add('hidden');
+        // ALWAYS show Drive Card as requested (Coupled to Dashboard)
+        driveCard.classList.remove('hidden');
+        grid.appendChild(driveCard);
+
+        // Update stats snippet if available (Coupling KM)
+        const kmEl = document.getElementById('dayKmValue');
+        const dashTripEl = document.getElementById('dashTrips');
+        if (kmEl && dashTripEl) {
+            dashTripEl.textContent = (kmEl.textContent || '0') + " km";
+        }
+
+        // Coupling Active Drive Mode Context (Next Destination)
+        const dashTripsList = document.getElementById('dashTripsList');
+        if (dashTripsList && typeof getUpcomingLocationTasks === 'function') {
+            const upcoming = getUpcomingLocationTasks();
+            if (upcoming.length > 0) {
+                const dest = upcoming[0];
+                dashTripsList.innerHTML = `<div class="dash-list-item" style="display:flex; align-items:center; gap:5px; color:var(--text-secondary); font-size:0.85rem; margin-top:5px;">
+                    <i data-lucide="map-pin" style="width:14px; height:14px; color:var(--secondary);"></i> 
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 100px;">${escapeHtml(dest.keyword)}</span>
+                 </div>`;
+
+                // Update label to indicate active
+                const label = driveCard.querySelector('.dashboard-card-label');
+                if (label) {
+                    label.textContent = 'Navigations-Bereit';
+                    label.style.color = 'var(--secondary)';
+                }
+
+                // Refresh icons
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            } else {
+                dashTripsList.innerHTML = '';
+                const label = driveCard.querySelector('.dashboard-card-label');
+                if (label) {
+                    label.textContent = 'Heute';
+                    label.style.color = '';
+                }
+            }
         }
     }
 }
@@ -334,12 +368,14 @@ function initDOMElements() {
     // PayPal
     paypalBtn = document.getElementById('paypalBtn');
     sidePaypalBtn = document.getElementById('sidePaypalBtn');
+    const paypalBtnFooter = document.getElementById('paypalBtnFooter');
     paypalModal = document.getElementById('paypalModal');
     closePaypalBtn = document.getElementById('closePaypalBtn');
     redirectToPaypalBtn = document.getElementById('redirectToPaypalBtn');
 
     if (paypalBtn) paypalBtn.addEventListener('click', () => paypalModal.classList.remove('hidden'));
     if (sidePaypalBtn) sidePaypalBtn.addEventListener('click', () => { paypalModal.classList.remove('hidden'); sideMenuOverlay.classList.add('hidden'); });
+    if (paypalBtnFooter) paypalBtnFooter.addEventListener('click', () => paypalModal.classList.remove('hidden'));
     if (closePaypalBtn) closePaypalBtn.addEventListener('click', () => paypalModal.classList.add('hidden'));
     if (redirectToPaypalBtn) redirectToPaypalBtn.addEventListener('click', () => {
         window.open('https://www.paypal.com/signin', '_blank');
@@ -873,8 +909,19 @@ function setupEventListeners() {
 }
 
 function openDriveMode() {
-    const dm = document.getElementById('driveModeOverlay');
-    if (dm) dm.classList.remove('hidden');
+    // Attempt to auto-select the next relevant drive task
+    const upcoming = getUpcomingLocationTasks();
+    if (upcoming.length > 0) {
+        showDriveMode(upcoming[0]);
+    } else {
+        // Fallback for no specific task
+        const dm = document.getElementById('driveModeOverlay');
+        if (dm) dm.classList.remove('hidden');
+        // Initialize basics even if no task
+        if (typeof updateGlobalClock === 'function') updateGlobalClock();
+        if (typeof fetchDriveWeather === 'function') fetchDriveWeather();
+    }
+
     // Attempt wake lock
     if ('wakeLock' in navigator) {
         try { navigator.wakeLock.request('screen'); } catch (e) { }

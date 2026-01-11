@@ -114,6 +114,8 @@
     color: var(--text-primary);
     font-size: 0.9rem;
     text-align: left;
+    white-space: normal;
+    line-height: 1.3;
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 0.4rem;

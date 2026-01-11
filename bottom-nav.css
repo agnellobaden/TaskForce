@@ -152,7 +152,8 @@ body.nav-top-mode #mainClock {
     left: 0;
     width: 100%;
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    /* Changed from space-around to flex-start for scrolling */
     align-items: center;
     background: rgba(15, 15, 26, 0.98);
     backdrop-filter: blur(25px);
@@ -163,6 +164,10 @@ body.nav-top-mode #mainClock {
     z-index: 1000;
     animation: slideUpNav 0.3s ease-out;
     min-height: 50px;
+    overflow-x: auto;
+    /* Enable horizontal scrolling */
+    gap: 15px;
+    /* Add consistent gap */
 }
 
 .btn-footer-icon {
