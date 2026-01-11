@@ -164,6 +164,7 @@ function updateDashboardGrid() {
     const noteCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="file-text"]'));
     const expCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="dollar-sign"]'));
     const alarmCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bell"]'));
+    const aiCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bot"]'));
     const driveCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="car"]'));
 
     if (appCard) grid.appendChild(appCard); // 1. Termine
@@ -171,6 +172,7 @@ function updateDashboardGrid() {
     if (noteCard) grid.appendChild(noteCard); // 3. Notizen
     if (expCard) grid.appendChild(expCard); // 4. Kosten
     if (alarmCard) grid.appendChild(alarmCard); // 5. Wecker
+    if (aiCard) grid.appendChild(aiCard); // 6. Mein KI
 
     // Drive card only if relevant
     if (driveCard) {
@@ -6349,10 +6351,42 @@ function updateDashboard() {
             if (dashAppointmentsList) {
                 dashAppointmentsList.innerHTML = '';
                 if (todayTasks.length > 0) {
+                    // Sort by time
+                    todayTasks.sort((a, b) => {
+                        const tA = a.deadline ? new Date(a.deadline).getTime() : 0;
+                        const tB = b.deadline ? new Date(b.deadline).getTime() : 0;
+                        return tA - tB;
+                    });
+
                     todayTasks.slice(0, 3).forEach(t => {
                         const item = document.createElement('div');
                         item.className = 'dash-list-item';
-                        item.innerHTML = `<span class="dash-item-dot"></span>${t.keyword}`;
+                        item.style.cursor = 'pointer';
+
+                        // Time
+                        let timeStr = '';
+                        if (t.deadline) {
+                            timeStr = new Date(t.deadline).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        }
+
+                        // Distance/Location Hint
+                        let metaInfo = '';
+                        if (t.details && t.details.distance) {
+                            metaInfo += ` (${t.details.distance} km)`;
+                        }
+
+                        item.onclick = (e) => {
+                            e.stopPropagation();
+                            openTaskDetail(t.id);
+                        };
+
+                        item.innerHTML = `
+                            <div style="display:flex; align-items:center; width:100%;">
+                                <span class="dash-item-dot"></span>
+                                <span style="font-family:monospace; margin-right:8px; color:var(--text-secondary);">${timeStr}</span>
+                                <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.keyword}${metaInfo}</span>
+                            </div>
+                        `;
                         dashAppointmentsList.appendChild(item);
                     });
                     if (todayTasks.length > 3) {
@@ -6381,11 +6415,61 @@ function updateDashboard() {
             }
         }
 
+        // Update trips for today
+        const dashTrips = document.getElementById('dashTrips');
+        const dashTripsList = document.getElementById('dashTripsList');
+        if (dashTrips && tasks) {
+            const today = new Date().toISOString().split('T')[0];
+            const driveTasks = tasks.filter(t => {
+                if (t.archived) return false;
+                let taskDate = '';
+                if (t.deadline) taskDate = t.deadline.split('T')[0];
+                else if (t.details && t.details['📅 Wann?']) taskDate = t.details['📅 Wann?'].split('T')[0];
+                return taskDate === today && t.details && t.details.location;
+            });
+
+            const totalKm = driveTasks.length * 15;
+            let totalHours = 0;
+            if (driveTasks.length > 0) {
+                const sorted = [...driveTasks].sort((a, b) => (new Date(a.deadline) || 0) - (new Date(b.deadline) || 0));
+                const first = new Date(sorted[0].deadline);
+                const last = new Date(sorted[sorted.length - 1].deadline);
+                const diff = (last - first) / (1000 * 60 * 60);
+                totalHours = Math.max(1, Math.ceil(diff + 1));
+            }
+
+            dashTrips.textContent = `${totalKm} km` + (totalHours > 0 ? ` (${totalHours}h)` : '');
+
+            if (dashTripsList) {
+                dashTripsList.innerHTML = '';
+                driveTasks.slice(0, 2).forEach(t => {
+                    const time = t.deadline ? new Date(t.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    const item = document.createElement('div');
+                    item.className = 'dash-list-item';
+                    item.innerHTML = `<span class="dash-item-dot" style="background:var(--secondary)"></span> ${time} ${t.keyword}`;
+                    dashTripsList.appendChild(item);
+                });
+            }
+        }
+
         updateDashboardGrid(); // Termine immer ganz oben!
 
         if (DEBUG) console.log('Dashboard updated successfully!');
     } catch (error) {
         if (DEBUG) console.error('Error updating dashboard:', error);
+    }
+}
+
+// Helper to focus input
+function focusKeywordInput() {
+    if (keywordInput) {
+        keywordInput.focus();
+        keywordInput.classList.add('highlight-flash');
+        setTimeout(() => keywordInput.classList.remove('highlight-flash'), 1000);
+
+        // Scroll to search area if not visible
+        const header = document.querySelector('.header-search-wrapper');
+        if (header) header.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 

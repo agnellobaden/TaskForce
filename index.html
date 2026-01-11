@@ -541,7 +541,7 @@
             <section class="dashboard-content" id="dashboardContent">
                 <div class="dashboard-grid">
                     <!-- Termine -->
-                    <div class="dashboard-card" onclick="openCalendarView()">
+                    <div class="dashboard-card" onclick="openAppointmentModalWithData('', 'Manuell')">
                         <div class="dashboard-card-header">
                             <i data-lucide="calendar"></i>
                             <h4>Termine</h4>
@@ -552,7 +552,7 @@
                     </div>
 
                     <!-- Notizen -->
-                    <div class="dashboard-card" onclick="scrollToNotes()">
+                    <div class="dashboard-card" onclick="promptNewNoteList()">
                         <div class="dashboard-card-header">
                             <i data-lucide="file-text"></i>
                             <h4>Notizen</h4>
@@ -562,7 +562,7 @@
                     </div>
 
                     <!-- Wecker -->
-                    <div class="dashboard-card" onclick="scrollToAlarms()">
+                    <div class="dashboard-card" onclick="openAlarmSettings()">
                         <div class="dashboard-card-header">
                             <i data-lucide="bell"></i>
                             <h4>Wecker</h4>
@@ -572,7 +572,7 @@
                     </div>
 
                     <!-- Aufgaben -->
-                    <div class="dashboard-card">
+                    <div class="dashboard-card" onclick="focusKeywordInput()">
                         <div class="dashboard-card-header">
                             <i data-lucide="check-circle"></i>
                             <h4>Aufgaben</h4>
@@ -594,13 +594,23 @@
                     </div>
 
                     <!-- Kosten -->
-                    <div class="dashboard-card" onclick="scrollToExpenses()">
+                    <div class="dashboard-card" onclick="openExpenseModal()">
                         <div class="dashboard-card-header">
                             <i data-lucide="dollar-sign"></i>
                             <h4>Kosten</h4>
                         </div>
                         <div class="dashboard-card-value" id="dashExpenses">0,00 €</div>
                         <div class="dashboard-card-label">Heute</div>
+                    </div>
+
+                    <!-- Mein KI -->
+                    <div class="dashboard-card" onclick="document.getElementById('personalAIBtn').click()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="bot"></i>
+                            <h4>Mein KI</h4>
+                        </div>
+                        <div class="dashboard-card-value" style="font-size: 1.5rem;">Advisor</div>
+                        <div class="dashboard-card-label">Assistent</div>
                     </div>
 
                     <!-- Fahrten (wenn vorhanden) -->
@@ -611,6 +621,7 @@
                         </div>
                         <div class="dashboard-card-value" id="dashTrips">0 km</div>
                         <div class="dashboard-card-label">Heute</div>
+                        <div id="dashTripsList" class="dash-list-container"></div>
                     </div>
                 </div>
             </section>
@@ -1404,9 +1415,9 @@
                     style="margin-top: 20px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
                     <label>🔑 OpenAI API Key (Optional)</label>
                     <div style="display:flex; gap:10px;">
-                        <input type="password" id="openaiApiKeyInput" class="settings-input" placeholder="sk-..."
+                        <input type="password" id="aiOpenaiApiKeyInput" class="settings-input" placeholder="sk-..."
                             style="flex:1;">
-                        <button id="toggleApiKeyVisibility" type="button" class="btn-secondary"
+                        <button id="toggleAiApiKeyVisibility" type="button" class="btn-secondary"
                             style="padding:0 12px;">👁️</button>
                     </div>
                     <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px;">

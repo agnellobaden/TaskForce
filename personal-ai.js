@@ -106,6 +106,16 @@ function initPersonalAI() {
         });
     }
 
+    // API Key toggler
+    const toggleAiApiBtn = document.getElementById('toggleAiApiKeyVisibility');
+    const aiApiInput = document.getElementById('aiOpenaiApiKeyInput');
+    if (toggleAiApiBtn && aiApiInput) {
+        toggleAiApiBtn.addEventListener('click', () => {
+            aiApiInput.type = aiApiInput.type === 'password' ? 'text' : 'password';
+            toggleAiApiBtn.textContent = aiApiInput.type === 'password' ? '👁️' : '🔒';
+        });
+    }
+
     // Check for morning briefing
     checkMorningBriefing();
     setInterval(checkMorningBriefing, 60000); // Check every minute
@@ -219,6 +229,10 @@ function loadPersonalAIData() {
 
     if (document.getElementById('aiMorningTime')) document.getElementById('aiMorningTime').value = personalAIData.morningTime || '07:00';
 
+    if (document.getElementById('aiOpenaiApiKeyInput')) {
+        document.getElementById('aiOpenaiApiKeyInput').value = (typeof appSettings !== 'undefined') ? appSettings.openaiApiKey : '';
+    }
+
     updateAgeDisplay();
 }
 
@@ -241,6 +255,15 @@ function savePersonalAIData() {
     };
 
     localStorage.setItem('taskforce_personal_ai', JSON.stringify(personalAIData));
+
+    // Update global API key if provided
+    const aiApiInput = document.getElementById('aiOpenaiApiKeyInput');
+    if (aiApiInput && aiApiInput.value.trim()) {
+        if (typeof appSettings !== 'undefined') {
+            appSettings.openaiApiKey = aiApiInput.value.trim();
+            localStorage.setItem('taskforce_settings', JSON.stringify(appSettings));
+        }
+    }
 
     if (typeof showToast === 'function') {
         showToast('Persönliche KI-Einstellungen gespeichert!', 'success');
