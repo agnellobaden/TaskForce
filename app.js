@@ -146,6 +146,48 @@ const keywordPatterns = {
     }
 };
 
+// Reorder dashboard cards: Appointments first!
+function updateDashboardGrid() {
+    const grid = document.querySelector('.dashboard-grid');
+    if (!grid) return;
+
+    // We need to re-append children in the correct order:
+    // 1. Appointments (Termine) - always first
+    // 2. Tasks (Aufgaben)
+    // 3. Notes (Notizen)
+    // 4. Expenses (Kosten)
+    // 5. Alarms (Wecker)
+    // 6. Drive Mode (Fahrten) - only if active tasks exist
+
+    const appCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="calendar"]'));
+    const taskCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="check-circle"]'));
+    const noteCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="file-text"]'));
+    const expCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="dollar-sign"]'));
+    const alarmCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bell"]'));
+    const driveCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="car"]'));
+
+    if (appCard) grid.appendChild(appCard); // 1. Termine
+    if (taskCard) grid.appendChild(taskCard); // 2. Aufgaben
+    if (noteCard) grid.appendChild(noteCard); // 3. Notizen
+    if (expCard) grid.appendChild(expCard); // 4. Kosten
+    if (alarmCard) grid.appendChild(alarmCard); // 5. Wecker
+
+    // Drive card only if relevant
+    if (driveCard) {
+        const hasDriveTasks = getUpcomingLocationTasks().length > 0;
+        if (hasDriveTasks) {
+            driveCard.classList.remove('hidden');
+            grid.appendChild(driveCard);
+        } else {
+            driveCard.classList.add('hidden');
+        }
+    }
+}
+
+// Call this whenever dashboard is updated
+setInterval(updateDashboardGrid, 5000); // Check periodically
+
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initDOMElements();
@@ -217,23 +259,6 @@ function initDOMElements() {
         if (typeof stopWakeWord === 'function') startWakeWord(); // Resume listening when closed
     });
 
-    const aiSelectorArrow = document.getElementById('aiSelectorArrow');
-    const toggleActionsBtn = document.getElementById('toggleActionsBtn');
-    const collapsibleActions = document.getElementById('collapsibleActions');
-    const inputContainer = document.querySelector('.input-container');
-
-    if (toggleActionsBtn) {
-        toggleActionsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            collapsibleActions.classList.toggle('hidden');
-            inputContainer.classList.toggle('expanded');
-            if (!collapsibleActions.classList.contains('hidden')) {
-                // Refresh Lucide icons as they might have been injected
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        });
-    }
-
     if (grokManualBtn) {
         grokManualBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -247,15 +272,7 @@ function initDOMElements() {
         });
     }
 
-    if (aiSelectorArrow) {
-        aiSelectorArrow.addEventListener('click', (e) => {
-            e.stopPropagation();
-            aiSelectionMenu.classList.toggle('hidden');
-            aiOptions.forEach(opt => {
-                opt.classList.toggle('active', opt.dataset.provider === (appSettings.aiProvider || 'grok'));
-            });
-        });
-    }
+
 
     document.addEventListener('click', () => {
         if (aiSelectionMenu) aiSelectionMenu.classList.add('hidden');
@@ -1041,6 +1058,7 @@ function showMainApp() {
     loadExpenses(); // Local first
     syncExpenses(); // Then cloud sync
     updateStats();
+    updateDashboard();
     startUrgentReminder();
     requestNotificationPermission();
 
@@ -5922,42 +5940,28 @@ function renderCalendar() {
 
     grid.innerHTML = '';
 
-    // Header Row (Mo, Di, ...)
-    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-    days.forEach(d => {
-        const div = document.createElement('div');
-        div.className = 'calendar-weekday';
-        div.textContent = d;
-        grid.appendChild(div);
-    });
-
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth();
 
     monthYear.textContent = new Date(year, month).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
 
-    // First day of month (Monday start)
-    const firstDay = new Date(year, month, 1).getDay();
-    const startDay = (firstDay === 0) ? 6 : firstDay - 1;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Previous month filler
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startDay - 1; i >= 0; i--) {
+    // Dynamic Header Row: Start with the weekday of the 1st
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(year, month, 1 + i);
         const div = document.createElement('div');
-        div.className = 'calendar-day other-month';
-        const num = document.createElement('span');
-        num.className = 'day-num';
-        num.textContent = prevMonthLastDay - i;
-        div.appendChild(num);
+        div.className = 'calendar-weekday';
+        div.textContent = d.toLocaleDateString('de-DE', { weekday: 'short' });
         grid.appendChild(div);
     }
 
-    // Current month days
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const today = new Date();
+
+    // Render days starting from the 1st (no padding)
     for (let i = 1; i <= daysInMonth; i++) {
         const div = document.createElement('div');
         div.className = 'calendar-day';
+
         if (today.getDate() === i && today.getMonth() === month && today.getFullYear() === year) {
             div.classList.add('today');
         }
@@ -5970,7 +5974,6 @@ function renderCalendar() {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const dayTasks = tasks.filter(t => {
             if (t.archived) return false;
-            // Matches date part of deadline YYYY-MM-DD
             return t.deadline && t.deadline.startsWith(dateStr);
         });
 
@@ -5993,17 +5996,14 @@ function renderCalendar() {
         }
 
         div.onclick = () => {
-            // Populate Modal Fields for new appointment
             const clickedDate = new Date(year, month, i);
             const offset = clickedDate.getTimezoneOffset();
             const localDate = new Date(clickedDate.getTime() - (offset * 60 * 1000));
-            const dateVal = localDate.toISOString().slice(0, 10);
+            document.getElementById('appDate').value = localDate.toISOString().slice(0, 10);
 
             const now = new Date();
-            const timeVal = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+            document.getElementById('appTime').value = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
 
-            document.getElementById('appDate').value = dateVal;
-            document.getElementById('appTime').value = timeVal;
             document.getElementById('appTitle').value = '';
             document.getElementById('appLocation').value = '';
             document.getElementById('appPerson').value = '';
@@ -6018,17 +6018,22 @@ function renderCalendar() {
         grid.appendChild(div);
     }
 
-    // Next month filler
-    const totalSlots = 42; // 6 rows of 7
-    const remainingSlots = totalSlots - (startDay + daysInMonth);
-    for (let i = 1; i <= remainingSlots; i++) {
-        const div = document.createElement('div');
-        div.className = 'calendar-day other-month';
-        const num = document.createElement('span');
-        num.className = 'day-num';
-        num.textContent = i;
-        div.appendChild(num);
-        grid.appendChild(div);
+    // Fill to maintain grid structure (square look) - optional but helps with layout
+    const totalSlots = 35; // 5 rows of 7
+    const remaining = totalSlots - daysInMonth;
+    if (remaining > 0) {
+        for (let i = 1; i <= remaining; i++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day other-month';
+            grid.appendChild(div);
+        }
+    } else if (daysInMonth > 35) {
+        // Handle 6th row if needed (e.g. 31 days)
+        for (let i = 1; i <= (42 - daysInMonth); i++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day other-month';
+            grid.appendChild(div);
+        }
     }
 }
 // ===== QUICK TODO SYSTEM =====
@@ -6329,20 +6334,58 @@ function updateDashboard() {
 
         // Update appointments for today (if tasks have appointments)
         const dashAppointments = document.getElementById('dashAppointments');
+        const dashAppointmentsList = document.getElementById('dashAppointmentsList');
         if (dashAppointments && tasks) {
             const today = new Date().toISOString().split('T')[0];
             const todayTasks = tasks.filter(t => {
-                if (!t.details || !t.details['📅 Wann?']) return false;
-                const taskDate = t.details['📅 Wann?'].split('T')[0];
+                if (t.archived) return false;
+                let taskDate = '';
+                if (t.deadline) taskDate = t.deadline.split('T')[0];
+                else if (t.details && t.details['📅 Wann?']) taskDate = t.details['📅 Wann?'].split('T')[0];
                 return taskDate === today;
             });
             dashAppointments.textContent = todayTasks.length;
+
+            if (dashAppointmentsList) {
+                dashAppointmentsList.innerHTML = '';
+                if (todayTasks.length > 0) {
+                    todayTasks.slice(0, 3).forEach(t => {
+                        const item = document.createElement('div');
+                        item.className = 'dash-list-item';
+                        item.innerHTML = `<span class="dash-item-dot"></span>${t.keyword}`;
+                        dashAppointmentsList.appendChild(item);
+                    });
+                    if (todayTasks.length > 3) {
+                        const more = document.createElement('div');
+                        more.className = 'dash-list-item more';
+                        more.textContent = `+ ${todayTasks.length - 3} weitere...`;
+                        dashAppointmentsList.appendChild(more);
+                    }
+                }
+            }
             if (DEBUG) console.log('Today appointments:', todayTasks.length);
         }
 
+        // Hide Dashboard Wrapper if empty
+        const dashboardWrapper = document.querySelector('.dashboard-wrapper');
+        const hasContent = (todos && todos.length > 0) ||
+            (alarms && alarms.some(a => a.active)) ||
+            (expenses && expenses.length > 0) ||
+            (tasks && tasks.filter(t => !t.done && !t.archived).length > 0);
+
+        if (dashboardWrapper) {
+            if (hasContent) {
+                dashboardWrapper.classList.remove('hidden');
+            } else {
+                dashboardWrapper.classList.add('hidden');
+            }
+        }
+
+        updateDashboardGrid(); // Termine immer ganz oben!
+
         if (DEBUG) console.log('Dashboard updated successfully!');
     } catch (error) {
-        console.error('Error updating dashboard:', error);
+        if (DEBUG) console.error('Error updating dashboard:', error);
     }
 }
 
@@ -7441,5 +7484,48 @@ function openAppointmentModalWithData(info, searchType) {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAiResearchModal);
 } else {
+
     initAiResearchModal();
 }
+
+// ===== API Key Settings Handler (Added for User Fix) =====
+document.addEventListener('DOMContentLoaded', () => {
+    const apiKeyInput = document.getElementById('openaiApiKeyInput');
+    const toggleBtn = document.getElementById('toggleApiKeyVisibility');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const sideSettingsBtn = document.getElementById('sideSettingsBtn');
+
+    if (toggleBtn && apiKeyInput) {
+        toggleBtn.addEventListener('click', () => {
+            apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+        });
+    }
+
+    // Load Key
+    function loadApiKeyToInput() {
+        if (apiKeyInput && typeof appSettings !== 'undefined') {
+            // If it matches the specific hardcoded "auto-inserted" key that might be dead, maybe show empty?
+            // But let's just show what's in appSettings.
+            apiKeyInput.value = appSettings.openaiApiKey || '';
+        }
+    }
+
+    // Attach to open buttons
+    if (settingsBtn) settingsBtn.addEventListener('click', loadApiKeyToInput);
+    if (sideSettingsBtn) sideSettingsBtn.addEventListener('click', loadApiKeyToInput);
+
+    // Save Key (Attached to existing save button)
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            if (apiKeyInput && typeof appSettings !== 'undefined') {
+                const val = apiKeyInput.value.trim();
+                // Update specific field
+                appSettings.openaiApiKey = val;
+                // Force save to localStorage immediately to ensure persistence
+                localStorage.setItem('taskforce_settings', JSON.stringify(appSettings));
+                console.log("API Key updated via Settings UI");
+            }
+        });
+    }
+});

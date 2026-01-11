@@ -364,7 +364,7 @@ Berücksichtige Wetterinfo (simuliert als sonnig), motiviere mich für meine Hob
         return await callChatGPT(messages);
     } catch (err) {
         // Fallback to local briefing if API fails
-        return generateDailyBriefing() + `<br><small style="color:gray;">(Lokales Backup-Briefing, da API nicht erreichbar)</small>`;
+        return generateDailyBriefing() + `<br><small style="color:#ef4444;">(API Fehler: ${err.message})</small><br><small style="color:gray;">(Lokales Backup-Briefing)</small>`;
     }
 }
 

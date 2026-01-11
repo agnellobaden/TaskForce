@@ -499,75 +499,122 @@
                     </button>
                 </div>
                 <div class="header-buttons-row">
-                    <section class="quick-add-section">
-                        <div class="input-container">
-                            <!-- Collapse Toggle Button -->
-                            <button id="toggleActionsBtn" class="btn-toggle-actions" title="Aktionen anzeigen">
-                                <i data-lucide="plus"></i>
-                            </button>
-
-                            <div id="collapsibleActions" class="collapsible-actions hidden">
-                                <div class="ai-selector-container">
-                                    <button id="grokManualBtn" class="btn-grok-manual"
-                                        title="Ausgewählte KI (Original) öffnen">
-                                        <i data-lucide="bot"></i>
-                                        <span class="icon-label">KI</span>
-                                    </button>
-                                    <button id="aiSelectorArrow" class="ai-selector-arrow" title="KI wählen"><i
-                                            data-lucide="chevron-down"></i></button>
-                                    <div id="aiSelectionMenu" class="ai-selection-menu hidden">
-                                        <div class="ai-option" data-provider="grok" title="Grok (xAI)">🤖
-                                            <span>Grok</span>
-                                        </div>
-                                        <div class="ai-option" data-provider="chatgpt" title="ChatGPT (OpenAI)">🧠
-                                            <span>ChatGPT</span>
-                                        </div>
-                                        <div class="ai-option" data-provider="gemini" title="Gemini (Google)">✨
-                                            <span>Gemini</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button id="voiceBtn" class="btn-voice" title="Spracheingabe">
-                                    <i data-lucide="mic"></i>
-                                    <span class="icon-label">Sprache</span>
-                                </button>
-                                <button id="addTodoBtn" class="btn-todo" title="Schnell-Notiz / To-do">
-                                    <i data-lucide="file-text"></i>
-                                    <span class="icon-label">Notiz</span>
-                                </button>
-                                <button id="addTaskBtn" class="btn-add" title="Aufgabe mit Details">
-                                    <span>+</span>
-                                    <span class="icon-label">Neu</span>
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- Mobile Quick Comm Bar - Permanently Visible -->
+                    <!-- Unified Scrollable Action Bar -->
                     <div class="mobile-comm-bar" id="mobileCommBar">
+                        <!-- Core Actions (Moved from + Menu) -->
+                        <button id="addTaskBtn" class="btn-comm-quick" title="Neue Aufgabe">
+                            <span class="icon-label">Neu</span>
+                        </button>
+                        <button id="addTodoBtn" class="btn-comm-quick" title="Notiz">
+                            <span class="icon-label">Notiz</span>
+                        </button>
+                        <button id="grokManualBtn" class="btn-comm-quick" title="KI Assistant">
+                            <span class="icon-label">KI</span>
+                        </button>
+
+                        <!-- Comm & Tools Actions -->
+                        <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
+                            <span class="icon-label">Scan</span>
+                        </button>
                         <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen">
-                            <i data-lucide="phone"></i>
                             <span class="icon-label">Anruf</span>
                         </button>
                         <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp">
-                            <i data-lucide="message-square"></i>
                             <span class="icon-label">WA</span>
                         </button>
                         <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
-                            <i data-lucide="mail"></i>
                             <span class="icon-label">E-Mail</span>
                         </button>
                         <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
-                            <i data-lucide="dollar-sign"></i>
                             <span class="icon-label">Kosten</span>
                         </button>
-                        <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
-                            <i data-lucide="camera"></i>
-                            <span class="icon-label">Scan</span>
-                        </button>
+
+                        <!-- Extra AI Selection (Hidden by default but available in DOM if needed) -->
+                        <div id="aiSelectionMenu" class="hidden"></div>
                     </div>
                 </div>
             </div>
         </header>
+
+        <!-- Dashboard Overview -->
+        <section class="dashboard-wrapper">
+            <section class="dashboard-content" id="dashboardContent">
+                <div class="dashboard-grid">
+                    <!-- Termine -->
+                    <div class="dashboard-card" onclick="openCalendarView()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="calendar"></i>
+                            <h4>Termine</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashAppointments">0</div>
+                        <div class="dashboard-card-label">Heute</div>
+                        <div id="dashAppointmentsList" class="dash-list-container"></div>
+                    </div>
+
+                    <!-- Notizen -->
+                    <div class="dashboard-card" onclick="scrollToNotes()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="file-text"></i>
+                            <h4>Notizen</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashNotes">0</div>
+                        <div class="dashboard-card-label">Listen</div>
+                    </div>
+
+                    <!-- Wecker -->
+                    <div class="dashboard-card" onclick="scrollToAlarms()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="bell"></i>
+                            <h4>Wecker</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashAlarms">0</div>
+                        <div class="dashboard-card-label">Aktiv</div>
+                    </div>
+
+                    <!-- Aufgaben -->
+                    <div class="dashboard-card">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="check-circle"></i>
+                            <h4>Aufgaben</h4>
+                        </div>
+                        <div class="dashboard-card-stats">
+                            <div class="stat-mini">
+                                <span class="stat-mini-number" id="totalTasks">0</span>
+                                <span class="stat-mini-label">Gesamt</span>
+                            </div>
+                            <div class="stat-mini urgent">
+                                <span class="stat-mini-number" id="urgentTasks">0</span>
+                                <span class="stat-mini-label">Dringend</span>
+                            </div>
+                            <div class="stat-mini done">
+                                <span class="stat-mini-number" id="doneTasks">0</span>
+                                <span class="stat-mini-label">Erledigt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kosten -->
+                    <div class="dashboard-card" onclick="scrollToExpenses()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="dollar-sign"></i>
+                            <h4>Kosten</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashExpenses">0,00 €</div>
+                        <div class="dashboard-card-label">Heute</div>
+                    </div>
+
+                    <!-- Fahrten (wenn vorhanden) -->
+                    <div class="dashboard-card" onclick="openDriveMode()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="car"></i>
+                            <h4>Fahrten</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashTrips">0 km</div>
+                        <div class="dashboard-card-label">Heute</div>
+                    </div>
+                </div>
+            </section>
+        </section>
 
         <!-- Communication Modal -->
         <div id="commModal" class="modal hidden">
@@ -758,89 +805,7 @@
             </div>
         </section>
 
-        <!-- Dashboard Overview -->
-        <section class="dashboard-wrapper">
-            <button id="toggleDashboardBtn" class="dashboard-toggle-btn" title="Dashboard anzeigen/verbergen">
-                <i data-lucide="layout-dashboard"></i>
-                <span>Dashboard</span>
-                <i data-lucide="chevron-down" class="chevron-icon"></i>
-            </button>
-            <section class="dashboard-content hidden" id="dashboardContent">
-                <div class="dashboard-grid">
-                    <!-- Termine -->
-                    <div class="dashboard-card" onclick="openCalendarView()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="calendar"></i>
-                            <h4>Termine</h4>
-                        </div>
-                        <div class="dashboard-card-value" id="dashAppointments">0</div>
-                        <div class="dashboard-card-label">Heute</div>
-                    </div>
 
-                    <!-- Notizen -->
-                    <div class="dashboard-card" onclick="scrollToNotes()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="file-text"></i>
-                            <h4>Notizen</h4>
-                        </div>
-                        <div class="dashboard-card-value" id="dashNotes">0</div>
-                        <div class="dashboard-card-label">Listen</div>
-                    </div>
-
-                    <!-- Wecker -->
-                    <div class="dashboard-card" onclick="scrollToAlarms()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="bell"></i>
-                            <h4>Wecker</h4>
-                        </div>
-                        <div class="dashboard-card-value" id="dashAlarms">0</div>
-                        <div class="dashboard-card-label">Aktiv</div>
-                    </div>
-
-                    <!-- Aufgaben -->
-                    <div class="dashboard-card">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="check-circle"></i>
-                            <h4>Aufgaben</h4>
-                        </div>
-                        <div class="dashboard-card-stats">
-                            <div class="stat-mini">
-                                <span class="stat-mini-number" id="totalTasks">0</span>
-                                <span class="stat-mini-label">Gesamt</span>
-                            </div>
-                            <div class="stat-mini urgent">
-                                <span class="stat-mini-number" id="urgentTasks">0</span>
-                                <span class="stat-mini-label">Dringend</span>
-                            </div>
-                            <div class="stat-mini done">
-                                <span class="stat-mini-number" id="doneTasks">0</span>
-                                <span class="stat-mini-label">Erledigt</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Kosten -->
-                    <div class="dashboard-card" onclick="scrollToExpenses()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="dollar-sign"></i>
-                            <h4>Kosten</h4>
-                        </div>
-                        <div class="dashboard-card-value" id="dashExpenses">0,00 €</div>
-                        <div class="dashboard-card-label">Heute</div>
-                    </div>
-
-                    <!-- Fahrten (wenn vorhanden) -->
-                    <div class="dashboard-card" onclick="openDriveMode()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="car"></i>
-                            <h4>Fahrten</h4>
-                        </div>
-                        <div class="dashboard-card-value" id="dashTrips">0 km</div>
-                        <div class="dashboard-card-label">Heute</div>
-                    </div>
-                </div>
-            </section>
-        </section>
 
         <!-- Filter Tabs -->
         <section class="filter-tabs">
@@ -852,7 +817,20 @@
             <button class="tab-btn" data-filter="archived"><i data-lucide="archive"></i> Archiv</button>
         </section>
 
-        <!-- AI Advisor Section -->
+
+        <!-- Tasks List -->
+        <section class="tasks-section">
+            <div id="tasksList" class="tasks-list">
+                <!-- Tasks werden hier dynamisch eingefügt -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon"><i data-lucide="clipboard-list"></i></div>
+                    <h3>Keine Aufgaben</h3>
+                    <p>Gib ein Stichwort ein, um loszulegen!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Advisor Section - Moved to bottom -->
         <section id="aiAdvisorSection" class="ai-advisor-section hidden">
             <div class="ai-advisor-card">
                 <div class="ai-advisor-header">
@@ -867,18 +845,6 @@
                 </div>
                 <div class="ai-advisor-actions" id="aiAdvisorActions">
                     <!-- Actions dynamically inserted here -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Tasks List -->
-        <section class="tasks-section">
-            <div id="tasksList" class="tasks-list">
-                <!-- Tasks werden hier dynamisch eingefügt -->
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-icon"><i data-lucide="clipboard-list"></i></div>
-                    <h3>Keine Aufgaben</h3>
-                    <p>Gib ein Stichwort ein, um loszulegen!</p>
                 </div>
             </div>
         </section>
@@ -1106,594 +1072,607 @@
                     </div>
                 </div>
 
-              
+
+            </div>
+            <div class="setting-toggle-row">
+                <span>💰 Kosten-Liste</span>
+                <label class="switch">
+                    <input type="checkbox" id="headerIconExpense">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>📸 Beleg scannen</span>
+                <label class="switch">
+                    <input type="checkbox" id="headerIconScan">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>⏰ Wecker / Alarm</span>
+                <label class="switch">
+                    <input type="checkbox" id="headerIconAlarm">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>🚗 Fahrt-Modus</span>
+                <label class="switch">
+                    <input type="checkbox" id="headerIconDrive">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>🌙 Nachtmodus</span>
+                <label class="switch">
+                    <input type="checkbox" id="headerIconNight">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>🗣️ Wake-Word Aktivierung (Autostart)</label>
+            <div class="setting-toggle-row">
+                <span>Hallo-Befehl aktivieren</span>
+                <label class="switch">
+                    <input type="checkbox" id="wakeWordToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="form-group" id="wakeWordNameGroup">
+                <label>Wake-Word Name</label>
+                <input type="text" id="wakeWordNameInput" placeholder="z.B. Taskforce">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>🚗 Fahrt-Modus</label>
+            <div class="setting-toggle-row">
+                <span>Fahrt-Modus automatisch starten</span>
+                <label class="switch">
+                    <input type="checkbox" id="driveModeToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group"
+            style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
+            <label>⚙️ System & Automatisierung</label>
+            <div class="setting-toggle-row">
+                <span>⚠️ Dringende Aufgaben (Popup)</span>
+                <label class="switch">
+                    <input type="checkbox" id="urgentPopupToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>Abgelaufene Termine archivieren</span>
+                <label class="switch">
+                    <input type="checkbox" id="autoArchiveToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-toggle-row">
+                <span>Standort-Tracking</span>
+                <label class="switch">
+                    <input type="checkbox" id="locationToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-field" style="margin-top: 1rem;">
+                <label>🏠 Heimatadresse</label>
+                <input type="text" id="homeAddressInput" placeholder="z.B. Musterstraße 1, Berlin"
+                    class="settings-input">
+            </div>
+            <small style="color: var(--text-muted); font-size: 0.75rem;">Termine, die in der Vergangenheit
+                liegen, werden automatisch archiviert.</small>
+        </div>
+
+        <div class="form-group" style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
+            <label>🎨 Profilbild ändern</label>
+            <div class="avatar-picker-wrapper">
+                <div class="avatar-picker" id="settingsAvatarPicker">
+                    <div class="avatar-option" data-avatar="😊">😊</div>
+                    <div class="avatar-option" data-avatar="😎">😎</div>
+                    <div class="avatar-option" data-avatar="🦸">🦸</div>
+                    <div class="avatar-option" data-avatar="🦊">🦊</div>
+                    <div class="avatar-option upload-option" id="settingsCustomAvatarBtn">
+                        <span class="plus-icon">+</span>
+                        <input type="file" id="settingsAvatarUpload" accept="image/*" class="hidden-input">
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: User Profile & Sync Section -->
+        <div class="form-group"
+            style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
+            <label>👤 Benutzerkonto & Synchronisierung</label>
+
+
+            <div class="setting-field" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.85em; color: var(--text-muted);">Dein Nutzername</label>
+                <input type="text" id="settingsUserName" class="settings-input" placeholder="Name ändern">
+            </div>
+
+            <div class="setting-field" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.85em; color: var(--text-muted);">Dein Aktuelles Passwort
+                    (PIN)</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="visibleCurrentPin" class="settings-input" readonly
+                        style="background: rgba(0,0,0,0.2); color: var(--primary);">
+                </div>
+            </div>
+
+            <div class="setting-field" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.85em; color: var(--text-muted);">👥 Wer ist gerade online?
+                    (Team)</label>
+                <div id="activeTeamMembers"
+                    style="background: rgba(0,0,0,0.1); padding: 12px; border-radius: 8px; font-size: 0.9rem; color: var(--text-primary); min-height: 40px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="color: var(--text-muted); font-style: italic;">Lade Team-Status...</div>
+                </div>
+            </div>
+
+            <div class="setting-field" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.85em; color: var(--text-muted);">Aktive Team-Codes</label>
+                <div id="settingsTeamList"
+                    style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; font-family: monospace; color: var(--text-primary);">
+                    Lade...
+                </div>
+            </div>
+
+            <div class="setting-field" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.85em; color: var(--text-muted);">Neues Passwort (PIN) setzen</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="password" id="settingsUserPin" class="settings-input"
+                        placeholder="Neuer 6-stelliger PIN (Optional)" maxlength="6" inputmode="numeric"
+                        pattern="[0-9]*">
+                </div>
+                <small style="font-size: 0.7rem; color: var(--text-muted);">Lass dieses Feld leer, wenn du den
+                    PIN behalten willst.</small>
+            </div>
+
+            <div class="sync-info-box"
+                style="margin-top: 1.5rem; padding: 15px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 12px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <span style="font-size:1.5rem">☁️</span>
+                    <strong style="color: var(--primary-light);">Geräte verbinden & Daten sichern</strong>
+                </div>
+                <p style="font-size: 0.8rem; line-height: 1.4; opacity: 0.9; margin:0;">
+                    <strong>So geht's:</strong> Nutze auf deinem Laptop und Handy exakt denselben
+                    <span style="color: var(--secondary);">Benutzernamen</span> und <span
+                        style="color: var(--secondary);">PIN</span> beim Anmelden.
+                    <br><br>
+                    Deine Termine werden dann automatisch synchronisiert und sind auch nach Updates sicher!
+                </p>
+
+                <div class="connection-status-area"
+                    style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-glass);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div id="connectionStatusDot" class="status-dot offline"
+                                style="width: 10px; height: 10px; border-radius: 50%; background: gray;"></div>
+                            <span id="connectionStatusText" style="font-size: 0.8rem; color: var(--text-muted);">Status
+                                unbekannt</span>
+                        </div>
+                        <button type="button" class="btn-link-small" onclick="testConnection()">🔄 Verbindung
+                            testen</button>
+                    </div>
+                    <button type="button" class="btn-small-outline full-width" onclick="forceSync()">☁️ Jetzt
+                        alles synchronisieren</button>
+                </div>
+            </div>
+        </div> <!-- End modal-body -->
+        <div class="modal-footer">
+            <button id="saveSettingsBtn" class="btn-primary">Speichern</button>
+        </div>
+    </div> <!-- End modal-content -->
+    </div> <!-- End settingsModal -->
+
+    <!-- Personal AI Assistant Modal -->
+    <div id="personalAIModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i data-lucide="bot"></i> Meine Persönliche KI</h2>
+                <button class="modal-close-icon" id="closePersonalAIBtn">✕</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- AI Greeting -->
+                <div id="aiGreeting"
+                    style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(139, 92, 246, 0.05)); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(167, 139, 250, 0.2);">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="font-size: 2.5rem;">🤖</div>
+                        <div>
+                            <h3 id="aiGreetingText" style="margin: 0; color: var(--primary-light);">Hallo! Ich bin
+                                deine persönliche KI.</h3>
+                            <p id="aiGreetingSubtext" style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">
+                                Lass mich dich kennenlernen, damit ich dir besser helfen kann.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Information Form -->
+                <div class="form-group">
+                    <label><i data-lucide="user"></i> Dein vollständiger Name</label>
+                    <input type="text" id="aiUserName" class="settings-input" placeholder="z.B. Max Mustermann">
+                </div>
+
+                <div class="form-group">
+                    <label><i data-lucide="cake"></i> Dein Geburtsdatum</label>
+                    <input type="date" id="aiUserBirthdate" class="settings-input">
+                    <small id="aiAgeDisplay"
+                        style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 5px;"></small>
+                </div>
+
+                <div class="form-group">
+                    <label><i data-lucide="users"></i> Geschlecht</label>
+                    <select id="aiUserGender" class="settings-select">
+                        <option value="">Bitte wählen...</option>
+                        <option value="male">Männlich</option>
+                        <option value="female">Weiblich</option>
+                        <option value="diverse">Divers</option>
+                        <option value="prefer-not-to-say">Möchte ich nicht angeben</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label><i data-lucide="briefcase"></i> Beruf / Tätigkeit</label>
+                    <input type="text" id="aiUserJob" class="settings-input"
+                        placeholder="z.B. Software-Entwickler, Student, Selbstständig...">
+                </div>
+
+                <div class="form-group">
+                    <label><i data-lucide="heart"></i> Hobbys & Interessen</label>
+                    <textarea id="aiUserHobbies" class="settings-input" rows="3"
+                        placeholder="z.B. Fußball, Kochen, Reisen, Gaming..." style="resize: vertical;"></textarea>
+                </div>
+
+                <!-- AI Features Section -->
+                <div style="border-top: 1px solid var(--border-glass); padding-top: 20px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="sparkles"></i> KI-Features aktivieren
+                    </h3>
+
                     <div class="setting-toggle-row">
-                        <span>💰 Kosten-Liste</span>
+                        <span>🌤️ Morgendliches Wetter-Briefing</span>
                         <label class="switch">
-                            <input type="checkbox" id="headerIconExpense">
+                            <input type="checkbox" id="aiWeatherToggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
+                    <small
+                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Erhalte
+                        morgens eine Wettervorhersage, damit du weißt, wie du dich anziehen sollst.</small>
+
                     <div class="setting-toggle-row">
-                        <span>📸 Beleg scannen</span>
+                        <span>📰 Tägliche Nachrichten & Weltereignisse</span>
                         <label class="switch">
-                            <input type="checkbox" id="headerIconScan">
+                            <input type="checkbox" id="aiNewsToggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
+                    <small
+                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Bleibe
+                        informiert über wichtige Ereignisse auf der Welt.</small>
+
                     <div class="setting-toggle-row">
-                        <span>⏰ Wecker / Alarm</span>
+                        <span>💼 Geschäftliche Unterstützung</span>
                         <label class="switch">
-                            <input type="checkbox" id="headerIconAlarm">
+                            <input type="checkbox" id="aiBusinessToggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
+                    <small
+                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Hilfe
+                        bei beruflichen Aufgaben und Terminen.</small>
+
                     <div class="setting-toggle-row">
-                        <span>🚗 Fahrt-Modus</span>
+                        <span>🏠 Private Unterstützung</span>
                         <label class="switch">
-                            <input type="checkbox" id="headerIconDrive">
+                            <input type="checkbox" id="aiPrivateToggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
+                    <small
+                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Unterstützung
+                        im Alltag und bei privaten Aufgaben.</small>
+
                     <div class="setting-toggle-row">
-                        <span>🌙 Nachtmodus</span>
+                        <span>🔔 Proaktive Erinnerungen</span>
                         <label class="switch">
-                            <input type="checkbox" id="headerIconNight">
+                            <input type="checkbox" id="aiRemindersToggle" checked>
                             <span class="slider round"></span>
                         </label>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Die
+                        KI erinnert dich proaktiv an wichtige Dinge.</small>
+                </div>
+
+                <!-- Morning Briefing Time -->
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>⏰ Morgendliches Briefing um:</label>
+                    <input type="time" id="aiMorningTime" class="settings-input" value="07:00">
+                    <small style="color: var(--text-muted); font-size: 0.75rem;">Zu dieser Zeit erhältst du dein
+                        tägliches Briefing mit Wetter und Nachrichten.</small>
+                </div>
+
+                <!-- API Key Setting -->
+                <div class="form-group"
+                    style="margin-top: 20px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
+                    <label>🔑 OpenAI API Key (Optional)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="password" id="openaiApiKeyInput" class="settings-input" placeholder="sk-..."
+                            style="flex:1;">
+                        <button id="toggleApiKeyVisibility" type="button" class="btn-secondary"
+                            style="padding:0 12px;">👁️</button>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px;">
+                        Wenn "Meine KI" nicht funktioniert, trage hier deinen eigenen API-Key ein.
+                    </small>
+                </div>
+
+                <!-- AI Dashboard Preview -->
+                <div id="aiDashboardPreview" class="hidden"
+                    style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border-glass);">
+                    <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="activity"></i> Dein heutiges Briefing
+                    </h4>
+                    <div id="aiDashboardContent" style="font-size: 0.9rem; line-height: 1.6;">
+                        <!-- Dynamic content will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Personal Advisor Chat Section -->
+                <div class="ai-chat-section"
+                    style="margin-top: 25px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
+                    <h3
+                        style="margin-bottom: 15px; color: var(--primary-light); display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="message-circle"></i> Chatte mit deinem Advisor
+                    </h3>
+                    <div id="aiChatHistory"
+                        style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px;">
+                        <div class="ai-msg"
+                            style="background: rgba(var(--primary-rgb), 0.1); padding: 10px; border-radius: 12px; font-size: 0.9rem; align-self: flex-start; max-width: 85%;">
+                            Hallo! Ich bin dein persönlicher Berater. Wie kann ich dich heute unterstützen?
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="aiChatInput" class="settings-input" placeholder="Frage mich alles..."
+                            style="flex: 1; border-radius: 20px; padding-left: 15px;">
+                        <button id="sendAiChatBtn" class="btn-primary"
+                            style="width: 45px; height: 45px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="testAIBriefingBtn" class="btn-secondary">🧪 Briefing testen</button>
+                <button id="savePersonalAIBtn" class="btn-primary">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grok Modal -->
+    <div id="grokModal" class="modal hidden">
+        <div class="modal-content grok-modal-content">
+            <div class="modal-header">
+                <h2>🤖 Grok AI</h2>
+                <button class="modal-close-icon" id="closeGrokBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="grok-chat-container">
+                    <div class="grok-user-input" id="grokInput">...</div>
+                    <div class="grok-bot-response" id="grokResponse">Ich höre zu...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div id="calendarModal" class="modal hidden">
+        <div class="modal-content calendar-modal-content">
+            <div class="modal-header">
+                <h2>📅 Kalender</h2>
+                <div class="calendar-nav">
+                    <button id="prevMonthBtn" class="btn-icon-nav">❮</button>
+                    <span id="calendarMonthYear" class="month-year-label">Monat 2024</span>
+                    <button id="nextMonthBtn" class="btn-icon-nav">❯</button>
+                    <button id="todayBtn" class="btn-link-small"
+                        style="margin-left: 10px; color: var(--secondary); text-decoration: none; font-weight: 700;">Heute</button>
+                </div>
+                <button class="modal-close-icon" id="closeCalendarBtn">✕</button>
+            </div>
+            <div class="modal-body no-padding">
+                <div id="calendarGrid" class="calendar-grid">
+                    <!-- Calendar days inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment Modal (Formular) -->
+    <div id="appointmentModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button id="backAppointmentBtn" class="btn-back">
+                    <i data-lucide="chevron-left"></i> Zurück
+                </button>
+                <h2>📅 Neuer Termin</h2>
+                <div style="margin-left: auto; display: flex; gap: 10px;">
+                    <button id="appVoiceBtn" class="btn-icon-nav"
+                        style="border-radius: 50%; width: 32px; height: 32px; background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary);">🎤</button>
+                    <button class="modal-close-icon" id="closeAppointmentModal">✕</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>📝 Titel / Betreff</label>
+                    <input type="text" id="appTitle" placeholder="z.B. Zahnarzt, Meeting..." class="settings-input">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>📅 Datum</label>
+                        <input type="date" id="appDate" class="settings-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>⏰ Uhrzeit</label>
+                        <input type="time" id="appTime" class="settings-input">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>🗣️ Wake-Word Aktivierung (Autostart)</label>
-                    <div class="setting-toggle-row">
-                        <span>Hallo-Befehl aktivieren</span>
-                        <label class="switch">
-                            <input type="checkbox" id="wakeWordToggle">
-                            <span class="slider round"></span>
-                        </label>
+                    <label>📍 Ort / Adresse</label>
+                    <input type="text" id="appLocation" placeholder="Straße, Stadt..." class="settings-input">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>👤 Name / Kontakt</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="appPerson" placeholder="Name" class="settings-input" style="flex:1;">
+                            <button id="appContactBtn" class="btn-secondary" style="padding: 0 8px;"
+                                title="Kontakte">📇</button>
+                        </div>
                     </div>
-                    <div class="form-group" id="wakeWordNameGroup">
-                        <label>Wake-Word Name</label>
-                        <input type="text" id="wakeWordNameInput" placeholder="z.B. Taskforce">
+                    <div class="form-group" style="flex: 1;">
+                        <label>📞 Telefon</label>
+                        <input type="tel" id="appPhone" placeholder="0123..." class="settings-input">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>🚗 Fahrt-Modus</label>
-                    <div class="setting-toggle-row">
-                        <span>Fahrt-Modus automatisch starten</span>
-                        <label class="switch">
-                            <input type="checkbox" id="driveModeToggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group"
-                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
-                    <label>⚙️ System & Automatisierung</label>
-                    <div class="setting-toggle-row">
-                        <span>⚠️ Dringende Aufgaben (Popup)</span>
-                        <label class="switch">
-                            <input type="checkbox" id="urgentPopupToggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="setting-toggle-row">
-                        <span>Abgelaufene Termine archivieren</span>
-                        <label class="switch">
-                            <input type="checkbox" id="autoArchiveToggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="setting-toggle-row">
-                        <span>Standort-Tracking</span>
-                        <label class="switch">
-                            <input type="checkbox" id="locationToggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="setting-field" style="margin-top: 1rem;">
-                        <label>🏠 Heimatadresse</label>
-                        <input type="text" id="homeAddressInput" placeholder="z.B. Musterstraße 1, Berlin"
-                            class="settings-input">
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 0.75rem;">Termine, die in der Vergangenheit
-                        liegen, werden automatisch archiviert.</small>
-                </div>
-
-                <div class="form-group" style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
-                    <label>🎨 Profilbild ändern</label>
-                    <div class="avatar-picker-wrapper">
-                        <div class="avatar-picker" id="settingsAvatarPicker">
-                            <div class="avatar-option" data-avatar="😊">😊</div>
-                            <div class="avatar-option" data-avatar="😎">😎</div>
-                            <div class="avatar-option" data-avatar="🦸">🦸</div>
-                            <div class="avatar-option" data-avatar="🦊">🦊</div>
-                            <div class="avatar-option upload-option" id="settingsCustomAvatarBtn">
-                                <span class="plus-icon">+</span>
-                                <input type="file" id="settingsAvatarUpload" accept="image/*" class="hidden-input">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- NEW: User Profile & Sync Section -->
-                <div class="form-group"
-                    style="border-top: 1px solid var(--border-glass); padding-top: 1.5rem; margin-top: 1.5rem;">
-                    <label>👤 Benutzerkonto & Synchronisierung</label>
-
-
-                    <div class="setting-field" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85em; color: var(--text-muted);">Dein Nutzername</label>
-                        <input type="text" id="settingsUserName" class="settings-input" placeholder="Name ändern">
-                    </div>
-
-                    <div class="setting-field" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85em; color: var(--text-muted);">Dein Aktuelles Passwort
-                            (PIN)</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="visibleCurrentPin" class="settings-input" readonly
-                                style="background: rgba(0,0,0,0.2); color: var(--primary);">
-                        </div>
-                    </div>
-
-                    <div class="setting-field" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85em; color: var(--text-muted);">👥 Wer ist gerade online?
-                            (Team)</label>
-                        <div id="activeTeamMembers"
-                            style="background: rgba(0,0,0,0.1); padding: 12px; border-radius: 8px; font-size: 0.9rem; color: var(--text-primary); min-height: 40px; display: flex; flex-direction: column; gap: 8px;">
-                            <div style="color: var(--text-muted); font-style: italic;">Lade Team-Status...</div>
-                        </div>
-                    </div>
-
-                    <div class="setting-field" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85em; color: var(--text-muted);">Aktive Team-Codes</label>
-                        <div id="settingsTeamList"
-                            style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; font-family: monospace; color: var(--text-primary);">
-                            Lade...
-                        </div>
-                    </div>
-
-                    <div class="setting-field" style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85em; color: var(--text-muted);">Neues Passwort (PIN) setzen</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="password" id="settingsUserPin" class="settings-input"
-                                placeholder="Neuer 6-stelliger PIN (Optional)" maxlength="6" inputmode="numeric"
-                                pattern="[0-9]*">
-                        </div>
-                        <small style="font-size: 0.7rem; color: var(--text-muted);">Lass dieses Feld leer, wenn du den
-                            PIN behalten willst.</small>
-                    </div>
-
-                    <div class="sync-info-box"
-                        style="margin-top: 1.5rem; padding: 15px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 12px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                            <span style="font-size:1.5rem">☁️</span>
-                            <strong style="color: var(--primary-light);">Geräte verbinden & Daten sichern</strong>
-                        </div>
-                        <p style="font-size: 0.8rem; line-height: 1.4; opacity: 0.9; margin:0;">
-                            <strong>So geht's:</strong> Nutze auf deinem Laptop und Handy exakt denselben
-                            <span style="color: var(--secondary);">Benutzernamen</span> und <span
-                                style="color: var(--secondary);">PIN</span> beim Anmelden.
-                            <br><br>
-                            Deine Termine werden dann automatisch synchronisiert und sind auch nach Updates sicher!
-                        </p>
-
-                        <div class="connection-status-area"
-                            style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-glass);">
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <div id="connectionStatusDot" class="status-dot offline"
-                                        style="width: 10px; height: 10px; border-radius: 50%; background: gray;"></div>
-                                    <span id="connectionStatusText"
-                                        style="font-size: 0.8rem; color: var(--text-muted);">Status unbekannt</span>
-                                </div>
-                                <button type="button" class="btn-link-small" onclick="testConnection()">🔄 Verbindung
-                                    testen</button>
-                            </div>
-                            <button type="button" class="btn-small-outline full-width" onclick="forceSync()">☁️ Jetzt
-                                alles synchronisieren</button>
-                        </div>
-                    </div>
-                </div> <!-- End modal-body -->
-                <div class="modal-footer">
-                    <button id="saveSettingsBtn" class="btn-primary">Speichern</button>
-                </div>
-            </div> <!-- End modal-content -->
-        </div> <!-- End settingsModal -->
-
-        <!-- Personal AI Assistant Modal -->
-        <div id="personalAIModal" class="modal hidden">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h2><i data-lucide="bot"></i> Meine Persönliche KI</h2>
-                    <button class="modal-close-icon" id="closePersonalAIBtn">✕</button>
-                </div>
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <!-- AI Greeting -->
-                    <div id="aiGreeting"
-                        style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(139, 92, 246, 0.05)); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(167, 139, 250, 0.2);">
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                            <div style="font-size: 2.5rem;">🤖</div>
-                            <div>
-                                <h3 id="aiGreetingText" style="margin: 0; color: var(--primary-light);">Hallo! Ich bin
-                                    deine persönliche KI.</h3>
-                                <p id="aiGreetingSubtext" style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">
-                                    Lass mich dich kennenlernen, damit ich dir besser helfen kann.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Personal Information Form -->
-                    <div class="form-group">
-                        <label><i data-lucide="user"></i> Dein vollständiger Name</label>
-                        <input type="text" id="aiUserName" class="settings-input" placeholder="z.B. Max Mustermann">
-                    </div>
-
-                    <div class="form-group">
-                        <label><i data-lucide="cake"></i> Dein Geburtsdatum</label>
-                        <input type="date" id="aiUserBirthdate" class="settings-input">
-                        <small id="aiAgeDisplay"
-                            style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 5px;"></small>
-                    </div>
-
-                    <div class="form-group">
-                        <label><i data-lucide="users"></i> Geschlecht</label>
-                        <select id="aiUserGender" class="settings-select">
-                            <option value="">Bitte wählen...</option>
-                            <option value="male">Männlich</option>
-                            <option value="female">Weiblich</option>
-                            <option value="diverse">Divers</option>
-                            <option value="prefer-not-to-say">Möchte ich nicht angeben</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label><i data-lucide="briefcase"></i> Beruf / Tätigkeit</label>
-                        <input type="text" id="aiUserJob" class="settings-input"
-                            placeholder="z.B. Software-Entwickler, Student, Selbstständig...">
-                    </div>
-
-                    <div class="form-group">
-                        <label><i data-lucide="heart"></i> Hobbys & Interessen</label>
-                        <textarea id="aiUserHobbies" class="settings-input" rows="3"
-                            placeholder="z.B. Fußball, Kochen, Reisen, Gaming..." style="resize: vertical;"></textarea>
-                    </div>
-
-                    <!-- AI Features Section -->
-                    <div style="border-top: 1px solid var(--border-glass); padding-top: 20px; margin-top: 20px;">
-                        <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="sparkles"></i> KI-Features aktivieren
-                        </h3>
-
-                        <div class="setting-toggle-row">
-                            <span>🌤️ Morgendliches Wetter-Briefing</span>
-                            <label class="switch">
-                                <input type="checkbox" id="aiWeatherToggle" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <small
-                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Erhalte
-                            morgens eine Wettervorhersage, damit du weißt, wie du dich anziehen sollst.</small>
-
-                        <div class="setting-toggle-row">
-                            <span>📰 Tägliche Nachrichten & Weltereignisse</span>
-                            <label class="switch">
-                                <input type="checkbox" id="aiNewsToggle" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <small
-                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Bleibe
-                            informiert über wichtige Ereignisse auf der Welt.</small>
-
-                        <div class="setting-toggle-row">
-                            <span>💼 Geschäftliche Unterstützung</span>
-                            <label class="switch">
-                                <input type="checkbox" id="aiBusinessToggle" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <small
-                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Hilfe
-                            bei beruflichen Aufgaben und Terminen.</small>
-
-                        <div class="setting-toggle-row">
-                            <span>🏠 Private Unterstützung</span>
-                            <label class="switch">
-                                <input type="checkbox" id="aiPrivateToggle" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <small
-                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Unterstützung
-                            im Alltag und bei privaten Aufgaben.</small>
-
-                        <div class="setting-toggle-row">
-                            <span>🔔 Proaktive Erinnerungen</span>
-                            <label class="switch">
-                                <input type="checkbox" id="aiRemindersToggle" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <small
-                            style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Die
-                            KI erinnert dich proaktiv an wichtige Dinge.</small>
-                    </div>
-
-                    <!-- Morning Briefing Time -->
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label>⏰ Morgendliches Briefing um:</label>
-                        <input type="time" id="aiMorningTime" class="settings-input" value="07:00">
-                        <small style="color: var(--text-muted); font-size: 0.75rem;">Zu dieser Zeit erhältst du dein
-                            tägliches Briefing mit Wetter und Nachrichten.</small>
-                    </div>
-
-                    <!-- AI Dashboard Preview -->
-                    <div id="aiDashboardPreview" class="hidden"
-                        style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border-glass);">
-                        <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="activity"></i> Dein heutiges Briefing
-                        </h4>
-                        <div id="aiDashboardContent" style="font-size: 0.9rem; line-height: 1.6;">
-                            <!-- Dynamic content will be inserted here -->
-                        </div>
-                    </div>
-
-                    <!-- Personal Advisor Chat Section -->
-                    <div class="ai-chat-section"
-                        style="margin-top: 25px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
-                        <h3
-                            style="margin-bottom: 15px; color: var(--primary-light); display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="message-circle"></i> Chatte mit deinem Advisor
-                        </h3>
-                        <div id="aiChatHistory"
-                            style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px;">
-                            <div class="ai-msg"
-                                style="background: rgba(var(--primary-rgb), 0.1); padding: 10px; border-radius: 12px; font-size: 0.9rem; align-self: flex-start; max-width: 85%;">
-                                Hallo! Ich bin dein persönlicher Berater. Wie kann ich dich heute unterstützen?
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="aiChatInput" class="settings-input" placeholder="Frage mich alles..."
-                                style="flex: 1; border-radius: 20px; padding-left: 15px;">
-                            <button id="sendAiChatBtn" class="btn-primary"
-                                style="width: 45px; height: 45px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center;">
-                                <i data-lucide="send"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="testAIBriefingBtn" class="btn-secondary">🧪 Briefing testen</button>
-                    <button id="savePersonalAIBtn" class="btn-primary">Speichern</button>
+                    <label>🗒️ Notizen</label>
+                    <textarea id="appNotes" rows="3" placeholder="Weitere Details..." class="settings-input"
+                        style="min-height: 60px;"></textarea>
                 </div>
             </div>
-        </div>
+            <div class="modal-footer">
+                <button id="cancelAppointmentBtn" class="btn-secondary">Abbrechen</button>
+                <button id="saveAppointmentBtn" class="btn-primary">Speichern</button>
+            </div>
 
-        <!-- Grok Modal -->
-        <div id="grokModal" class="modal hidden">
-            <div class="modal-content grok-modal-content">
-                <div class="modal-header">
-                    <h2>🤖 Grok AI</h2>
-                    <button class="modal-close-icon" id="closeGrokBtn">✕</button>
+        </div>
+    </div>
+
+    <!-- AI Research Result Modal -->
+    <div id="aiResearchResultModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 Recherche-Ergebnis</h2>
+                <button class="modal-close-icon" id="closeAiResearchResultBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="ai-result-box" id="aiResultBox">
+                    <div id="aiResultHeader" style="font-weight: 700; color: var(--secondary); margin-bottom: 0.5rem;">
+                        Gefundene
+                        Information:</div>
+                    <div id="aiResultContent"
+                        style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--border-glass); margin-bottom: 1.5rem; font-size: 1.1rem;">
+                        -</div>
                 </div>
-                <div class="modal-body">
-                    <div class="grok-chat-container">
-                        <div class="grok-user-input" id="grokInput">...</div>
-                        <div class="grok-bot-response" id="grokResponse">Ich höre zu...</div>
+
+                <div class="appointment-selector">
+                    <label style="display: block; margin-bottom: 1rem; opacity: 0.8;">In welchen Termin soll ich das
+                        speichern?</label>
+                    <div id="researchAppointmentList"
+                        style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                        <!-- Appointments will be listed here -->
+                        <div class="loading-spinner" style="text-align:center; padding: 2rem;">Warten auf Daten...
+                        </div>
                     </div>
+                    <button id="saveInNewAppointmentBtn" class="btn-secondary"
+                        style="width: 100%; margin-top: 1rem; border-style: dashed;">➕ In neuen Termin
+                        eintragen</button>
                 </div>
             </div>
-        </div>
-
-        <!-- Calendar Modal -->
-        <div id="calendarModal" class="modal hidden">
-            <div class="modal-content calendar-modal-content">
-                <div class="modal-header">
-                    <h2>📅 Kalender</h2>
-                    <div class="calendar-nav">
-                        <button id="prevMonthBtn" class="btn-icon-nav">❮</button>
-                        <span id="calendarMonthYear" class="month-year-label">Monat 2024</span>
-                        <button id="nextMonthBtn" class="btn-icon-nav">❯</button>
-                        <button id="todayBtn" class="btn-link-small"
-                            style="margin-left: 10px; color: var(--secondary); text-decoration: none; font-weight: 700;">Heute</button>
-                    </div>
-                    <button class="modal-close-icon" id="closeCalendarBtn">✕</button>
-                </div>
-                <div class="modal-body no-padding">
-                    <div id="calendarGrid" class="calendar-grid">
-                        <!-- Calendar days inserted here -->
-                    </div>
-                </div>
+            <div class="modal-footer">
+                <button id="cancelAiResearchResultBtn" class="btn-secondary" style="width: 100%;">Abbrechen</button>
             </div>
         </div>
+    </div>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
-        <!-- Appointment Modal (Formular) -->
-        <div id="appointmentModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button id="backAppointmentBtn" class="btn-back">
-                        <i data-lucide="chevron-left"></i> Zurück
-                    </button>
-                    <h2>📅 Neuer Termin</h2>
-                    <div style="margin-left: auto; display: flex; gap: 10px;">
-                        <button id="appVoiceBtn" class="btn-icon-nav"
-                            style="border-radius: 50%; width: 32px; height: 32px; background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary);">🎤</button>
-                        <button class="modal-close-icon" id="closeAppointmentModal">✕</button>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>📝 Titel / Betreff</label>
-                        <input type="text" id="appTitle" placeholder="z.B. Zahnarzt, Meeting..." class="settings-input">
-                    </div>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+    <script src="personal-ai.js"></script>
+    <script src="auto-hide-nav.js"></script>
+    <script src="interactive-ai.js"></script>
+    <script>
+        // Wire up footer navigation buttons to existing functions
+        document.addEventListener('DOMContentLoaded', () => {
+            // Calendar Button
+            const calendarBtnFooter = document.getElementById('calendarBtnFooter');
+            if (calendarBtnFooter) {
+                calendarBtnFooter.addEventListener('click', () => {
+                    if (typeof window.openCalendarModal === 'function') {
+                        window.openCalendarModal();
+                    } else {
+                        const sideCalendarBtn = document.getElementById('sideCalendarBtn');
+                        if (sideCalendarBtn) sideCalendarBtn.click();
+                    }
+                });
+            }
 
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 1;">
-                            <label>📅 Datum</label>
-                            <input type="date" id="appDate" class="settings-input">
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label>⏰ Uhrzeit</label>
-                            <input type="time" id="appTime" class="settings-input">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>📍 Ort / Adresse</label>
-                        <input type="text" id="appLocation" placeholder="Straße, Stadt..." class="settings-input">
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 1;">
-                            <label>👤 Name / Kontakt</label>
-                            <div style="display: flex; gap: 5px;">
-                                <input type="text" id="appPerson" placeholder="Name" class="settings-input"
-                                    style="flex:1;">
-                                <button id="appContactBtn" class="btn-secondary" style="padding: 0 8px;"
-                                    title="Kontakte">📇</button>
-                            </div>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label>📞 Telefon</label>
-                            <input type="tel" id="appPhone" placeholder="0123..." class="settings-input">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🗒️ Notizen</label>
-                        <textarea id="appNotes" rows="3" placeholder="Weitere Details..." class="settings-input"
-                            style="min-height: 60px;"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="cancelAppointmentBtn" class="btn-secondary">Abbrechen</button>
-                    <button id="saveAppointmentBtn" class="btn-primary">Speichern</button>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- AI Research Result Modal -->
-        <div id="aiResearchResultModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>🔍 Recherche-Ergebnis</h2>
-                    <button class="modal-close-icon" id="closeAiResearchResultBtn">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="ai-result-box" id="aiResultBox">
-                        <div id="aiResultHeader"
-                            style="font-weight: 700; color: var(--secondary); margin-bottom: 0.5rem;">Gefundene
-                            Information:</div>
-                        <div id="aiResultContent"
-                            style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--border-glass); margin-bottom: 1.5rem; font-size: 1.1rem;">
-                            -</div>
-                    </div>
-
-                    <div class="appointment-selector">
-                        <label style="display: block; margin-bottom: 1rem; opacity: 0.8;">In welchen Termin soll ich das
-                            speichern?</label>
-                        <div id="researchAppointmentList"
-                            style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
-                            <!-- Appointments will be listed here -->
-                            <div class="loading-spinner" style="text-align:center; padding: 2rem;">Warten auf Daten...
-                            </div>
-                        </div>
-                        <button id="saveInNewAppointmentBtn" class="btn-secondary"
-                            style="width: 100%; margin-top: 1rem; border-style: dashed;">➕ In neuen Termin
-                            eintragen</button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="cancelAiResearchResultBtn" class="btn-secondary" style="width: 100%;">Abbrechen</button>
-                </div>
-            </div>
-        </div>
-        <!-- Firebase SDKs -->
-        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
-        <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-        <script src="app.js"></script>
-        <script src="personal-ai.js"></script>
-        <script src="auto-hide-nav.js"></script>
-        <script src="interactive-ai.js"></script>
-        <script>
-            // Wire up footer navigation buttons to existing functions
-            document.addEventListener('DOMContentLoaded', () => {
-                // Calendar Button
-                const calendarBtnFooter = document.getElementById('calendarBtnFooter');
-                if (calendarBtnFooter) {
-                    calendarBtnFooter.addEventListener('click', () => {
-                        if (typeof window.openCalendarModal === 'function') {
-                            window.openCalendarModal();
-                        } else {
-                            const sideCalendarBtn = document.getElementById('sideCalendarBtn');
-                            if (sideCalendarBtn) sideCalendarBtn.click();
+            // Note Button
+            const noteBtnFooter = document.getElementById('noteBtnFooter');
+            if (noteBtnFooter) {
+                noteBtnFooter.addEventListener('click', () => {
+                    if (typeof window.scrollToNotes === 'function') {
+                        window.scrollToNotes();
+                    } else {
+                        const qts = document.getElementById('quickTodoSection');
+                        if (qts) {
+                            qts.classList.remove('hidden');
+                            qts.scrollIntoView({ behavior: 'smooth' });
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                // Note Button
-                const noteBtnFooter = document.getElementById('noteBtnFooter');
-                if (noteBtnFooter) {
-                    noteBtnFooter.addEventListener('click', () => {
-                        if (typeof window.scrollToNotes === 'function') {
-                            window.scrollToNotes();
-                        } else {
-                            const qts = document.getElementById('quickTodoSection');
-                            if (qts) {
-                                qts.classList.remove('hidden');
-                                qts.scrollIntoView({ behavior: 'smooth' });
-                            }
-                        }
-                    });
-                }
+            // Nightstand Button
+            const sideNightstandBtnFooter = document.getElementById('sideNightstandBtnFooter');
+            const sideNightstandBtn = document.getElementById('sideNightstandBtn');
+            if (sideNightstandBtnFooter && sideNightstandBtn) {
+                sideNightstandBtnFooter.addEventListener('click', () => sideNightstandBtn.click());
+            }
 
-                // Nightstand Button
-                const sideNightstandBtnFooter = document.getElementById('sideNightstandBtnFooter');
-                const sideNightstandBtn = document.getElementById('sideNightstandBtn');
-                if (sideNightstandBtnFooter && sideNightstandBtn) {
-                    sideNightstandBtnFooter.addEventListener('click', () => sideNightstandBtn.click());
-                }
+            // Alarm Button
+            const alarmBtnFooter = document.getElementById('alarmBtnFooter');
+            const sideAlarmBtn = document.getElementById('sideAlarmBtn');
+            if (alarmBtnFooter && sideAlarmBtn) {
+                alarmBtnFooter.addEventListener('click', () => sideAlarmBtn.click());
+            }
 
-                // Alarm Button
-                const alarmBtnFooter = document.getElementById('alarmBtnFooter');
-                const sideAlarmBtn = document.getElementById('sideAlarmBtn');
-                if (alarmBtnFooter && sideAlarmBtn) {
-                    alarmBtnFooter.addEventListener('click', () => sideAlarmBtn.click());
-                }
+            // Drive Mode Button
+            const manualDriveBtnFooter = document.getElementById('manualDriveBtnFooter');
+            const sideDriveBtn = document.getElementById('sideDriveBtn');
+            if (manualDriveBtnFooter && sideDriveBtn) {
+                manualDriveBtnFooter.addEventListener('click', () => sideDriveBtn.click());
+            }
+        });
+    </script>
+    <script>
+        // Initialize Lucide icons immediately
+        lucide.createIcons();
 
-                // Drive Mode Button
-                const manualDriveBtnFooter = document.getElementById('manualDriveBtnFooter');
-                const sideDriveBtn = document.getElementById('sideDriveBtn');
-                if (manualDriveBtnFooter && sideDriveBtn) {
-                    manualDriveBtnFooter.addEventListener('click', () => sideDriveBtn.click());
-                }
-            });
-        </script>
-        <script>
-            // Initialize Lucide icons immediately
+        // Re-initialize after a short delay to catch any dynamically added elements
+        setTimeout(() => {
             lucide.createIcons();
+        }, 100);
 
-            // Re-initialize after a short delay to catch any dynamically added elements
-            setTimeout(() => {
-                lucide.createIcons();
-            }, 100);
-
-            // Also re-initialize when DOM is fully loaded
-            document.addEventListener('DOMContentLoaded', () => {
-                lucide.createIcons();
-            });
-        </script>
+        // Also re-initialize when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 
 </html>
