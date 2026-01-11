@@ -955,6 +955,117 @@ function initDOMElements() {
         toggleSideMenu();
     });
 
+    // Settings Modal Event Listeners
+    if (sideSettingsBtn) {
+        sideSettingsBtn.addEventListener('click', () => {
+            if (settingsModal) {
+                settingsModal.classList.remove('hidden');
+                loadSettingsToUI();
+                toggleSideMenu();
+                showToast('⚙️ Einstellungen geöffnet', 'success');
+            }
+        });
+    }
+
+    if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', () => {
+            if (settingsModal) settingsModal.classList.add('hidden');
+        });
+    }
+
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            saveSettings();
+        });
+    }
+
+    if (testSoundBtn) {
+        testSoundBtn.addEventListener('click', () => {
+            playAlarmSound(soundSelect.value, 2000);
+        });
+    }
+
+    if (aiProviderSelect) {
+        aiProviderSelect.addEventListener('change', (e) => {
+            const provider = e.target.value;
+            updateRobotIcon(provider);
+
+            // Show/hide OpenAI key input based on provider
+            const openaiKeyGroup = document.getElementById('openaiKeyGroup');
+            if (openaiKeyGroup) {
+                if (provider === 'chatgpt') {
+                    openaiKeyGroup.classList.remove('hidden');
+                } else {
+                    openaiKeyGroup.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    const testAiBtn = document.getElementById('testAiBtn');
+    if (testAiBtn) {
+        testAiBtn.addEventListener('click', () => {
+            openAISearch('');
+        });
+    }
+
+    // Avatar picker in settings
+    if (settingsAvatarPicker) {
+        const avatarOptions = settingsAvatarPicker.querySelectorAll('.avatar-option:not(.upload-option)');
+        avatarOptions.forEach(opt => {
+            opt.addEventListener('click', function () {
+                const emoji = this.dataset.avatar;
+                if (emoji && userAvatar) {
+                    userAvatar.textContent = emoji;
+                    currentUser.avatar = emoji;
+                    saveUserData();
+                    avatarOptions.forEach(o => o.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+    }
+
+    const settingsCustomAvatarBtn = document.getElementById('settingsCustomAvatarBtn');
+    if (settingsCustomAvatarBtn && settingsAvatarUpload) {
+        settingsCustomAvatarBtn.addEventListener('click', () => {
+            settingsAvatarUpload.click();
+        });
+
+        settingsAvatarUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    if (userAvatar) {
+                        userAvatar.style.backgroundImage = `url(${ev.target.result})`;
+                        userAvatar.textContent = '';
+                        currentUser.avatar = ev.target.result;
+                        saveUserData();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Settings: User name and PIN
+    const settingsUserName = document.getElementById('settingsUserName');
+    const settingsUserPin = document.getElementById('settingsUserPin');
+    const visibleCurrentPin = document.getElementById('visibleCurrentPin');
+
+    if (visibleCurrentPin && currentUser) {
+        visibleCurrentPin.value = currentUser.pin || '------';
+    }
+
+    // Footer Nightstand Button
+    const sideNightstandBtnFooter = document.getElementById('sideNightstandBtnFooter');
+    if (sideNightstandBtnFooter) {
+        sideNightstandBtnFooter.addEventListener('click', () => {
+            startNightstandMode();
+        });
+    }
+
     // AI Research Result Modal
     aiResearchResultModal = document.getElementById('aiResearchResultModal');
     closeAiResearchResultBtn = document.getElementById('closeAiResearchResultBtn');
@@ -1078,7 +1189,299 @@ function openDriveMode() {
     }
 }
 
-// Toast System
+// Settings Functions
+function loadSettingsToUI() {
+    // Load all settings into the UI
+    if (themeSelect) themeSelect.value = appSettings.theme || 'dark';
+    if (soundSelect) soundSelect.value = appSettings.sound || 'beep';
+    if (defaultSnoozeSelect) defaultSnoozeSelect.value = appSettings.defaultSnooze || '5';
+
+    const reminderLeadTimeSelect = document.getElementById('reminderLeadTimeSelect');
+    if (reminderLeadTimeSelect) reminderLeadTimeSelect.value = appSettings.reminderLeadTime || 60;
+
+    const voiceBeepToggle = document.getElementById('voiceBeepToggle');
+    if (voiceBeepToggle) voiceBeepToggle.checked = appSettings.voiceBeepEnabled || false;
+
+    const aiTipsToggle = document.getElementById('aiTipsToggle');
+    if (aiTipsToggle) aiTipsToggle.checked = appSettings.aiTipsEnabled !== false;
+
+    const aiVoiceToggle = document.getElementById('aiVoiceToggle');
+    if (aiVoiceToggle) aiVoiceToggle.checked = appSettings.aiVoiceEnabled !== false;
+
+    if (aiProviderSelect) aiProviderSelect.value = appSettings.aiProvider || 'grok';
+
+    const openaiApiKeyInput = document.getElementById('openaiApiKeyInput');
+    if (openaiApiKeyInput) openaiApiKeyInput.value = appSettings.openaiApiKey || '';
+
+    const googleMapsApiKeyInput = document.getElementById('googleMapsApiKeyInput');
+    if (googleMapsApiKeyInput) googleMapsApiKeyInput.value = appSettings.googleMapsApiKey || '';
+
+    // Header Icons
+    const headerIconExpense = document.getElementById('headerIconExpense');
+    if (headerIconExpense) headerIconExpense.checked = appSettings.headerIconExpense !== false;
+
+    const headerIconScan = document.getElementById('headerIconScan');
+    if (headerIconScan) headerIconScan.checked = appSettings.headerIconScan !== false;
+
+    const headerIconAlarm = document.getElementById('headerIconAlarm');
+    if (headerIconAlarm) headerIconAlarm.checked = appSettings.headerIconAlarm !== false;
+
+    const headerIconDrive = document.getElementById('headerIconDrive');
+    if (headerIconDrive) headerIconDrive.checked = appSettings.headerIconDrive !== false;
+
+    const headerIconNight = document.getElementById('headerIconNight');
+    if (headerIconNight) headerIconNight.checked = appSettings.headerIconNight !== false;
+
+    // Wake Word
+    const wakeWordToggle = document.getElementById('wakeWordToggle');
+    if (wakeWordToggle) wakeWordToggle.checked = appSettings.wakeWordEnabled || false;
+
+    const wakeWordNameInput = document.getElementById('wakeWordNameInput');
+    if (wakeWordNameInput) wakeWordNameInput.value = appSettings.wakeWordName || 'Taskforce';
+
+    // Drive Mode
+    const driveModeToggle = document.getElementById('driveModeToggle');
+    if (driveModeToggle) driveModeToggle.checked = appSettings.driveModeEnabled !== false;
+
+    // System
+    const urgentPopupToggle = document.getElementById('urgentPopupToggle');
+    if (urgentPopupToggle) urgentPopupToggle.checked = appSettings.urgentPopupEnabled !== false;
+
+    const autoArchiveToggle = document.getElementById('autoArchiveToggle');
+    if (autoArchiveToggle) autoArchiveToggle.checked = appSettings.autoArchive !== false;
+
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle) locationToggle.checked = appSettings.locationTracking !== false;
+
+    const homeAddressInput = document.getElementById('homeAddressInput');
+    if (homeAddressInput) homeAddressInput.value = appSettings.homeAddress || '';
+
+    // User info
+    const settingsUserName = document.getElementById('settingsUserName');
+    if (settingsUserName && currentUser) settingsUserName.value = currentUser.name || '';
+
+    const visibleCurrentPin = document.getElementById('visibleCurrentPin');
+    if (visibleCurrentPin && currentUser) visibleCurrentPin.value = currentUser.pin || '------';
+
+    // Show/hide OpenAI key input based on provider
+    const openaiKeyGroup = document.getElementById('openaiKeyGroup');
+    if (openaiKeyGroup) {
+        if (appSettings.aiProvider === 'chatgpt') {
+            openaiKeyGroup.classList.remove('hidden');
+        } else {
+            openaiKeyGroup.classList.add('hidden');
+        }
+    }
+
+    // Load team list
+    loadTeamList();
+}
+
+function saveSettings() {
+    // Save all settings from UI
+    if (themeSelect) appSettings.theme = themeSelect.value;
+    if (soundSelect) appSettings.sound = soundSelect.value;
+    if (defaultSnoozeSelect) appSettings.defaultSnooze = defaultSnoozeSelect.value;
+
+    const reminderLeadTimeSelect = document.getElementById('reminderLeadTimeSelect');
+    if (reminderLeadTimeSelect) appSettings.reminderLeadTime = parseInt(reminderLeadTimeSelect.value);
+
+    const voiceBeepToggle = document.getElementById('voiceBeepToggle');
+    if (voiceBeepToggle) appSettings.voiceBeepEnabled = voiceBeepToggle.checked;
+
+    const aiTipsToggle = document.getElementById('aiTipsToggle');
+    if (aiTipsToggle) appSettings.aiTipsEnabled = aiTipsToggle.checked;
+
+    const aiVoiceToggle = document.getElementById('aiVoiceToggle');
+    if (aiVoiceToggle) appSettings.aiVoiceEnabled = aiVoiceToggle.checked;
+
+    if (aiProviderSelect) appSettings.aiProvider = aiProviderSelect.value;
+
+    const openaiApiKeyInput = document.getElementById('openaiApiKeyInput');
+    if (openaiApiKeyInput) appSettings.openaiApiKey = openaiApiKeyInput.value.trim();
+
+    const googleMapsApiKeyInput = document.getElementById('googleMapsApiKeyInput');
+    if (googleMapsApiKeyInput) appSettings.googleMapsApiKey = googleMapsApiKeyInput.value.trim();
+
+    // Header Icons
+    const headerIconExpense = document.getElementById('headerIconExpense');
+    if (headerIconExpense) appSettings.headerIconExpense = headerIconExpense.checked;
+
+    const headerIconScan = document.getElementById('headerIconScan');
+    if (headerIconScan) appSettings.headerIconScan = headerIconScan.checked;
+
+    const headerIconAlarm = document.getElementById('headerIconAlarm');
+    if (headerIconAlarm) appSettings.headerIconAlarm = headerIconAlarm.checked;
+
+    const headerIconDrive = document.getElementById('headerIconDrive');
+    if (headerIconDrive) appSettings.headerIconDrive = headerIconDrive.checked;
+
+    const headerIconNight = document.getElementById('headerIconNight');
+    if (headerIconNight) appSettings.headerIconNight = headerIconNight.checked;
+
+    // Wake Word
+    const wakeWordToggle = document.getElementById('wakeWordToggle');
+    if (wakeWordToggle) appSettings.wakeWordEnabled = wakeWordToggle.checked;
+
+    const wakeWordNameInput = document.getElementById('wakeWordNameInput');
+    if (wakeWordNameInput) appSettings.wakeWordName = wakeWordNameInput.value.trim();
+
+    // Drive Mode
+    const driveModeToggle = document.getElementById('driveModeToggle');
+    if (driveModeToggle) appSettings.driveModeEnabled = driveModeToggle.checked;
+
+    // System
+    const urgentPopupToggle = document.getElementById('urgentPopupToggle');
+    if (urgentPopupToggle) appSettings.urgentPopupEnabled = urgentPopupToggle.checked;
+
+    const autoArchiveToggle = document.getElementById('autoArchiveToggle');
+    if (autoArchiveToggle) appSettings.autoArchive = autoArchiveToggle.checked;
+
+    const locationToggle = document.getElementById('locationToggle');
+    if (locationToggle) appSettings.locationTracking = locationToggle.checked;
+
+    const homeAddressInput = document.getElementById('homeAddressInput');
+    if (homeAddressInput) appSettings.homeAddress = homeAddressInput.value.trim();
+
+    // Save user info updates
+    const settingsUserName = document.getElementById('settingsUserName');
+    const settingsUserPin = document.getElementById('settingsUserPin');
+
+    if (currentUser) {
+        if (settingsUserName && settingsUserName.value.trim()) {
+            currentUser.name = settingsUserName.value.trim();
+            if (displayUserName) displayUserName.textContent = currentUser.name;
+        }
+
+        if (settingsUserPin && settingsUserPin.value.trim()) {
+            const newPin = settingsUserPin.value.trim();
+            if (newPin.length === 6 && /^\d+$/.test(newPin)) {
+                currentUser.pin = newPin;
+                showToast('PIN erfolgreich aktualisiert!', 'success');
+            } else {
+                showToast('PIN muss 6 Ziffern haben!', 'error');
+            }
+        }
+
+        saveUserData();
+    }
+
+    // Persist to localStorage
+    localStorage.setItem('taskforce_settings', JSON.stringify(appSettings));
+
+    // Apply the new settings
+    applyAppSettings();
+
+    showToast('Einstellungen gespeichert!', 'success');
+
+    if (settingsModal) settingsModal.classList.add('hidden');
+
+    // Refresh wake word if setting changed
+    if (appSettings.wakeWordEnabled) {
+        initWakeWordRecognition();
+    } else {
+        if (wakeWordRecognition) {
+            wakeWordRecognition.stop();
+            isWakeWordListening = false;
+        }
+    }
+}
+
+function applyAppSettings() {
+    // Apply theme
+    if (appSettings.theme === 'light') {
+        document.body.classList.add('theme-light');
+        document.body.classList.remove('theme-business');
+    } else if (appSettings.theme === 'business') {
+        document.body.classList.add('theme-business');
+        document.body.classList.remove('theme-light');
+    } else {
+        document.body.classList.remove('theme-light', 'theme-business');
+    }
+
+    // Update header icons visibility
+    updateHeaderIcons();
+
+    // Apply AI provider
+    if (appSettings.aiProvider) {
+        updateRobotIcon(appSettings.aiProvider);
+    }
+}
+
+function updateHeaderIcons() {
+    // This function would update which icons are visible in the header
+    // Based on the header icon settings
+    const expenseBtn = document.getElementById('expenseBtn');
+    const scanBtn = document.getElementById('scanBtn');
+    const alarmBtn = document.getElementById('alarmBtn');
+    const manualDriveBtn = document.getElementById('manualDriveBtn');
+    const nightBtn = document.getElementById('nightBtn');
+
+    if (expenseBtn) {
+        expenseBtn.style.display = appSettings.headerIconExpense ? 'flex' : 'none';
+    }
+    if (scanBtn) {
+        scanBtn.style.display = appSettings.headerIconScan ? 'flex' : 'none';
+    }
+    if (alarmBtn) {
+        alarmBtn.style.display = appSettings.headerIconAlarm ? 'flex' : 'none';
+    }
+    if (manualDriveBtn) {
+        manualDriveBtn.style.display = appSettings.headerIconDrive ? 'flex' : 'none';
+    }
+    if (nightBtn) {
+        nightBtn.style.display = appSettings.headerIconNight ? 'flex' : 'none';
+    }
+}
+
+function loadTeamList() {
+    // Load and display team list in settings
+    const settingsTeamList = document.getElementById('settingsTeamList');
+    if (!settingsTeamList) return;
+
+    if (!currentUser || !currentUser.teamCode) {
+        settingsTeamList.innerHTML = '<div style="color: var(--text-muted); font-style: italic;">Kein Team-Code aktiv</div>';
+        return;
+    }
+
+    settingsTeamList.innerHTML = `<div style="color: var(--primary);">${currentUser.teamCode}</div>`;
+}
+
+// Global helper functions for settings
+window.testConnection = function () {
+    const statusDot = document.getElementById('connectionStatusDot');
+    const statusText = document.getElementById('connectionStatusText');
+
+    if (statusDot && statusText) {
+        statusText.textContent = 'Teste Verbindung...';
+
+        // Test Firebase connection
+        setTimeout(() => {
+            if (db) {
+                statusDot.style.background = '#10b981'; // green
+                statusText.textContent = 'Verbunden ✓';
+                statusText.style.color = '#10b981';
+                showToast('Verbindung erfolgreich!', 'success');
+            } else {
+                statusDot.style.background = '#ef4444'; // red
+                statusText.textContent = 'Nicht verbunden ✕';
+                statusText.style.color = '#ef4444';
+                showToast('Verbindung fehlgeschlagen!', 'error');
+            }
+        }, 1000);
+    }
+};
+
+window.forceSync = function () {
+    showToast('Synchronisiere Daten...', 'info');
+    if (typeof syncTasks === 'function') {
+        syncTasks();
+    }
+    setTimeout(() => {
+        showToast('Synchronisierung abgeschlossen!', 'success');
+    }, 2000);
+};
+
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
