@@ -87,7 +87,8 @@ let appSettings = Object.assign({
     voiceBeepEnabled: false, // Default OFF as requested
     aiTipsEnabled: true,
     aiVoiceEnabled: true,
-    openaiApiKey: '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', // Auto-inserted key
+    aiVoiceEnabled: true,
+    openaiApiKey: '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', // User provided key
     autoArchive: true,
     locationTracking: true,
     driveModeEnabled: true,
@@ -170,18 +171,99 @@ function updateDashboardGrid() {
     const aiCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bot"]'));
     const driveCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="car"]'));
 
-    if (appCard) grid.appendChild(appCard); // 1. Termine
-    // USER REQUEST: Tasks (Aufgaben) MUST appear after Dashboard (Termine)
-    if (taskCard) grid.appendChild(taskCard); // 2. Aufgaben
-    if (driveCard) { // 3. Fahrten (Drive Mode) - Prioritized
-        driveCard.classList.remove('hidden');
-        grid.appendChild(driveCard);
-        // ... (Logic kept in subsequent block, just moving element here for order)
+    // Drag & Drop / Saved Order Logic
+    const savedOrder = JSON.parse(localStorage.getItem('taskforce_dashboard_order'));
+
+    // Elements Map
+    const cards = [taskCard, appCard, aiCard, driveCard, noteCard, expCard, alarmCard].filter(c => c);
+
+    // If we have a saved order, try to respect it
+    if (savedOrder && savedOrder.length > 0) {
+        // Append known IDs in order
+        savedOrder.forEach(id => {
+            const card = cards.find(c => c.id === id);
+            if (card) {
+                if (id === 'card_drive' && !card.classList.contains('hidden')) {
+                    grid.appendChild(card);
+                } else if (id !== 'card_drive') {
+                    grid.appendChild(card);
+                }
+            }
+        });
+        // Append anything missing from saved order (e.g. new features)
+        cards.forEach(card => {
+            if (!savedOrder.includes(card.id)) {
+                // Drive card special handling
+                if (card.id === 'card_drive' && !card.classList.contains('hidden')) grid.appendChild(card);
+                else if (card.id !== 'card_drive') grid.appendChild(card);
+            }
+        });
+    } else {
+        // DEFAULT ORDER (Fallback)
+        if (taskCard) grid.appendChild(taskCard); // 1. Aufgaben
+        if (appCard) grid.appendChild(appCard); // 2. Termine
+        if (aiCard) grid.appendChild(aiCard); // 3. Mein KI
+        if (driveCard) { // 4. Fahrten
+            driveCard.classList.remove('hidden');
+            grid.appendChild(driveCard);
+        }
+        if (noteCard) grid.appendChild(noteCard); // 5. Notizen
+        if (expCard) grid.appendChild(expCard); // 6. Kosten
+        if (alarmCard) grid.appendChild(alarmCard); // 7. Wecker
     }
-    if (noteCard) grid.appendChild(noteCard); // 4. Notizen
-    if (expCard) grid.appendChild(expCard); // 5. Kosten
-    if (alarmCard) grid.appendChild(alarmCard); // 6. Wecker
-    if (aiCard) grid.appendChild(aiCard); // 7. Mein KI
+
+    // Initialize Drag & Drop functionality
+    setTimeout(initDashboardDragAndDrop, 100);
+}
+
+// Drag & Drop Logic for Dashboard
+function initDashboardDragAndDrop() {
+    const cards = document.querySelectorAll('.dashboard-card');
+    const grid = document.querySelector('.dashboard-grid');
+
+    cards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', card.id);
+            card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            // Check if order changed
+            const currentOrder = Array.from(grid.children).map(c => c.id).filter(id => id);
+            const savedOrder = JSON.parse(localStorage.getItem('taskforce_dashboard_order')) || [];
+
+            if (JSON.stringify(currentOrder) !== JSON.stringify(savedOrder)) {
+                showSaveLayoutButton(currentOrder);
+            }
+        });
+    });
+
+    grid.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Allow drop
+        const afterElement = getDragAfterElement(grid, e.clientY);
+        const draggable = document.querySelector('.dragging');
+        if (!draggable) return;
+        if (afterElement == null) {
+            grid.appendChild(draggable);
+        } else {
+            grid.insertBefore(draggable, afterElement);
+        }
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.dashboard-card:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
 
     // Drive card only if relevant
     if (driveCard) {
@@ -230,6 +312,37 @@ function updateDashboardGrid() {
     }
 }
 
+// Helper: Show Floating Save Layout Button
+function showSaveLayoutButton(newOrder) {
+    let btn = document.getElementById('saveLayoutFloatingBtn');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'saveLayoutFloatingBtn';
+        btn.className = 'btn-primary';
+        btn.innerHTML = '<i data-lucide="save"></i> Layout speichern';
+        btn.style.position = 'fixed';
+        btn.style.bottom = '80px'; // Above footer
+        btn.style.right = '20px';
+        btn.style.zIndex = '2000';
+        btn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+        btn.style.padding = '12px 20px';
+        btn.style.display = 'flex';
+        btn.style.gap = '8px';
+        btn.style.alignItems = 'center';
+        document.body.appendChild(btn);
+
+        // Initialize icon
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Update click handler to current order
+    btn.onclick = () => {
+        localStorage.setItem('taskforce_dashboard_order', JSON.stringify(newOrder));
+        showToast('Layout erfolgreich gespeichert!', 'success');
+        btn.remove();
+    };
+}
+
 // Call this whenever dashboard is updated
 setInterval(updateDashboardGrid, 5000); // Check periodically
 
@@ -249,6 +362,30 @@ document.addEventListener('DOMContentLoaded', () => {
         startLocationTracking();
     }, { once: true });
 
+    // NEW: Footer AI Button wiring
+    const personalAIBtnFooter = document.getElementById('personalAIBtnFooter');
+    if (personalAIBtnFooter) {
+        personalAIBtnFooter.addEventListener('click', () => {
+            const btn = document.getElementById('personalAIBtn');
+            if (btn) btn.click();
+        });
+    }
+
+    // NEW: Header Briefing Button
+    const headerBriefingBtn = document.getElementById('headerBriefingBtn');
+    if (headerBriefingBtn) {
+        headerBriefingBtn.addEventListener('click', () => {
+            const btn = document.getElementById('personalAIBtn');
+            if (btn) {
+                btn.click();
+                // Optionally auto-trigger test briefing after a short delay
+                setTimeout(() => {
+                    const testBtn = document.getElementById('testAIBriefingBtn');
+                    if (testBtn) testBtn.click();
+                }, 500);
+            }
+        });
+    }
     checkUrlActions();
 
     // Start Alarm Check Interval
@@ -1121,6 +1258,7 @@ function showMainApp() {
     syncExpenses(); // Then cloud sync
     updateStats();
     updateDashboard();
+    updateDashboardGrid(); // Restore saved layout immediately
     startUrgentReminder();
     requestNotificationPermission();
 
@@ -5499,7 +5637,15 @@ function showDriveMode(task) {
     const relevantTasks = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === targetDateStr && !t.archived)
         .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
-    if (grok) grok.innerHTML = generateDailyBriefing(relevantTasks);
+    // AI Briefing Logic
+    if (appSettings.openaiApiKey && typeof generateDailyBriefingAI === 'function') {
+        grok.innerHTML = '<div style="text-align:center;"><i class="loading-spinner"></i> Personal AI wird geladen...</div>';
+        generateDailyBriefingAI().then(content => {
+            if (grok) grok.innerHTML = content + generatePunctualityCheck(task) + generateEssentialsChecklist(task);
+        });
+    } else {
+        if (grok) grok.innerHTML = generateDailyBriefing(relevantTasks);
+    }
 
     // Timeline with Grok comments
     const tl = document.getElementById('driveTimelineList');
@@ -5526,9 +5672,9 @@ function showDriveMode(task) {
         routeInfo.innerHTML = generateRouteInfo(relevantTasks, task);
     }
 
-    // NEW: Punctuality Check & Essentials Checklist
+    // NEW: Punctuality Check & Essentials Checklist (Initial placeholder, updated by AI async above)
     const punEl = document.getElementById('driveGrokSummary');
-    if (punEl) {
+    if (punEl && !appSettings.openaiApiKey) {
         punEl.innerHTML = generatePunctualityCheck(task) + generateEssentialsChecklist(task);
     }
 
@@ -5937,15 +6083,61 @@ function handleGrokQuery(query) {
     if (grokInput) grokInput.innerText = `"${query}"`;
     if (grokResponse) grokResponse.innerText = `${aiName} denkt nach...`;
 
-    // Simulated Response Logic
-    setTimeout(() => {
-        const response = generateGrokResponse(query);
-        typewriterEffect(grokResponse, response);
+    // Real AI Response Logic
+    if (appSettings.openaiApiKey && appSettings.openaiApiKey.startsWith('sk-')) {
+        fetchOpenAIResponse(query, (response) => {
+            typewriterEffect(grokResponse, response);
+            if (appSettings.aiVoiceEnabled) {
+                speakText(response);
+            }
+        });
+    } else {
+        // Fallback to simulation
+        setTimeout(() => {
+            const response = generateGrokResponse(query);
+            typewriterEffect(grokResponse, response);
 
-        if (appSettings.aiVoiceEnabled) {
-            speakText(response);
+            if (appSettings.aiVoiceEnabled) {
+                speakText(response);
+            }
+        }, 1000);
+    }
+}
+
+async function fetchOpenAIResponse(query, callback) {
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${appSettings.openaiApiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini", // Using a fast, smart model
+                messages: [
+                    {
+                        role: "system",
+                        content: `Du bist TaskForce AI, ein hilfreicher Assistent für diese App. 
+                        Der Nutzer heißt ${currentUser ? currentUser.name : 'Nutzer'}.
+                        Halte dich kurz, präzise und hilfreich. Du kannst Aufgaben, Termine und Notizen verwalten.
+                        Aktuelles Datum: ${new Date().toLocaleDateString('de-DE')}, Uhrzeit: ${new Date().toLocaleTimeString('de-DE')}.`
+                    },
+                    { role: "user", content: query }
+                ],
+                max_tokens: 150
+            })
+        });
+
+        const data = await response.json();
+        if (data.choices && data.choices.length > 0) {
+            callback(data.choices[0].message.content);
+        } else {
+            callback("Entschuldigung, ich konnte keine Antwort von OpenAI erhalten.");
         }
-    }, 1000);
+    } catch (e) {
+        console.error("OpenAI Error:", e);
+        callback("Fehler bei der Verbindung zu OpenAI. Bitte prüfe deine Internetverbindung oder den API Key.");
+    }
 }
 
 function generateGrokResponse(text) {

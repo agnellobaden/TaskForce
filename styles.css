@@ -2462,6 +2462,26 @@ input[type="password"]::placeholder {
     background: var(--bg-glass);
 }
 
+/* Draggable Dashboard Cards */
+.dashboard-card {
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.dashboard-card:active {
+    cursor: grabbing;
+}
+
+.dashboard-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    border: 2px dashed var(--primary);
+}
+
+.dashboard-card.drag-over {
+    border-top: 2px solid var(--secondary);
+}
+
 /* Detail Priority selection */
 .detail-priority-selection {
     margin-bottom: 2rem;

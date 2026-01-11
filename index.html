@@ -457,6 +457,10 @@
                                 Liste</button>
                             <button class="menu-item" id="sideExpenseBtn"><i data-lucide="dollar-sign"></i>
                                 Kostenkontrolle / Ausgaben</button>
+                            <!-- AI added before PayPal -->
+                            <button class="menu-item" id="sideAiBtn"
+                                onclick="document.getElementById('personalAIBtn').click()"><i data-lucide="bot"></i>
+                                Mein KI Advisor</button>
                             <button class="menu-item" id="sidePaypalBtn">🅿️ Mit PayPal bezahlen</button>
                             <button class="menu-item" id="sideCommBtn">📱 Kommunikation & Kontakt</button>
                             <button class="menu-item" id="sideDriveBtn"><i data-lucide="car"></i> Fahrt-Modus
@@ -501,26 +505,26 @@
                 <div class="header-buttons-row">
                     <!-- Unified Scrollable Action Bar -->
                     <div class="mobile-comm-bar" id="mobileCommBar">
+                        <!-- Briefing Button (First!) -->
+                        <button id="headerBriefingBtn" class="btn-comm-quick" title="Tages-Briefing"
+                            style="color: var(--secondary);">
+                            <span class="icon-label">Briefing</span>
+                        </button>
+
                         <!-- Core Actions (Moved from + Menu) -->
                         <button id="addTaskBtn" class="btn-comm-quick" title="Neue Aufgabe">
                             <span class="icon-label">Neu</span>
-                        </button>
-                        <button id="addTodoBtn" class="btn-comm-quick" title="Notiz">
-                            <span class="icon-label">Notiz</span>
                         </button>
                         <button id="grokManualBtn" class="btn-comm-quick" title="KI Assistant">
                             <span class="icon-label">KI</span>
                         </button>
 
                         <!-- Comm & Tools Actions -->
-                        <button id="mobileAddExpenseBtn" class="btn-comm-quick" title="Beleg scannen">
-                            <span class="icon-label">Scan</span>
-                        </button>
                         <button id="quickCallBtn" class="btn-comm-quick" title="Anrufen">
                             <span class="icon-label">Anruf</span>
                         </button>
                         <button id="quickWaBtn" class="btn-comm-quick" title="WhatsApp">
-                            <span class="icon-label">WA</span>
+                            <span class="icon-label">WhatsApp</span>
                         </button>
                         <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
                             <span class="icon-label">E-Mail</span>
@@ -541,7 +545,8 @@
             <section class="dashboard-content" id="dashboardContent">
                 <div class="dashboard-grid">
                     <!-- Termine -->
-                    <div class="dashboard-card" onclick="openAppointmentModalWithData('', 'Manuell')">
+                    <div class="dashboard-card" id="card_appointments" draggable="true"
+                        onclick="openAppointmentModalWithData('', 'Manuell')">
                         <div class="dashboard-card-header">
                             <i data-lucide="calendar"></i>
                             <h4>Termine</h4>
@@ -551,18 +556,18 @@
                         <div id="dashAppointmentsList" class="dash-list-container"></div>
                     </div>
 
-                    <!-- Notizen -->
-                    <div class="dashboard-card" onclick="promptNewNoteList()">
+                    <!-- Notizen renamed to To-Do -->
+                    <div class="dashboard-card" id="card_notes" draggable="true" onclick="promptNewNoteList()">
                         <div class="dashboard-card-header">
                             <i data-lucide="file-text"></i>
-                            <h4>Notizen</h4>
+                            <h4>To-Do</h4>
                         </div>
                         <div class="dashboard-card-value" id="dashNotes">0</div>
                         <div class="dashboard-card-label">Listen</div>
                     </div>
 
                     <!-- Wecker -->
-                    <div class="dashboard-card" onclick="openAlarmSettings()">
+                    <div class="dashboard-card" id="card_alarms" draggable="true" onclick="openAlarmSettings()">
                         <div class="dashboard-card-header">
                             <i data-lucide="bell"></i>
                             <h4>Wecker</h4>
@@ -572,7 +577,7 @@
                     </div>
 
                     <!-- Aufgaben -->
-                    <div class="dashboard-card" onclick="focusKeywordInput()">
+                    <div class="dashboard-card" id="card_tasks" draggable="true" onclick="focusKeywordInput()">
                         <div class="dashboard-card-header">
                             <i data-lucide="check-circle"></i>
                             <h4>Aufgaben</h4>
@@ -595,7 +600,7 @@
                     </div>
 
                     <!-- Kosten -->
-                    <div class="dashboard-card" onclick="openExpenseModal()">
+                    <div class="dashboard-card" id="card_expenses" draggable="true" onclick="openExpenseModal()">
                         <div class="dashboard-card-header">
                             <i data-lucide="dollar-sign"></i>
                             <h4>Kosten</h4>
@@ -605,7 +610,8 @@
                     </div>
 
                     <!-- Mein KI -->
-                    <div class="dashboard-card" onclick="document.getElementById('personalAIBtn').click()">
+                    <div class="dashboard-card" id="card_ai" draggable="true"
+                        onclick="document.getElementById('personalAIBtn').click()">
                         <div class="dashboard-card-header">
                             <i data-lucide="bot"></i>
                             <h4>Mein KI</h4>
@@ -615,7 +621,7 @@
                     </div>
 
                     <!-- Fahrten (wenn vorhanden) -->
-                    <div class="dashboard-card" onclick="openDriveMode()">
+                    <div class="dashboard-card" id="card_drive" draggable="true" onclick="openDriveMode()">
                         <div class="dashboard-card-header">
                             <i data-lucide="car"></i>
                             <h4>Fahrten</h4>
@@ -917,13 +923,13 @@
 
         <!-- Fixed Footer Navigation -->
         <div id="fixedFooterNav" class="fixed-footer-nav">
+            <button class="btn-footer-icon" id="personalAIBtnFooter" title="Persönliche KI" style="color: #a78bfa;">
+                <i data-lucide="bot"></i>
+                <span class="icon-label">Meine KI</span>
+            </button>
             <button class="btn-footer-icon" id="paypalBtnFooter" title="PayPal">
                 <span style="font-size: 1.2rem;">🅿️</span>
                 <span class="icon-label">PayPal</span>
-            </button>
-            <button class="btn-footer-icon" id="personalAIBtn" title="Persönliche KI" style="color: #a78bfa;">
-                <i data-lucide="bot"></i>
-                <span class="icon-label">Meine KI</span>
             </button>
             <button class="btn-footer-icon" id="calendarBtnFooter" title="Kalender öffnen">
                 <i data-lucide="calendar"></i>
@@ -1298,6 +1304,7 @@
     </div>
 
     <!-- Personal AI Assistant Modal -->
+    <button id="personalAIBtn" class="hidden"></button>
     <div id="personalAIModal" class="modal hidden">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">

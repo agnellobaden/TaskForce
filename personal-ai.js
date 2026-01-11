@@ -33,7 +33,7 @@ async function callChatGPT(messages, options = {}) {
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: options.model || 'gpt-3.5-turbo',
+                model: options.model || 'gpt-4o-mini',
                 messages: messages,
                 temperature: options.temperature || 0.7,
                 max_tokens: options.max_tokens || 1000
@@ -358,8 +358,53 @@ async function generateDailyBriefingAI() {
     const dayName = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][now.getDay()];
     const dateStr = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}`;
 
-    // Get current tasks
-    const openTasks = (typeof tasks !== 'undefined') ? tasks.filter(t => !t.done && !t.archived).map(t => t.keyword).join(', ') : 'Keine';
+    // 1. Fetch Real Context Data
+    let weatherInfo = "Keine Wetterdaten (nutze Jahreszeit)";
+    let newsInfo = "Keine aktuellen Nachrichten";
+
+    try {
+        // Parallel fetch for speed
+        const [weather, news] = await Promise.all([
+            fetchRealWeather(),
+            fetchRealNews()
+        ]);
+        if (weather) weatherInfo = weather;
+        if (news) newsInfo = news;
+    } catch (e) {
+        console.error("Context Fetch Error", e);
+    }
+
+
+    // 2. Prepare Task Data (Separated)
+    let appointmentsText = "Keine Termine für heute.";
+    let todoText = "Keine offenen Aufgaben.";
+
+    if (typeof tasks !== 'undefined') {
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Termine heute
+        const todaysAppointments = tasks.filter(t => !t.archived && !t.done && (
+            (t.deadline && t.deadline.startsWith(todayStr)) ||
+            (t.details && t.details['📅 Wann?'] && t.details['📅 Wann?'].startsWith(todayStr))
+        ));
+
+        if (todaysAppointments.length > 0) {
+            appointmentsText = todaysAppointments.map(t => {
+                const time = t.deadline ? new Date(t.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ganztägig';
+                return `- ${time} Uhr: ${t.keyword}`;
+            }).join('\n');
+        }
+
+        // Andere offene To-Dos (ohne heutiges Datum oder überfällig, aber nicht erledigt)
+        const otherTodos = tasks.filter(t => !t.archived && !t.done && !todaysAppointments.includes(t));
+
+        if (otherTodos.length > 0) {
+            // Top 5 wichtigste
+            todoText = otherTodos.slice(0, 5).map(t => `- ${t.keyword}`).join('\n');
+            if (otherTodos.length > 5) todoText += `\n... und ${otherTodos.length - 5} weitere.`;
+        }
+    }
+
 
     const systemPrompt = `Du bist ein hilfreicher persönlicher Assistent namens "Personal Advisor". 
 Dein Ziel ist es, den Nutzer optimal zu unterstützen. Sei freundlich, professionell und motivierend.
@@ -374,9 +419,32 @@ Hobbys: ${personalAIData.hobbies || 'Nicht angegeben'}
 Interessen: ${Object.entries(personalAIData.features).filter(([k, v]) => v).map(([k, v]) => k).join(', ')}
 
 Heute ist ${dayName}, der ${dateStr}.
-Aktuelle Aufgaben: ${openTasks}
 
-Berücksichtige Wetterinfo (simuliert als sonnig), motiviere mich für meine Hobbys oder meinen Job.`;
+HIER SIND MEINE DATEN FÜR HEUTE:
+
+1. MEINE TERMINE HEUTE (Wichtig!):
+${appointmentsText}
+
+2. MEINE OFFENE TO-DO LISTE:
+${todoText}
+
+3. WETTER (LIVE): 
+${weatherInfo}
+
+4. NACHRICHTEN (LIVE): 
+${newsInfo}
+
+ANWEISUNG:
+Erstelle ein gesprochenes Briefing (Text, der vorgelesen wird).
+Struktur:
+1. Begrüßung (Nenne meinen Namen).
+2. Wetter & Kleidungstipp (Kurz).
+3. MEINE TERMINE: Sage mir konkret, was heute ansteht (Uhrzeit & Titel). Wenn keine Termine, sage das.
+4. MEINE TO-DOs: Erwähne kurz, dass ich X Aufgaben auf der Liste habe und nenne 1-2 Beispiele.
+5. NACHRICHTEN: Fasse 1-2 wichtige Schlagzeilen kurz zusammen.
+6. Motivation zum Schluss.
+
+Halte es natürlich und gesprächig, wie ein echter Assistent.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
@@ -389,6 +457,67 @@ Berücksichtige Wetterinfo (simuliert als sonnig), motiviere mich für meine Hob
         // Fallback to local briefing if API fails
         return generateDailyBriefing() + `<br><small style="color:#ef4444;">(API Fehler: ${err.message})</small><br><small style="color:gray;">(Lokales Backup-Briefing)</small>`;
     }
+}
+
+// Helper: Fetch Real Weather (OpenMeteo)
+async function fetchRealWeather() {
+    // Default to Berlin if no pos
+    let lat = 52.52;
+    let lng = 13.41;
+
+    if (typeof userPos !== 'undefined' && userPos && userPos.lat) {
+        lat = userPos.lat;
+        lng = userPos.lng;
+    }
+
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.current_weather) {
+            const temp = data.current_weather.temperature;
+            const code = data.current_weather.weathercode;
+            const wind = data.current_weather.windspeed;
+
+            // Interpret code (Simplified)
+            let condition = "Unbekannt";
+            if (code === 0) condition = "Klarer Himmel";
+            else if (code <= 3) condition = "Leicht bewölkt";
+            else if (code <= 48) condition = "Nebel";
+            else if (code <= 67) condition = "Regen";
+            else if (code <= 77) condition = "Schnee";
+            else if (code <= 82) condition = "Regenschauer";
+            else condition = "Gewitter/Sturm";
+
+            return `${condition}, ${temp}°C, Wind: ${wind} km/h.`;
+        }
+    } catch (e) {
+        console.warn("Weather Fetch Failed", e);
+    }
+    return null;
+}
+
+// Helper: Fetch Real News (Tagesschau API)
+async function fetchRealNews() {
+    try {
+        // Tagesschau Homepage API (CORS friendly often, or at least public)
+        // If this fails due to CORS, we might need a fallback or different API.
+        // Trying direct JSON fetch.
+        const res = await fetch('https://www.tagesschau.de/api2u/news');
+        const data = await res.json();
+
+        if (data.news && data.news.length > 0) {
+            // Take top 3 headlines
+            const headlines = data.news.slice(0, 3).map(n => `- ${n.title}`).join('\n');
+            return headlines;
+        }
+    } catch (e) {
+        console.warn("News Fetch Failed", e);
+        // Fallback: Use Sim data based on user being online
+        return "Konnte keine Live-Nachrichten laden (Netzwerk/CORS).";
+    }
+    return null;
 }
 
 // Generate Daily Briefing
