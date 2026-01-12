@@ -530,10 +530,11 @@ function initDOMElements() {
     // Widget Mode Toggle
     const toggleWidgetModeBtn = document.getElementById('toggleWidgetModeBtn');
     if (toggleWidgetModeBtn) {
-        // Load initial state
-        if (localStorage.getItem('taskforce_widget_mode') === 'true') {
-            document.body.classList.add('widget-mode');
-        }
+        // Load initial state - ALWAYS OFF on startup as requested ("alles erscheinen")
+        // if (localStorage.getItem('taskforce_widget_mode') === 'true') {
+        //     document.body.classList.add('widget-mode');
+        // }
+        document.body.classList.remove('widget-mode'); // Ensure full view
 
         toggleWidgetModeBtn.addEventListener('click', () => {
             const isWidget = document.body.classList.toggle('widget-mode');
@@ -9042,7 +9043,7 @@ window.showQuickChoice = showQuickChoice;
 document.addEventListener('DOMContentLoaded', () => {
     const kwInput = document.getElementById('keywordInput');
     if (kwInput) {
-        kwInput.addEventListener('input', function() {
+        kwInput.addEventListener('input', function () {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
         });

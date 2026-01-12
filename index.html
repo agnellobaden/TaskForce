@@ -431,14 +431,11 @@
                     <div class="user-details">
                         <span class="user-greeting">Hallo,</span>
                         <span class="user-name" id="displayUserName">User</span>
-                        <span class="team-badge hidden" id="teamBadge">TEAM: <span id="teamCodeName"></span></span>
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button id="toggleWidgetModeBtn" class="btn-icon-nav" title="Widget-Modus (Nur Dashboard)"
-                        style="margin-right: 10px;">
-                        <i data-lucide="layout"></i>
-                    </button>
+
+
                     <div id="mainClock" class="header-clock" onclick="openCalendarView()" style="cursor: pointer;">
                         <span class="clock-time">--:--</span>
                         <span id="headerDate" class="header-date">--.--.</span>
@@ -498,11 +495,12 @@
 
             <!-- Embedded Quick Add Section -->
             <div class="header-search-wrapper">
-                <div class="keyword-row">
+                <div class="keyword-row" style="position: relative;">
                     <span class="search-tiny-logo"><i data-lucide="zap"></i></span>
                     <textarea id="keywordInput" placeholder="Stichwort, Nummer oder E-Mail eingeben..."
                         autocomplete="off" rows="1"></textarea>
-                    <button id="voiceBtnHeader" class="btn-voice-header" title="Spracheingabe">
+                    <button id="voiceBtnHeader" class="btn-voice-header" title="Spracheingabe"
+                        style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: transparent; border: none; z-index: 10;">
                         <i data-lucide="mic"></i>
                     </button>
                 </div>
@@ -532,6 +530,16 @@
                         <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
                             <span class="icon-label">Kosten</span>
                         </button>
+                        <button id="toggleWidgetModeBtn" class="btn-comm-quick icon-only" title="Widget-Modus">
+                            <i data-lucide="layout"></i>
+                        </button>
+
+                        <!-- Connection Dot (Moved next to Costs) -->
+                        <span class="team-badge hidden" id="teamBadge" title="Verbunden"
+                            style="align-self: center; padding: 0 5px;">
+                            <span class="connection-dot"></span>
+                            <span class="team-text hidden">TEAM: <span id="teamCodeName"></span></span>
+                        </span>
 
                         <!-- Extra AI Selection (Hidden by default but available in DOM if needed) -->
                         <div id="aiSelectionMenu" class="hidden"></div>
