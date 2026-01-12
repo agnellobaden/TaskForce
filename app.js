@@ -70,6 +70,10 @@ let expenses = [];
 let editingExpenseId = null;
 let expenseBtn, sideExpenseBtn, expenseSection, expenseModal, closeExpenseModalBtn, addExpenseBtn, saveExpenseBtn, expenseImageInput, receiptPreview, scannerOverlay, expenseResultForm;
 let expDate, expStore, expCategory, expAmount, expenseTableBody, expDay, expWeek, expMonth, expYear;
+let expenseDonutChartInstance = null;
+let expenseTrendChartInstance = null;
+let dashExpenseChartInstance = null;
+let currentExpensePeriod = 'month';
 let paypalBtn, sidePaypalBtn, paypalModal, closePaypalBtn, redirectToPaypalBtn;
 let commBtn, sideCommBtn, commModal, closeCommBtn, btnCall, btnWhatsApp, btnEmail, commInput, commContactBtn;
 let appContactBtn, appPerson, appPhone;
@@ -513,6 +517,31 @@ function initDOMElements() {
         expenseSearchInput.addEventListener('input', (e) => renderExpenses(e.target.value));
     }
 
+    // Period Selector Listeners
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentExpensePeriod = btn.dataset.period;
+            renderCategoryBreakdown();
+        });
+    });
+
+    // Widget Mode Toggle
+    const toggleWidgetModeBtn = document.getElementById('toggleWidgetModeBtn');
+    if (toggleWidgetModeBtn) {
+        // Load initial state
+        if (localStorage.getItem('taskforce_widget_mode') === 'true') {
+            document.body.classList.add('widget-mode');
+        }
+
+        toggleWidgetModeBtn.addEventListener('click', () => {
+            const isWidget = document.body.classList.toggle('widget-mode');
+            localStorage.setItem('taskforce_widget_mode', isWidget);
+            showToast(isWidget ? 'Widget-Modus aktiviert (Nur Dashboard)' : 'Standard-Modus aktiviert', 'info');
+        });
+    }
+
     // New Header & Modal buttons for direct entry
     const manualExpenseBtnHeader = document.getElementById('manualExpenseBtnHeader');
     const voiceExpenseBtnHeader = document.getElementById('voiceExpenseBtnHeader');
@@ -598,8 +627,11 @@ function initDOMElements() {
         }
 
         if (!val) {
-            if (!commModal.classList.contains('hidden')) showToast('Kein Kontakt ausgewählt.', 'error');
-            else commModal.classList.remove('hidden');
+            if (!commModal.classList.contains('hidden')) {
+                showToast('Kein Kontakt ausgewählt.', 'error');
+            } else {
+                window.prepareCommunicationHub(type);
+            }
             return;
         }
 
@@ -638,17 +670,50 @@ function initDOMElements() {
         }
     };
 
-    // Local wrapper for buttons
-    const doCommAction = (type, value) => window.handleCommunicationAction(type, value);
+    // Communication Modal Adaptive Logic
+    let currentCommAction = 'call';
+    window.prepareCommunicationHub = (type) => {
+        currentCommAction = type || 'call';
+        if (!commModal) return;
 
-    if (btnCall) btnCall.addEventListener('click', () => doCommAction('call'));
-    if (btnWhatsApp) btnWhatsApp.addEventListener('click', () => doCommAction('whatsapp'));
-    if (btnEmail) btnEmail.addEventListener('click', () => doCommAction('email'));
+        commModal.classList.remove('hidden');
+        const titleEl = commModal.querySelector('.modal-header h2');
+        const labelEl = document.getElementById('commModalLabel');
+        const executeBtn = document.getElementById('commExecuteBtn');
+
+        if (type === 'call') {
+            titleEl.innerHTML = '📞 Anruf planen';
+            if (labelEl) labelEl.innerHTML = '<i data-lucide="phone"></i> Telefonnummer eingeben';
+            if (executeBtn) executeBtn.textContent = 'Jetzt anrufen';
+        } else if (type === 'whatsapp') {
+            titleEl.innerHTML = '💬 WhatsApp senden';
+            if (labelEl) labelEl.innerHTML = '<i data-lucide="message-square"></i> Nummer für WhatsApp';
+            if (executeBtn) executeBtn.textContent = 'WhatsApp Nachricht starten';
+        } else if (type === 'email') {
+            titleEl.innerHTML = '✉️ E-Mail verfassen';
+            if (labelEl) labelEl.innerHTML = '<i data-lucide="mail"></i> E-Mail Adresse eingeben';
+            if (executeBtn) executeBtn.textContent = 'E-Mail schreiben';
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (commInput) commInput.focus();
+    };
+
+    const commExecuteBtn = document.getElementById('commExecuteBtn');
+    if (commExecuteBtn) {
+        commExecuteBtn.addEventListener('click', () => {
+            window.handleCommunicationAction(currentCommAction);
+        });
+    }
+
+    if (btnCall) btnCall.addEventListener('click', () => window.prepareCommunicationHub('call'));
+    if (btnWhatsApp) btnWhatsApp.addEventListener('click', () => window.prepareCommunicationHub('whatsapp'));
+    if (btnEmail) btnEmail.addEventListener('click', () => window.prepareCommunicationHub('email'));
 
     // Quick Action Listeners (Input -> Action)
-    if (quickCallBtn) quickCallBtn.addEventListener('click', () => doCommAction('call', keywordInput.value));
-    if (quickWaBtn) quickWaBtn.addEventListener('click', () => doCommAction('whatsapp', keywordInput.value));
-    if (quickMailBtn) quickMailBtn.addEventListener('click', () => doCommAction('email', keywordInput.value));
+    if (quickCallBtn) quickCallBtn.addEventListener('click', () => window.handleCommunicationAction('call', keywordInput.value));
+    if (quickWaBtn) quickWaBtn.addEventListener('click', () => window.handleCommunicationAction('whatsapp', keywordInput.value));
+    if (quickMailBtn) quickMailBtn.addEventListener('click', () => window.handleCommunicationAction('email', keywordInput.value));
 
     // CONTACT PICKER LOGIC (Exposed Globally)
     window.pickNativeContact = async () => {
@@ -1686,8 +1751,9 @@ function showMainApp() {
     startUrgentReminder();
     requestNotificationPermission();
 
-    // Ensure clock is visible immediately
+    // Ensure clock is visible immediately and updates every minute
     updateGlobalClock();
+    setInterval(updateGlobalClock, 60000); // Update every minute
     applyAppSettings();
 
     // Setup event listeners for dashboard and notes
@@ -3006,13 +3072,14 @@ function openAppointmentModalWithData(info, searchType) {
         const personMatch = info.match(/^([^@]+)@/);
         if (personMatch) document.getElementById('appPerson').value = personMatch[1];
         document.getElementById('appNotes').value = `E-Mail: ${info}`;
-    } else {
+    } else if (info) {
         document.getElementById('appNotes').value = info;
     }
 
     appointmentModal.classList.remove('hidden');
     document.getElementById('appTitle').focus();
 }
+window.openAppointmentModalWithData = openAppointmentModalWithData;
 
 // ===== INTELLIGENT NATURAL LANGUAGE COMMAND PROCESSOR =====
 
@@ -6404,27 +6471,7 @@ function generateEssentialsChecklist(task) {
 }
 
 // Update All Clocks
-function updateGlobalClock() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const timeStr = `${hours}:${minutes}`;
-
-    // Main App Clock
-    const mainClock = document.getElementById('mainClock');
-    if (mainClock) mainClock.textContent = timeStr;
-
-    // Drive Mode Clock
-    const driveClock = document.getElementById('driveClock');
-    if (driveClock) driveClock.textContent = timeStr;
-
-    // Drive Date
-    const dateEl = document.getElementById('driveDate');
-    if (dateEl) {
-        const options = { weekday: 'short', day: '2-digit', month: 'short' };
-        dateEl.textContent = now.toLocaleDateString('de-DE', options);
-    }
-}
+// (Function updateGlobalClock removed from here and moved to bottom for better consolidation)
 
 // Fetch Weather for Drive Mode
 function fetchDriveWeather() {
@@ -7296,9 +7343,13 @@ function scrollToExpenses() {
 }
 
 function openCalendarView() {
-    const calendarModal = document.getElementById('calendarModal');
-    if (calendarModal) {
-        calendarModal.classList.remove('hidden');
+    if (typeof window.openCalendarModal === 'function') {
+        window.openCalendarModal();
+    } else {
+        const calendarModal = document.getElementById('calendarModal');
+        if (calendarModal) {
+            calendarModal.classList.remove('hidden');
+        }
     }
 }
 
@@ -8126,6 +8177,57 @@ function updateExpenseStats() {
     expYear.textContent = yearTotal.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
     renderCategoryBreakdown();
+    updateDashExpenseChart();
+}
+
+function updateDashExpenseChart() {
+    const canvas = document.getElementById('dashExpenseChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    // Get current month totals per category for the dashboard
+    const now = new Date();
+    const currentMonthExpenses = expenses.filter(exp => {
+        const d = new Date(exp.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    const catSums = {};
+    currentMonthExpenses.forEach(exp => {
+        const cat = exp.category || 'Allgemein';
+        catSums[cat] = (catSums[cat] || 0) + exp.amount;
+    });
+
+    const labels = Object.keys(catSums);
+    const data = Object.values(catSums);
+
+    if (dashExpenseChartInstance) {
+        dashExpenseChartInstance.destroy();
+    }
+
+    if (labels.length === 0) return;
+
+    dashExpenseChartInstance = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#6366f1', '#10b981', '#f472b6', '#22d3ee', '#fbbf24', '#f87171', '#a78bfa', '#4ade80'
+                ],
+                borderWidth: 0,
+                spacing: 2
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true }
+            },
+            maintainAspectRatio: false
+        }
+    });
 }
 
 function renderCategoryBreakdown() {
@@ -8138,47 +8240,202 @@ function renderCategoryBreakdown() {
     }
 
     const now = new Date();
-    const currentMonthExpenses = expenses.filter(exp => {
+    const period = currentExpensePeriod || 'month';
+
+    // Period Filtering
+    const filteredExpenses = expenses.filter(exp => {
         const d = new Date(exp.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        if (period === 'month') {
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        } else if (period === 'year') {
+            return d.getFullYear() === now.getFullYear();
+        } else if (period === 'week') {
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+            startOfWeek.setHours(0, 0, 0, 0);
+            return d >= startOfWeek;
+        }
+        return true;
     });
 
-    if (currentMonthExpenses.length === 0) {
+    if (filteredExpenses.length === 0) {
         breakdownEl.classList.add('hidden');
+        if (expenseDonutChartInstance) expenseDonutChartInstance.destroy();
         return;
     }
 
     breakdownEl.classList.remove('hidden');
 
     const catSums = {};
-    let monthTotal = 0;
-    currentMonthExpenses.forEach(exp => {
+    let periodTotal = 0;
+    filteredExpenses.forEach(exp => {
         const cat = exp.category || 'Allgemein';
         catSums[cat] = (catSums[cat] || 0) + exp.amount;
-        monthTotal += exp.amount;
+        periodTotal += exp.amount;
     });
 
     const sortedCats = Object.entries(catSums).sort((a, b) => b[1] - a[1]);
 
+    const periodLabel = period === 'month' ? `(${now.toLocaleString('de-DE', { month: 'long' })})` :
+        (period === 'year' ? `(${now.getFullYear()})` : '(Diese Woche)');
+
     breakdownEl.innerHTML = `
-        <div style="margin-bottom: 10px; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Monats-Breakdown (Kategorien)</div>
+        <div style="margin-bottom: 10px; font-weight: 700; font-size: 0.85rem; color: #ffffff; text-transform: uppercase;">Kategorien ${periodLabel}</div>
         <div class="breakdown-grid">
             ${sortedCats.map(([cat, sum]) => {
-        const percentage = (sum / monthTotal * 100).toFixed(0);
+        const percentage = (sum / periodTotal * 100).toFixed(0);
         return `
                     <div class="breakdown-item">
                         <div class="breakdown-label">
-                            <span>${getCategoryEmoji(cat)} ${cat}</span>
-                            <span>${sum.toFixed(2)} €</span>
+                            <span style="font-weight: 600;">${getCategoryEmoji(cat)} ${cat}</span>
+                            <span style="font-weight: 800;">${sum.toFixed(2).replace('.', ',')} €</span>
                         </div>
                         <div class="breakdown-bar-bg">
-                            <div class="breakdown-bar-fill" style="width: ${percentage}%; background: var(--success);"></div>
+                            <div class="breakdown-bar-fill" style="width: ${(sum / periodTotal * 100).toFixed(0)}%; background: var(--primary);"></div>
                         </div>
                     </div>
                 `;
     }).join('')}
         </div>
     `;
+
+    // Render/Update Donut Chart
+    const canvas = document.getElementById('expenseDonutChart');
+    if (canvas && typeof Chart !== 'undefined') {
+        if (expenseDonutChartInstance) expenseDonutChartInstance.destroy();
+
+        const labels = sortedCats.map(c => c[0]);
+        const data = sortedCats.map(c => c[1]);
+
+        expenseDonutChartInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        '#6366f1', '#22d3ee', '#10b981', '#f472b6', '#fbbf24', '#f87171', '#a78bfa', '#4ade80'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#000000',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 10, weight: 'bold' },
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const val = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const perc = (val / total * 100).toFixed(1);
+                                return ` ${context.label}: ${val.toFixed(2)} € (${perc}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    updateExpenseTrendChart(period, filteredExpenses);
+}
+
+function updateExpenseTrendChart(period, filteredExpenses) {
+    const canvas = document.getElementById('expenseTrendChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    if (expenseTrendChartInstance) expenseTrendChartInstance.destroy();
+
+    const dataMap = {};
+    let labels = [];
+    const now = new Date();
+
+    if (period === 'week') {
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            dataMap[key] = 0;
+            labels.push(d.toLocaleDateString('de-DE', { weekday: 'short' }));
+        }
+        filteredExpenses.forEach(exp => {
+            if (dataMap[exp.date] !== undefined) dataMap[exp.date] += exp.amount;
+        });
+    } else if (period === 'month') {
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+            const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            dataMap[key] = 0;
+            labels.push(i);
+        }
+        filteredExpenses.forEach(exp => {
+            if (dataMap[exp.date] !== undefined) dataMap[exp.date] += exp.amount;
+        });
+    } else if (period === 'year') {
+        const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        months.forEach((m, idx) => {
+            dataMap[idx] = 0;
+            labels.push(m);
+        });
+        filteredExpenses.forEach(exp => {
+            const d = new Date(exp.date);
+            if (d.getFullYear() === now.getFullYear()) {
+                const mIdx = d.getMonth();
+                dataMap[mIdx] += exp.amount;
+            }
+        });
+    }
+
+    expenseTrendChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Trend',
+                data: Object.values(dataMap),
+                backgroundColor: 'rgba(99, 102, 241, 0.4)',
+                borderColor: '#6366f1',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#ffffff', font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#ffffff', font: { size: 10 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.parsed.y.toFixed(2)} €`
+                    }
+                }
+            }
+        }
+    });
 }
 
 function window_deleteExpense(id) { deleteExpense(id); }
@@ -8216,23 +8473,41 @@ function updateGlobalClock() {
     const now = new Date();
     const h = String(now.getHours()).padStart(2, '0');
     const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    const timeStr = `${h}:${m}`;
 
-    // Update main clock in header
+    // Update main clock and date in header
     const mainClock = document.getElementById('mainClock');
     if (mainClock) {
-        mainClock.textContent = `${h}:${m}`;
+        const timeEl = mainClock.querySelector('.clock-time');
+        const dateEl = document.getElementById('headerDate');
+
+        if (timeEl) timeEl.textContent = timeStr;
+        if (dateEl) {
+            // Format: "Mo, 12. Jan"
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            dateEl.textContent = now.toLocaleDateString('de-DE', options);
+        }
     }
 
-    // Update drive mode clock if visible
+    // Update drive mode elements
     const driveClock = document.getElementById('driveClock');
-    if (driveClock) {
-        driveClock.textContent = `${h}:${m}`;
-    }
+    if (driveClock) driveClock.textContent = timeStr;
 
     const driveDate = document.getElementById('driveDate');
     if (driveDate) {
         const options = { weekday: 'short', day: 'numeric', month: 'short' };
         driveDate.textContent = now.toLocaleDateString('de-DE', options);
+    }
+
+    // Update nightstand clock if active
+    const nsClock = document.getElementById('nightstandClock');
+    if (nsClock) nsClock.textContent = `${h}:${m}:${s}`;
+
+    const nsDate = document.getElementById('nightstandDate');
+    if (nsDate) {
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        nsDate.textContent = now.toLocaleDateString('de-DE', options);
     }
 }
 
@@ -8517,17 +8792,7 @@ function applyResearchToTask(taskId, info, searchType) {
     showToast(`✅ ${fieldName} zu "${task.keyword}" hinzugefügt!`, 'success');
 }
 
-function openAppointmentModalWithData(info, searchType) {
-    // Open standard calendar modal but pre-fill data
-    // Triggering the "New Task" form directly via simulated input
-
-    keywordInput.value = (searchType === 'Adresse' ? 'Termin in ' : 'Kontakt ') + info;
-    // Flash it
-    keywordInput.classList.add('highlight-flash');
-    setTimeout(() => keywordInput.classList.remove('highlight-flash'), 500);
-
-    showToast('✨ Bitte Details ergänzen & Enter drücken', 'info');
-}
+// Duplicate openAppointmentModalWithData removed
 
 // Ensure initialization runs
 if (document.readyState === 'loading') {
@@ -8688,3 +8953,86 @@ function setupBackButtonLogic() {
         }
     });
 }
+// ===== QUICK CHOICE HANDLER FOR DASHBOARD CARDS =====
+function showQuickChoice(type) {
+    const modal = document.getElementById('selectionChoiceModal');
+    const title = document.getElementById('choiceTitle');
+    const grid = document.getElementById('choiceGrid');
+
+    if (!modal || !grid) return;
+
+    modal.classList.remove('hidden');
+    grid.innerHTML = '';
+
+    if (type === 'appointment') {
+        title.textContent = '📅 Neuen Termin anlegen';
+
+        // Manual Option
+        const btnManual = createChoiceBtn('edit-3', 'Manuell eingeben', 'primary', () => {
+            modal.classList.add('hidden');
+            if (typeof openAppointmentModalWithData === 'function') {
+                openAppointmentModalWithData('', 'Manuell');
+            }
+        });
+
+        // Voice Option
+        const btnVoice = createChoiceBtn('mic', 'Per Sprache (KI)', 'success', () => {
+            modal.classList.add('hidden');
+            if (typeof startMainVoice === 'function') {
+                startMainVoice('Termin');
+            }
+        });
+
+        // Research Option
+        const btnResearch = createChoiceBtn('search', 'KI Recherche (Firma/Ort)', '', () => {
+            modal.classList.add('hidden');
+            const query = prompt('Worüber soll ich recherchieren? (z.B. Telefonnummer von Dr. Schmidt)');
+            if (query && typeof openAISearch === 'function') {
+                openAISearch(query);
+            }
+        });
+
+        grid.appendChild(btnManual);
+        grid.appendChild(btnVoice);
+        grid.appendChild(btnResearch);
+
+    } else if (type === 'expense') {
+        title.textContent = '💰 Neue Ausgabe erfassen';
+
+        // Manual Option
+        const btnManual = createChoiceBtn('edit-3', 'Manuell eingeben', 'primary', () => {
+            modal.classList.add('hidden');
+            openExpenseModal();
+            openManualExpense();
+        });
+
+        // Voice Option
+        const btnVoice = createChoiceBtn('mic', 'Beleg einsprechen', 'success', () => {
+            modal.classList.add('hidden');
+            startVoiceExpense();
+        });
+
+        // Scan Option
+        const btnScan = createChoiceBtn('camera', 'Beleg scannen', '', () => {
+            modal.classList.add('hidden');
+            openExpenseModal();
+            openExpenseCamera();
+        });
+
+        grid.appendChild(btnManual);
+        grid.appendChild(btnVoice);
+        grid.appendChild(btnScan);
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function createChoiceBtn(icon, text, typeClass, onClick) {
+    const btn = document.createElement('button');
+    btn.className = `choice-btn ${typeClass}`;
+    btn.innerHTML = `<i data-lucide="${icon}"></i> ${text}`;
+    btn.onclick = onClick;
+    return btn;
+}
+
+window.showQuickChoice = showQuickChoice;
