@@ -9036,3 +9036,15 @@ function createChoiceBtn(icon, text, typeClass, onClick) {
 }
 
 window.showQuickChoice = showQuickChoice;
+
+
+// Auto-resize keyword input logic
+document.addEventListener('DOMContentLoaded', () => {
+    const kwInput = document.getElementById('keywordInput');
+    if (kwInput) {
+        kwInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+});

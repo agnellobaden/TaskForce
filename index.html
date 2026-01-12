@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="menu-styles.css">
     <link rel="stylesheet" href="icon-styles.css">
     <link rel="stylesheet" href="bottom-nav.css">
-    <link rel="stylesheet" href="personal-ai.css">
+
     <link rel="stylesheet" href="compact-view.css">
     <link rel="stylesheet" href="ultra-compact.css">
     <!-- Lucide Icons -->
@@ -464,10 +464,7 @@
                                 Liste</button>
                             <button class="menu-item" id="sideExpenseBtn"><i data-lucide="dollar-sign"></i>
                                 Kostenkontrolle / Ausgaben</button>
-                            <!-- AI added before PayPal -->
-                            <button class="menu-item" id="sideAiBtn"
-                                onclick="document.getElementById('personalAIBtn').click()"><i data-lucide="bot"></i>
-                                Mein KI Advisor</button>
+
                             <button class="menu-item" id="sidePaypalBtn">🅿️ Mit PayPal bezahlen</button>
                             <button class="menu-item" id="sideCommBtn">📱 Kommunikation & Kontakt</button>
                             <button class="menu-item" id="sideDriveBtn"><i data-lucide="car"></i> Fahrt-Modus
@@ -518,7 +515,7 @@
                         <button id="addTaskBtn" class="btn-comm-quick" title="Neue Aufgabe">
                             <span class="icon-label">Neu</span>
                         </button>
-                        <button id="grokManualBtn" class="btn-comm-quick" title="KI Assistant">
+                        <button id="grokManualBtn" class="btn-comm-quick hidden" title="KI Assistant">
                             <span class="icon-label">KI</span>
                         </button>
 
@@ -623,16 +620,7 @@
                         <div id="dashExpensesList" class="dash-list-container"></div>
                     </div>
 
-                    <!-- Mein KI -->
-                    <div class="dashboard-card" id="card_ai" draggable="true"
-                        onclick="document.getElementById('personalAIBtn').click()">
-                        <div class="dashboard-card-header">
-                            <i data-lucide="bot"></i>
-                            <h4>Mein KI</h4>
-                        </div>
-                        <div class="dashboard-card-value" style="font-size: 1.5rem;">Advisor</div>
-                        <div class="dashboard-card-label">Assistent</div>
-                    </div>
+
 
                     <!-- Fahrten (wenn vorhanden) -->
                     <div class="dashboard-card" id="card_drive" draggable="true" onclick="openDriveMode()">
@@ -884,24 +872,7 @@
             </div>
         </section>
 
-        <!-- AI Advisor Section - Moved to bottom -->
-        <section id="aiAdvisorSection" class="ai-advisor-section hidden">
-            <div class="ai-advisor-card">
-                <div class="ai-advisor-header">
-                    <div class="ai-advisor-info">
-                        <i data-lucide="bot" class="ai-icon"></i>
-                        <span class="ai-label">Personal Advisor <span class="tiny-logo"><i
-                                    data-lucide="zap"></i></span></span>
-                    </div>
-                </div>
-                <div id="aiAdvisorQuestion" class="ai-question-text">
-                    Lade AI-Vorschläge...
-                </div>
-                <div class="ai-advisor-actions" id="aiAdvisorActions">
-                    <!-- Actions dynamically inserted here -->
-                </div>
-            </div>
-        </section>
+
 
         <!-- Task Detail Modal -->
         <div id="taskDetailModal" class="modal hidden">
@@ -959,10 +930,7 @@
 
         <!-- Fixed Footer Navigation -->
         <div id="fixedFooterNav" class="fixed-footer-nav">
-            <button class="btn-footer-icon" id="personalAIBtnFooter" title="Persönliche KI" style="color: #a78bfa;">
-                <i data-lucide="bot"></i>
-                <span class="icon-label">Meine KI</span>
-            </button>
+
             <button class="btn-footer-icon" id="paypalBtnFooter" title="PayPal">
                 <span style="font-size: 1.2rem;">🅿️</span>
                 <span class="icon-label">PayPal</span>
@@ -1339,190 +1307,7 @@
         </div>
     </div>
 
-    <!-- Personal AI Assistant Modal -->
-    <button id="personalAIBtn" class="hidden"></button>
-    <div id="personalAIModal" class="modal hidden">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2><i data-lucide="bot"></i> Meine Persönliche KI</h2>
-                <button class="modal-close-icon" id="closePersonalAIBtn">✕</button>
-            </div>
-            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <!-- AI Greeting -->
-                <div id="aiGreeting"
-                    style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(139, 92, 246, 0.05)); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(167, 139, 250, 0.2);">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <div style="font-size: 2.5rem;">🤖</div>
-                        <div>
-                            <h3 id="aiGreetingText" style="margin: 0; color: var(--primary-light);">Hallo! Ich bin
-                                deine persönliche KI.</h3>
-                            <p id="aiGreetingSubtext" style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">
-                                Lass mich dich kennenlernen, damit ich dir besser helfen kann.</p>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Personal Information Form -->
-                <div class="form-group">
-                    <label><i data-lucide="user"></i> Dein vollständiger Name</label>
-                    <input type="text" id="aiUserName" class="settings-input" placeholder="z.B. Max Mustermann">
-                </div>
-
-                <div class="form-group">
-                    <label><i data-lucide="cake"></i> Dein Geburtsdatum</label>
-                    <input type="date" id="aiUserBirthdate" class="settings-input">
-                    <small id="aiAgeDisplay"
-                        style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 5px;"></small>
-                </div>
-
-                <div class="form-group">
-                    <label><i data-lucide="users"></i> Geschlecht</label>
-                    <select id="aiUserGender" class="settings-select">
-                        <option value="">Bitte wählen...</option>
-                        <option value="male">Männlich</option>
-                        <option value="female">Weiblich</option>
-                        <option value="diverse">Divers</option>
-                        <option value="prefer-not-to-say">Möchte ich nicht angeben</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label><i data-lucide="briefcase"></i> Beruf / Tätigkeit</label>
-                    <input type="text" id="aiUserJob" class="settings-input"
-                        placeholder="z.B. Software-Entwickler, Student, Selbstständig...">
-                </div>
-
-                <div class="form-group">
-                    <label><i data-lucide="heart"></i> Hobbys & Interessen</label>
-                    <textarea id="aiUserHobbies" class="settings-input" rows="3"
-                        placeholder="z.B. Fußball, Kochen, Reisen, Gaming..." style="resize: vertical;"></textarea>
-                </div>
-
-                <!-- AI Features Section -->
-                <div style="border-top: 1px solid var(--border-glass); padding-top: 20px; margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="sparkles"></i> KI-Features aktivieren
-                    </h3>
-
-                    <div class="setting-toggle-row">
-                        <span>🌤️ Morgendliches Wetter-Briefing</span>
-                        <label class="switch">
-                            <input type="checkbox" id="aiWeatherToggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <small
-                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Erhalte
-                        morgens eine Wettervorhersage, damit du weißt, wie du dich anziehen sollst.</small>
-
-                    <div class="setting-toggle-row">
-                        <span>📰 Tägliche Nachrichten & Weltereignisse</span>
-                        <label class="switch">
-                            <input type="checkbox" id="aiNewsToggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <small
-                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Bleibe
-                        informiert über wichtige Ereignisse auf der Welt.</small>
-
-                    <div class="setting-toggle-row">
-                        <span>💼 Geschäftliche Unterstützung</span>
-                        <label class="switch">
-                            <input type="checkbox" id="aiBusinessToggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <small
-                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Hilfe
-                        bei beruflichen Aufgaben und Terminen.</small>
-
-                    <div class="setting-toggle-row">
-                        <span>🏠 Private Unterstützung</span>
-                        <label class="switch">
-                            <input type="checkbox" id="aiPrivateToggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <small
-                        style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Unterstützung
-                        im Alltag und bei privaten Aufgaben.</small>
-
-                    <div class="setting-toggle-row">
-                        <span>🔔 Proaktive Erinnerungen</span>
-                        <label class="switch">
-                            <input type="checkbox" id="aiRemindersToggle" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 10px;">Die
-                        KI erinnert dich proaktiv an wichtige Dinge.</small>
-                </div>
-
-                <!-- Morning Briefing Time -->
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>⏰ Morgendliches Briefing um:</label>
-                    <input type="time" id="aiMorningTime" class="settings-input" value="07:00">
-                    <small style="color: var(--text-muted); font-size: 0.75rem;">Zu dieser Zeit erhältst du dein
-                        tägliches Briefing mit Wetter und Nachrichten.</small>
-                </div>
-
-                <!-- API Key Setting -->
-                <div class="form-group"
-                    style="margin-top: 20px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
-                    <label>🔑 OpenAI API Key (Optional)</label>
-                    <div style="display:flex; gap:10px;">
-                        <input type="password" id="aiOpenaiApiKeyInput" class="settings-input" placeholder="sk-..."
-                            style="flex:1;">
-                        <button id="toggleAiApiKeyVisibility" type="button" class="btn-secondary"
-                            style="padding:0 12px;">👁️</button>
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px;">
-                        Wenn "Meine KI" nicht funktioniert, trage hier deinen eigenen API-Key ein.
-                    </small>
-                </div>
-
-                <!-- AI Dashboard Preview -->
-                <div id="aiDashboardPreview" class="hidden"
-                    style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border-glass);">
-                    <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="activity"></i> Dein heutiges Briefing
-                    </h4>
-                    <div id="aiDashboardContent" style="font-size: 0.9rem; line-height: 1.6;">
-                        <!-- Dynamic content will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Personal Advisor Chat Section -->
-                <div class="ai-chat-section"
-                    style="margin-top: 25px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
-                    <h3
-                        style="margin-bottom: 15px; color: var(--primary-light); display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="message-circle"></i> Chatte mit deinem Advisor
-                    </h3>
-                    <div id="aiChatHistory"
-                        style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px;">
-                        <div class="ai-msg"
-                            style="background: rgba(var(--primary-rgb), 0.1); padding: 10px; border-radius: 12px; font-size: 0.9rem; align-self: flex-start; max-width: 85%;">
-                            Hallo! Ich bin dein persönlicher Berater. Wie kann ich dich heute unterstützen?
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="aiChatInput" class="settings-input" placeholder="Frage mich alles..."
-                            style="flex: 1; border-radius: 20px; padding-left: 15px;">
-                        <button id="sendAiChatBtn" class="btn-primary"
-                            style="width: 45px; height: 45px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="send"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="testAIBriefingBtn" class="btn-secondary">🧪 Briefing testen</button>
-                <button id="savePersonalAIBtn" class="btn-primary">Speichern</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Grok Modal -->
     <div id="grokModal" class="modal hidden">
@@ -1686,9 +1471,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="app.js"></script>
-    <script src="personal-ai.js"></script>
     <script src="auto-hide-nav.js"></script>
-    <script src="interactive-ai.js"></script>
+
     <script>
         // Wire up footer navigation buttons to existing functions
         document.addEventListener('DOMContentLoaded', () => {

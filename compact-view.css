@@ -73,7 +73,8 @@ body {
 
 #keywordInput {
     flex: 1;
-    height: 36px !important;
+    min-height: 36px !important;
+    height: auto !important;
     padding: 8px 5px !important;
     font-size: 0.95rem !important;
     background: transparent !important;
@@ -82,6 +83,8 @@ body {
     color: white;
     resize: none;
     outline: none !important;
+    overflow: hidden !important;
+    text-align: left !important;
 }
 
 .btn-voice-header {
