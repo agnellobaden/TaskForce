@@ -67,6 +67,7 @@ let nightstandTimer = null;
 // AI Research Result Modal Elements
 let aiResearchResultModal, closeAiResearchResultBtn, aiResultContent, researchAppointmentList, saveInNewAppointmentBtn, cancelAiResearchResultBtn;
 let expenses = [];
+let editingExpenseId = null;
 let expenseBtn, sideExpenseBtn, expenseSection, expenseModal, closeExpenseModalBtn, addExpenseBtn, saveExpenseBtn, expenseImageInput, receiptPreview, scannerOverlay, expenseResultForm;
 let expDate, expStore, expCategory, expAmount, expenseTableBody, expDay, expWeek, expMonth, expYear;
 let paypalBtn, sidePaypalBtn, paypalModal, closePaypalBtn, redirectToPaypalBtn;
@@ -7591,7 +7592,10 @@ function toggleExpenseSection() {
 
 function openExpenseModal() {
     expenseModal.classList.remove('hidden');
+    editingExpenseId = null; // Clear edit mode
     resetExpenseModal();
+    const saveBtn = document.getElementById('saveExpenseBtn');
+    if (saveBtn) saveBtn.textContent = 'Speichern';
 }
 window.openExpenseModal = openExpenseModal;
 
@@ -7970,39 +7974,79 @@ function handleSaveExpense() {
         return;
     }
 
-    const expenseId = 'exp_' + Date.now();
+    const expenseId = editingExpenseId || 'exp_' + Date.now();
     const newExpense = {
         date,
         store,
         category,
         amount,
-        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         userId: currentUser.id,
         userName: currentUser.name,
         sessionId: appSessionId
     };
 
+    if (!editingExpenseId) {
+        newExpense.createdAt = new Date().toISOString();
+    } else {
+        // Keep original createdAt if possible
+        const existing = expenses.find(e => e.id === editingExpenseId);
+        if (existing && existing.createdAt) newExpense.createdAt = existing.createdAt;
+    }
+
     // Store in Firestore if available
     if (db) {
         const path = currentUser.teamCode ? `teams/${currentUser.teamCode}/expenses` : `users/${currentUser.id}/expenses`;
-        db.collection(path).doc(expenseId).set(newExpense)
+        db.collection(path).doc(expenseId).set(newExpense, { merge: true })
             .then(() => {
-                showToast('Ausgabe in Cloud gesichert', 'success');
+                showToast(editingExpenseId ? 'Ausgabe aktualisiert' : 'Ausgabe in Cloud gesichert', 'success');
                 closeExpenseModal();
+                if (!editingExpenseId) {
+                    // Update local if needed (though snapshot usually handles it)
+                }
             })
             .catch(err => {
                 console.error("Cloud save error:", err);
                 // Fallback to local only if cloud fails
-                expenses.unshift({ id: expenseId, ...newExpense });
+                if (editingExpenseId) {
+                    const idx = expenses.findIndex(e => e.id === editingExpenseId);
+                    if (idx > -1) expenses[idx] = { id: expenseId, ...newExpense };
+                } else {
+                    expenses.unshift({ id: expenseId, ...newExpense });
+                }
                 saveExpenses();
                 closeExpenseModal();
             });
     } else {
-        expenses.unshift({ id: expenseId, ...newExpense });
+        if (editingExpenseId) {
+            const idx = expenses.findIndex(e => e.id === editingExpenseId);
+            if (idx > -1) expenses[idx] = { id: expenseId, ...newExpense };
+        } else {
+            expenses.unshift({ id: expenseId, ...newExpense });
+        }
         saveExpenses();
         closeExpenseModal();
     }
 }
+
+function editExpense(id) {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    editingExpenseId = id;
+    openExpenseModal();
+    openManualExpense();
+
+    // Populate fields
+    expDate.value = expense.date;
+    expStore.value = expense.store;
+    expCategory.value = expense.category || 'Allgemein';
+    expAmount.value = expense.amount;
+
+    const saveBtn = document.getElementById('saveExpenseBtn');
+    if (saveBtn) saveBtn.textContent = 'Aktualisieren';
+}
+window.editExpense = editExpense;
 
 function renderExpenses(filterQuery = '') {
     if (!expenseTableBody) return;
@@ -8030,7 +8074,8 @@ function renderExpenses(filterQuery = '') {
                 <span class="category-badge">${getCategoryEmoji(exp.category)} ${exp.category || 'Allgemein'}</span>
             </td>
             <td style="font-weight: 700; color: #10b981; text-align: right;">${exp.amount.toFixed(2).replace('.', ',')} €</td>
-            <td style="text-align:right;">
+            <td style="text-align:right; white-space:nowrap;">
+                <button class="btn-delete-mini" onclick="editExpense('${exp.id}')" style="background: rgba(99,102,241,0.1); color: var(--secondary); margin-right:5px;">✏️</button>
                 <button class="btn-delete-mini" onclick="deleteExpense('${exp.id}')">🗑️</button>
             </td>
         </tr>
@@ -8266,6 +8311,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const exitNightstandBtn = document.getElementById('exitNightstandBtn');
     const brightnessSlider = document.getElementById('nightstandBrightness');
     const toggleRotationBtn = document.getElementById('toggleRotationBtn');
+    const nightstandOverlay = document.getElementById('nightstandOverlay');
+
+    let controlsTimeout = null;
+
+    if (nightstandOverlay) {
+        nightstandOverlay.addEventListener('click', (e) => {
+            // If we click a button, don't just toggle, reset the timer
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') {
+                resetControlsTimer();
+                return;
+            }
+
+            if (nightstandOverlay.classList.contains('show-controls')) {
+                nightstandOverlay.classList.remove('show-controls');
+                if (controlsTimeout) clearTimeout(controlsTimeout);
+            } else {
+                nightstandOverlay.classList.add('show-controls');
+                resetControlsTimer();
+            }
+        });
+    }
+
+    function resetControlsTimer() {
+        if (controlsTimeout) clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            if (nightstandOverlay) nightstandOverlay.classList.remove('show-controls');
+        }, 5000); // Hide after 5 seconds
+    }
 
     if (nightstandBtn) nightstandBtn.addEventListener('click', startNightstandMode);
     if (exitNightstandBtn) exitNightstandBtn.addEventListener('click', stopNightstandMode);
@@ -8279,15 +8352,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (content.classList.contains('force-landscape')) {
                 content.classList.remove('force-landscape');
                 content.classList.add('force-portrait');
-                toggleRotationBtn.textContent = '🔄 Hochformat';
+                toggleRotationBtn.innerHTML = '<i data-lucide="smartphone"></i> Hochformat';
             } else if (content.classList.contains('force-portrait')) {
                 content.classList.remove('force-portrait');
                 // No class = auto mode
-                toggleRotationBtn.textContent = '🔄 Auto';
+                toggleRotationBtn.innerHTML = '<i data-lucide="maximize"></i> Auto';
             } else {
                 content.classList.add('force-landscape');
-                toggleRotationBtn.textContent = '🔄 Querformat';
+                toggleRotationBtn.innerHTML = '<i data-lucide="smartphone"></i> Querformat';
             }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         });
     }
 

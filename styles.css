@@ -5024,100 +5024,7 @@ input[type="password"]::placeholder {
     border-radius: 0;
 }
 
-/* ===== Nightstand Mode (Side Clock) ===== */
-.nightstand-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-    z-index: 12000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--secondary);
-    transition: all 0.5s ease;
-    overflow: hidden;
-}
-
-.nightstand-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    width: 100%;
-    padding: 2rem;
-}
-
-.nightstand-clock {
-    font-size: 15vw;
-    font-weight: 800;
-    letter-spacing: -2px;
-    line-height: 1;
-    text-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
-    font-variant-numeric: tabular-nums;
-}
-
-.nightstand-date {
-    font-size: 2rem;
-    color: var(--text-muted);
-    margin-top: 1rem;
-}
-
-.nightstand-next-alarm {
-    margin-top: 2rem;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-full);
-    font-size: 1rem;
-    color: #fbbf24;
-    display: inline-block;
-}
-
-.nightstand-controls {
-    margin-top: 4rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-}
-
-.brightness-control {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 200px;
-}
-
-#nightstandBrightness {
-    flex: 1;
-    accent-color: var(--secondary);
-    cursor: pointer;
-}
-
-.btn-nightstand-exit {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--border-glass);
-    color: white;
-    padding: 0.75rem 2rem;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.nightstand-dimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: black;
-    opacity: 0;
-    /* Updated dynamically */
-    pointer-events: none;
-    z-index: 5;
-}
+/* Nightstand styles moved/unified below */
 
 /* Landscape optimization for clock */
 @media (orientation: landscape) {
@@ -5542,7 +5449,7 @@ input[type="password"]::placeholder {
     }
 }
 
-/* ===== NIGHTSTAND MODE (NACHTMODUS) ===== */
+/* ===== NIGHTSTAND MODE (NACHTMODUS) - IMMERSIVE DESIGN ===== */
 .nightstand-overlay {
     position: fixed;
     top: 0;
@@ -5550,20 +5457,22 @@ input[type="password"]::placeholder {
     width: 100%;
     height: 100%;
     background: #000000;
-    z-index: 9000;
+    z-index: 20000;
+    /* Extremely high to cover everything */
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    cursor: none;
 }
 
-.nightstand-overlay.hidden {
-    display: none;
+.nightstand-overlay:not(.hidden) {
+    display: flex;
 }
 
 .nightstand-content {
     position: relative;
-    z-index: 9001;
+    z-index: 20001;
     text-align: center;
     width: 100%;
     height: 100%;
@@ -5572,10 +5481,120 @@ input[type="password"]::placeholder {
     align-items: center;
     justify-content: center;
     padding: 2rem;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium Clock Styles */
+.nightstand-clock {
+    font-size: 20vw;
+    font-weight: 900;
+    color: var(--primary-light);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 50px rgba(var(--primary-rgb), 0.3);
+    line-height: 0.9;
+    font-family: 'Inter', system-ui, sans-serif;
     transition: transform 0.3s ease;
 }
 
-/* Manual rotation override */
+.nightstand-date {
+    font-size: 2.5vw;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.1rem;
+}
+
+.nightstand-next-alarm {
+    margin-top: 2rem;
+    font-size: 1.5vw;
+    color: #fbbf24;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Controls - Hidden by default, show on tap */
+.nightstand-controls {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    padding: 1rem 2rem;
+    border-radius: 100px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 20005;
+}
+
+.nightstand-overlay.show-controls .nightstand-controls {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.nightstand-overlay.show-controls {
+    cursor: default;
+}
+
+/* Control Elements */
+.btn-nightstand-rotate,
+.btn-nightstand-exit {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 100px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-nightstand-rotate:hover,
+.btn-nightstand-exit:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.brightness-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brightness-control input[type="range"] {
+    width: 100px;
+    accent-color: var(--primary);
+}
+
+/* Red dimmer overlay */
+.nightstand-dimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    pointer-events: none;
+    z-index: 20003;
+    opacity: 0;
+}
+
+/* Rotation Fixes */
 .nightstand-content.force-landscape {
     transform: rotate(0deg) !important;
     width: 100% !important;
@@ -5584,234 +5603,51 @@ input[type="password"]::placeholder {
 
 .nightstand-content.force-portrait {
     transform: rotate(90deg) !important;
-    transform-origin: center center !important;
     width: 100vh !important;
     height: 100vw !important;
 }
 
-/* Landscape Mode - Querformat */
+/* Responsive adjustments */
 @media (orientation: landscape) {
-    .nightstand-content:not(.force-portrait) {
-        transform: rotate(0deg);
-    }
-
     .nightstand-clock {
-        font-size: 15vw !important;
-        writing-mode: horizontal-tb;
+        font-size: 25vh;
     }
 
     .nightstand-date {
-        font-size: 3vw !important;
+        font-size: 4vh;
     }
 
     .nightstand-next-alarm {
-        font-size: 2.5vw !important;
+        font-size: 3vh;
     }
 }
 
-/* Portrait Mode - Hochformat (Uhr im Querformat anzeigen) */
 @media (orientation: portrait) {
     .nightstand-content:not(.force-landscape) {
         transform: rotate(90deg);
-        transform-origin: center center;
         width: 100vh;
         height: 100vw;
     }
 
     .nightstand-clock {
-        font-size: 15vh !important;
-    }
-
-    .nightstand-date {
-        font-size: 3vh !important;
-    }
-
-    .nightstand-next-alarm {
-        font-size: 2.5vh !important;
+        font-size: 20vw;
     }
 }
 
-.nightstand-clock {
-    font-size: 20vw;
-    font-weight: 900;
-    color: #ffffff;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.05em;
-    text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
-    margin-bottom: 1rem;
-    line-height: 1;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.nightstand-date {
-    font-size: 4vw;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 2rem;
-    text-transform: capitalize;
-}
-
-.nightstand-next-alarm {
-    font-size: 3vw;
-    color: var(--secondary);
-    margin-top: 2rem;
-    padding: 1rem 2rem;
-    background: rgba(34, 211, 238, 0.1);
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(34, 211, 238, 0.3);
-}
-
-.nightstand-controls {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    z-index: 9002;
-}
-
-/* Portrait Mode - Controls bleiben normal lesbar (nicht gedreht) */
-@media (orientation: portrait) {
+@media (max-width: 600px) {
     .nightstand-controls {
-        /* Controls bleiben normal ausgerichtet, damit sie lesbar sind */
-        transform: translateX(-50%);
+        flex-direction: column;
+        border-radius: 24px;
+        padding: 1.5rem;
         bottom: 2rem;
-        left: 50%;
-        /* Kleinere Buttons für bessere Bedienbarkeit im Portrait */
-    }
-
-    .nightstand-controls button {
-        font-size: 0.9rem;
-        padding: 0.6rem 1.5rem;
     }
 
     .brightness-control {
-        padding: 0.6rem 1.2rem;
-    }
-
-    .brightness-control input[type="range"] {
-        width: 120px;
+        border: none;
+        padding: 10px 0;
     }
 }
 
-.brightness-control {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 1.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-full);
-    backdrop-filter: blur(10px);
-}
-
-.brightness-control span {
-    font-size: 1.5rem;
-}
-
-.brightness-control input[type="range"] {
-    width: 150px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-    outline: none;
-    -webkit-appearance: none;
-}
-
-.brightness-control input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    background: #ffffff;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-.brightness-control input[type="range"]::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    background: #ffffff;
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-.btn-nightstand-exit {
-    padding: 0.75rem 2rem;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid var(--urgent);
-    color: var(--urgent);
-    border-radius: var(--radius-full);
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-}
-
-.btn-nightstand-exit:hover {
-    background: var(--urgent);
-    color: white;
-    transform: scale(1.05);
-}
-
-.btn-nightstand-rotate {
-    padding: 0.75rem 2rem;
-    background: rgba(34, 211, 238, 0.2);
-    border: 1px solid var(--secondary);
-    color: var(--secondary);
-    border-radius: var(--radius-full);
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-}
-
-.btn-nightstand-rotate:hover {
-    background: var(--secondary);
-    color: #000;
-    transform: scale(1.05);
-}
-
-.nightstand-dimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000000;
-    pointer-events: none;
-    z-index: 9000;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-/* Keep screen awake - prevent sleep mode */
-.nightstand-overlay::before {
-    content: '';
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0.01;
-    animation: keepAwake 60s infinite;
-}
-
-@keyframes keepAwake {
-
-    0%,
-    100% {
-        opacity: 0.01;
-    }
-
-    50% {
-        opacity: 0.02;
-    }
-}
 
 /* ===== Dashboard Wrapper & Toggle ===== */
 .dashboard-wrapper {
