@@ -5864,7 +5864,7 @@ input[type="password"]::placeholder {
 
 @media (min-width: 600px) {
     .dashboard-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -6129,4 +6129,29 @@ input[type="password"]::placeholder {
     opacity: 1 !important;
     color: var(--urgent);
     transform: scale(1.2);
+}
+
+.btn-link-small {
+    background: transparent;
+    border: none;
+    color: var(--primary-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0.2rem 0.5rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-link-small:hover {
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.btn-link-small .lucide {
+    width: 14px;
+    height: 14px;
 }

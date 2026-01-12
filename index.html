@@ -505,11 +505,7 @@
                 <div class="header-buttons-row">
                     <!-- Unified Scrollable Action Bar -->
                     <div class="mobile-comm-bar" id="mobileCommBar">
-                        <!-- Briefing Button (First!) -->
-                        <button id="headerBriefingBtn" class="btn-comm-quick" title="Tages-Briefing"
-                            style="color: var(--secondary);">
-                            <span class="icon-label">Briefing</span>
-                        </button>
+
 
                         <!-- Core Actions (Moved from + Menu) -->
                         <button id="addTaskBtn" class="btn-comm-quick" title="Neue Aufgabe">
@@ -778,7 +774,9 @@
                 <div style="display:flex; gap:10px; align-items:center;">
                     <input type="text" id="expenseSearch" placeholder="Suchen..." class="settings-input"
                         style="margin-top:0; padding: 0.4rem 0.8rem; font-size: 0.8rem; width: 120px;">
-                    <button id="addExpenseBtn" class="btn-link-small">+ Beleg scannen</button>
+                    <button id="addExpenseBtn" class="btn-link-small">+ Scan</button>
+                    <button id="manualExpenseBtnHeader" class="btn-link-small">+ Manuell</button>
+                    <button id="voiceExpenseBtnHeader" class="btn-link-small">🎤 Sprache</button>
                 </div>
             </div>
 
@@ -935,9 +933,9 @@
                 <i data-lucide="calendar"></i>
                 <span class="icon-label">Kalender</span>
             </button>
-            <button class="btn-footer-icon" id="noteBtnFooter" title="Schnell-Notiz">
+            <button class="btn-footer-icon" id="noteBtnFooter" title="Todo">
                 <i data-lucide="file-text"></i>
-                <span class="icon-label">Notiz</span>
+                <span class="icon-label">Todo</span>
             </button>
             <button class="btn-footer-icon" id="sideNightstandBtnFooter" title="Nachtmodus">
                 <i data-lucide="moon"></i>

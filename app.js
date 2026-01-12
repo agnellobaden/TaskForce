@@ -512,6 +512,26 @@ function initDOMElements() {
         expenseSearchInput.addEventListener('input', (e) => renderExpenses(e.target.value));
     }
 
+    // New Header & Modal buttons for direct entry
+    const manualExpenseBtnHeader = document.getElementById('manualExpenseBtnHeader');
+    const voiceExpenseBtnHeader = document.getElementById('voiceExpenseBtnHeader');
+    const expVoiceBtn = document.getElementById('expVoiceBtn');
+
+    if (manualExpenseBtnHeader) {
+        manualExpenseBtnHeader.addEventListener('click', () => {
+            openExpenseModal();
+            openManualExpense();
+        });
+    }
+
+    if (voiceExpenseBtnHeader) {
+        voiceExpenseBtnHeader.addEventListener('click', startVoiceExpense);
+    }
+
+    if (expVoiceBtn) {
+        expVoiceBtn.addEventListener('click', startVoiceExpense);
+    }
+
     // PayPal
     paypalBtn = document.getElementById('paypalBtn');
     sidePaypalBtn = document.getElementById('sidePaypalBtn');
@@ -7625,6 +7645,101 @@ function resetExpenseModal() {
     expCategory.value = 'Allgemein';
     expAmount.value = '';
 }
+
+async function startVoiceExpense() {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        showToast('Spracherkennung wird auf diesem Gerät nicht unterstützt.', 'error');
+        return;
+    }
+
+    openExpenseModal();
+    document.querySelector('.scanner-placeholder').classList.add('hidden');
+    scannerOverlay.classList.remove('hidden'); // Feedback-Overlay zeigen
+    showToast('Ich höre zu... (z.B. "50 Euro bei Rewe für Lebensmittel")', 'info');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'de-DE';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice Expense Transcript:', transcript);
+        showToast('Verstanden: ' + transcript, 'success');
+
+        // Versuchen, die Daten mit einfacher Logik zu extrahieren
+        const parsed = await parseVoiceExpenseWithAI(transcript);
+        finalizeScan(parsed);
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        showToast('Spracherkennung fehlgeschlagen: ' + event.error, 'error');
+        resetExpenseModal();
+    };
+
+    recognition.onend = () => {
+        scannerOverlay.classList.add('hidden');
+    };
+
+    recognition.start();
+}
+window.startVoiceExpense = startVoiceExpense;
+
+async function parseVoiceExpenseWithAI(text) {
+    let amount = '';
+    let store = '';
+    let category = 'Allgemein';
+
+    // 1. Betrag finden (Zahlen mit Komma oder Punkt)
+    const amountMatch = text.match(/(\d+([,.]\d{1,2})?)/);
+    if (amountMatch) {
+        amount = amountMatch[1].replace(',', '.');
+    }
+
+    // 2. Kategorien anhand Stichwörter
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('essen') || lowerText.includes('lebensmittel') || lowerText.includes('supermarkt')) {
+        category = 'Lebensmittel';
+    } else if (lowerText.includes('tanken') || lowerText.includes('benzin') || lowerText.includes('auto') || lowerText.includes('diesel')) {
+        category = 'Tankstelle';
+    } else if (lowerText.includes('haushalt') || lowerText.includes('wohnen') || lowerText.includes('baumarkt')) {
+        category = 'Haushalt';
+    } else if (lowerText.includes('freizeit') || lowerText.includes('spaß') || lowerText.includes('kino') || lowerText.includes('restaurant')) {
+        category = 'Freizeit';
+    } else if (lowerText.includes('kleidung') || lowerText.includes('shoppen') || lowerText.includes('hose') || lowerText.includes('shirt')) {
+        category = 'Kleidung';
+    }
+
+    // 3. Geschäft finden
+    const stores = ['rewe', 'aldi', 'lidl', 'edeka', 'penny', 'netto', 'kaufland', 'shell', 'aral', 'esso', 'amazon', 'ebay', 'bauhaus', 'obi', 'dm', 'rossmann', 'mcdonalds', 'starbucks'];
+    for (const s of stores) {
+        if (lowerText.includes(s)) {
+            store = s.charAt(0).toUpperCase() + s.slice(1);
+            if (category === 'Allgemein') { // Automatische Kategorie-Zuweisung falls noch Standard
+                if (['rewe', 'aldi', 'lidl', 'edeka', 'penny', 'netto', 'kaufland'].includes(s)) category = 'Lebensmittel';
+                if (['shell', 'aral', 'esso'].includes(s)) category = 'Tankstelle';
+                if (['dm', 'rossmann'].includes(s)) category = 'Gesundheit';
+            }
+            break;
+        }
+    }
+
+    // Wenn kein Geschäft gefunden, aber Text da ist, versuchen das erste Wort nach dem Betrag oder am Anfang
+    if (!store) {
+        const words = text.split(' ');
+        if (words.length > 0) store = words[0];
+    }
+
+    return {
+        amount,
+        store: store || 'Unbekannt',
+        category,
+        date: new Date().toISOString().split('T')[0]
+    };
+}
+window.parseVoiceExpenseWithAI = parseVoiceExpenseWithAI;
 
 // Persistent Worker for instant scanning
 async function getTesseractWorker() {
