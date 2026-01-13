@@ -80,6 +80,9 @@ let appContactBtn, appPerson, appPhone;
 let syncContactsBtn, syncedContactsList;
 let savedContacts = JSON.parse(localStorage.getItem('taskforce_contacts')) || [];
 
+let organizerModal, closeOrganizerBtn, sideOrganizerBtn;
+let statTasksCreated, statTasksDone, statCompletionRate;
+
 let quickCallBtn, quickWaBtn, quickMailBtn;
 let manualDriveBtn, alarmBtn; // Header buttons restored
 let settingsModal, closeSettingsModal, saveSettingsBtn, themeSelect, soundSelect, defaultSnoozeSelect, testSoundBtn, snoozeTimeSelect, settingsAvatarPicker, settingsAvatarUpload;
@@ -109,15 +112,27 @@ let appSettings = Object.assign({
     headerIconAlarm: true,
     headerIconDrive: true,
     headerIconNight: true,
-    googleMapsApiKey: '' // New setting for Google Maps
+    googleMapsApiKey: '', // New setting for Google Maps
+    clockPosition: 'top'
 }, JSON.parse(localStorage.getItem('taskforce_settings')) || {});
 
 let userPos = null;
 
-let installPrompt, installBtn, dismissInstall, installBanner, installAppBtn, closeInstallBanner;
+// New Storage Keys & State
+let shoppingItems = JSON.parse(localStorage.getItem('taskforce_shopping')) || [];
+let habits = JSON.parse(localStorage.getItem('taskforce_habits')) || [
+    { id: 'h1', name: 'Wasser trinken', done: false },
+    { id: 'h2', name: 'Sport machen', done: false },
+    { id: 'h3', name: 'Lesen', done: false }
+];
+let meds = JSON.parse(localStorage.getItem('taskforce_meds')) || [];
+let waterIntake = JSON.parse(localStorage.getItem('taskforce_water')) || { amount: 0, goal: 2000, lastReset: '' };
+let weatherData = null;
 
-let currentFileBase64 = null;
-let currentFileName = null;
+// Modal Elements for new features
+let shoppingModal, closeShoppingBtn, shoppingInput, addShoppingItemBtn, shoppingListContainer, clearShoppingBtn;
+let habitModal, closeHabitBtn, habitListContainer, addHabitBtn;
+let healthModal, closeHealthBtn, medListContainer, waterAmountEl, waterProgressEl;
 
 // Keyword Detection for smart questions
 const keywordPatterns = {
@@ -142,8 +157,12 @@ const keywordPatterns = {
         question: { label: '👤 Wer?', type: 'text', placeholder: 'Name der Person...' }
     },
     amount: {
-        keywords: ['geld', 'euro', 'bezahlen', 'überweisen', 'kaufen', 'kosten', 'betrag'],
+        keywords: ['geld', 'euro', 'bezahlen', 'überweisen', 'kosten', 'betrag'],
         question: { label: '💰 Betrag', type: 'number', placeholder: 'z.B. 50' }
+    },
+    shopping: {
+        keywords: ['kaufen', 'besorgen', 'supermarkt', 'laden', 'einkaufen', 'lebensmittel'],
+        question: { label: '🛒 Einkaufsliste hinzufügen?', type: 'select', options: ['Ja', 'Nein'] }
     },
     email: {
         keywords: ['email', 'e-mail', 'mail', 'schreiben', 'nachricht'],
@@ -160,13 +179,29 @@ function updateDashboardGrid() {
     const grid = document.querySelector('.dashboard-grid');
     if (!grid) return;
 
-    // We need to re-append children in the correct order:
-    // 1. Appointments (Termine) - always first
-    // 2. Tasks (Aufgaben)
-    // 3. Notes (Notizen)
-    // 4. Expenses (Kosten)
-    // 5. Alarms (Wecker)
-    // 6. Drive Mode (Fahrten) - only if active tasks exist
+    const megaClockCard = document.getElementById('card_mega_clock');
+    const existingClone = document.getElementById('card_mega_clock_clone');
+    if (existingClone) existingClone.remove();
+
+    const position = appSettings.clockPosition || 'top';
+    const content = document.getElementById('dashboardContent');
+
+    // Handle Top placement (outside grid)
+    if (megaClockCard) {
+        if (position === 'top' || position === 'both') {
+            content.insertBefore(megaClockCard, grid);
+            megaClockCard.style.gridColumn = 'unset';
+            megaClockCard.style.width = '100%';
+            megaClockCard.style.marginBottom = '1.5rem';
+            megaClockCard.setAttribute('draggable', 'false');
+        } else {
+            // Ensure card is in grid for bottom logic
+            grid.appendChild(megaClockCard);
+            megaClockCard.style.gridColumn = 'span 2';
+            megaClockCard.style.marginBottom = '0';
+            megaClockCard.setAttribute('draggable', 'true');
+        }
+    }
 
     const appCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="calendar"]'));
     const taskCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="check-circle"]'));
@@ -175,47 +210,66 @@ function updateDashboardGrid() {
     const alarmCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bell"]'));
     const aiCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="bot"]'));
     const driveCard = Array.from(grid.children).find(c => c.querySelector('.dashboard-card-header i[data-lucide="car"]'));
+    const habitCard = document.getElementById('card_habits');
+    const shoppingCard = document.getElementById('card_shopping');
+    const healthCard = document.getElementById('card_health');
 
-    // Drag & Drop / Saved Order Logic
     const savedOrder = JSON.parse(localStorage.getItem('taskforce_dashboard_order'));
+    const ordinaryCards = [taskCard, appCard, aiCard, driveCard, noteCard, expCard, alarmCard, habitCard, shoppingCard, healthCard].filter(c => c);
 
-    // Elements Map
-    const cards = [taskCard, appCard, aiCard, driveCard, noteCard, expCard, alarmCard].filter(c => c);
-
-    // If we have a saved order, try to respect it
     if (savedOrder && savedOrder.length > 0) {
-        // Append known IDs in order
         savedOrder.forEach(id => {
-            const card = cards.find(c => c.id === id);
+            const card = ordinaryCards.find(c => c.id === id);
             if (card) {
-                if (id === 'card_drive' && !card.classList.contains('hidden')) {
-                    grid.appendChild(card);
-                } else if (id !== 'card_drive') {
-                    grid.appendChild(card);
-                }
+                if (id === 'card_drive' && !card.classList.contains('hidden')) grid.appendChild(card);
+                else if (id !== 'card_drive') grid.appendChild(card);
             }
         });
-        // Append anything missing from saved order (e.g. new features)
-        cards.forEach(card => {
+        ordinaryCards.forEach(card => {
             if (!savedOrder.includes(card.id)) {
-                // Drive card special handling
                 if (card.id === 'card_drive' && !card.classList.contains('hidden')) grid.appendChild(card);
                 else if (card.id !== 'card_drive') grid.appendChild(card);
             }
         });
-    } else {
-        // DEFAULT ORDER (Fallback)
-        if (taskCard) grid.appendChild(taskCard); // 1. Aufgaben
-        if (appCard) grid.appendChild(appCard); // 2. Termine
-        if (aiCard) grid.appendChild(aiCard); // 3. Mein KI
-        if (driveCard) { // 4. Fahrten
-            driveCard.classList.remove('hidden');
-            grid.appendChild(driveCard);
+
+        if (position === 'bottom') grid.appendChild(megaClockCard);
+        if (position === 'both') {
+            const clone = megaClockCard.cloneNode(true);
+            clone.id = 'card_mega_clock_clone';
+            clone.style.marginBottom = '0';
+            clone.style.gridColumn = 'span 2';
+            clone.setAttribute('draggable', 'false');
+            clone.querySelectorAll('[id]').forEach(el => { if (el.id !== 'card_mega_clock_clone') el.removeAttribute('id'); });
+            grid.appendChild(clone);
         }
-        if (noteCard) grid.appendChild(noteCard); // 5. Notizen
-        if (expCard) grid.appendChild(expCard); // 6. Kosten
-        if (alarmCard) grid.appendChild(alarmCard); // 7. Wecker
+    } else {
+        // DEFAULT ORDER
+        if (taskCard) grid.appendChild(taskCard);
+        if (appCard) grid.appendChild(appCard);
+        if (aiCard) grid.appendChild(aiCard);
+        if (habitCard) grid.appendChild(habitCard);
+        if (shoppingCard) grid.appendChild(shoppingCard);
+        if (healthCard) grid.appendChild(healthCard);
+        if (driveCard) { driveCard.classList.remove('hidden'); grid.appendChild(driveCard); }
+        if (noteCard) grid.appendChild(noteCard);
+        if (expCard) grid.appendChild(expCard);
+        if (alarmCard) grid.appendChild(alarmCard);
+
+        if (position === 'bottom' || position === 'both') {
+            const target = (position === 'both') ? megaClockCard.cloneNode(true) : megaClockCard;
+            if (position === 'both') {
+                target.id = 'card_mega_clock_clone';
+                target.style.marginBottom = '0';
+                target.style.gridColumn = 'span 2';
+                target.querySelectorAll('[id]').forEach(el => { if (el.id !== 'card_mega_clock_clone') el.removeAttribute('id'); });
+            } else { target.style.gridColumn = 'span 2'; target.style.marginBottom = '0'; }
+            grid.appendChild(target);
+        }
     }
+
+    if (typeof updateDashboardClockAndDate === 'function') updateDashboardClockAndDate();
+    if (typeof updateWeatherUI === 'function') updateWeatherUI();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // Initialize Drag & Drop functionality
     setTimeout(initDashboardDragAndDrop, 100);
@@ -349,7 +403,10 @@ function showSaveLayoutButton(newOrder) {
 }
 
 // Call this whenever dashboard is updated
-setInterval(updateDashboardGrid, 5000); // Check periodically
+setInterval(() => {
+    updateDashboardGrid();
+    updateDashboard();
+}, 5000); // Check periodically
 
 
 // Initialize App
@@ -593,7 +650,31 @@ function initDOMElements() {
     syncContactsBtn = document.getElementById('syncContactsBtn');
     syncedContactsList = document.getElementById('syncedContactsList');
 
-    // Render contacts on init
+    // Organizer Elements
+    organizerModal = document.getElementById('organizerModal');
+    closeOrganizerBtn = document.getElementById('closeOrganizerBtn');
+    sideOrganizerBtn = document.getElementById('sideOrganizerBtn');
+    statTasksCreated = document.getElementById('statTasksCreated');
+    statTasksDone = document.getElementById('statTasksDone');
+    statCompletionRate = document.getElementById('statCompletionRate');
+
+    if (sideOrganizerBtn) {
+        sideOrganizerBtn.addEventListener('click', () => {
+            if (sideMenuOverlay) sideMenuOverlay.classList.add('hidden');
+            if (organizerModal) {
+                organizerModal.classList.remove('hidden');
+                updateOrganizerStats();
+            }
+        });
+    }
+
+    if (closeOrganizerBtn) {
+        closeOrganizerBtn.addEventListener('click', () => {
+            if (organizerModal) organizerModal.classList.add('hidden');
+        });
+    }
+
+    // Existing render contacts...
     if (syncedContactsList) renderSyncedContacts();
     appContactBtn = document.getElementById('appContactBtn');
     appPerson = document.getElementById('appPerson');
@@ -1060,6 +1141,73 @@ function initDOMElements() {
         });
     }
 
+    // New Features: Shopping, Habits, Health
+    shoppingModal = document.getElementById('shoppingModal');
+    closeShoppingBtn = document.getElementById('closeShoppingBtn');
+    shoppingInput = document.getElementById('shoppingInput');
+    addShoppingItemBtn = document.getElementById('addShoppingItemBtn');
+    shoppingListContainer = document.getElementById('shoppingListContainer');
+    clearShoppingBtn = document.getElementById('clearShoppingBtn');
+
+    habitModal = document.getElementById('habitModal');
+    closeHabitBtn = document.getElementById('closeHabitBtn');
+    habitListContainer = document.getElementById('habitListContainer');
+    addHabitBtn = document.getElementById('addHabitBtn');
+
+    healthModal = document.getElementById('healthModal');
+    closeHealthBtn = document.getElementById('closeHealthBtn');
+    medListContainer = document.getElementById('medListContainer');
+    waterAmountEl = document.getElementById('waterAmount');
+    waterProgressEl = document.getElementById('waterProgress');
+
+    if (closeShoppingBtn) closeShoppingBtn.addEventListener('click', () => shoppingModal.classList.add('hidden'));
+    if (closeHabitBtn) closeHabitBtn.addEventListener('click', () => habitModal.classList.add('hidden'));
+    if (closeHealthBtn) closeHealthBtn.addEventListener('click', () => healthModal.classList.add('hidden'));
+
+    if (addShoppingItemBtn) addShoppingItemBtn.addEventListener('click', addShoppingItem);
+    if (clearShoppingBtn) clearShoppingBtn.addEventListener('click', clearDoneShoppingItems);
+    if (addHabitBtn) addHabitBtn.addEventListener('click', () => {
+        const name = prompt("Name der Gewohnheit:");
+        if (name) addHabit(name);
+    });
+
+    // Translator Elements
+    const translatorModal = document.getElementById('translatorModal');
+    const closeTranslatorBtn = document.getElementById('closeTranslatorBtn');
+    const sideTranslatorBtn = document.getElementById('sideTranslatorBtn');
+    const quickTranslateBtn = document.getElementById('quickTranslateBtn');
+    const transMicBtn = document.getElementById('transMicBtn');
+    const transInput = document.getElementById('transInput');
+    const transTargetLang = document.getElementById('transTargetLang');
+    const transSpeakBtn = document.getElementById('transSpeakBtn');
+    const startConvoBtn = document.getElementById('startConvoBtn');
+
+    if (sideTranslatorBtn) sideTranslatorBtn.addEventListener('click', () => { translatorModal.classList.remove('hidden'); toggleSideMenu(); });
+    if (quickTranslateBtn) quickTranslateBtn.addEventListener('click', () => { translatorModal.classList.remove('hidden'); });
+    if (closeTranslatorBtn) closeTranslatorBtn.addEventListener('click', () => { translatorModal.classList.add('hidden'); });
+
+    if (transMicBtn) transMicBtn.addEventListener('click', () => {
+        startVoiceRecognition(text => {
+            transInput.value = text;
+            handleTranslation(text, transTargetLang.value);
+        });
+    });
+
+    if (transSpeakBtn) transSpeakBtn.addEventListener('click', () => {
+        const text = document.getElementById('transResult').textContent;
+        if (text && text !== '...') speakText(text, transTargetLang.value);
+    });
+
+    if (startConvoBtn) startConvoBtn.addEventListener('click', startConversationMode);
+
+    // Initialize these features
+    updateShoppingUI();
+    updateHabitUI();
+    updateHealthUI();
+    updateWeatherUI();
+    checkDailyReset();
+
+
     if (saveSettingsBtn) {
         saveSettingsBtn.addEventListener('click', () => {
             saveSettings();
@@ -1360,6 +1508,9 @@ function loadSettingsToUI() {
         }
     }
 
+    const clockPositionSelect = document.getElementById('clockPositionSelect');
+    if (clockPositionSelect) clockPositionSelect.value = appSettings.clockPosition || 'top';
+
     // Load team list
     loadTeamList();
 }
@@ -1430,6 +1581,9 @@ function saveSettings() {
     const homeAddressInput = document.getElementById('homeAddressInput');
     if (homeAddressInput) appSettings.homeAddress = homeAddressInput.value.trim();
 
+    const clockPositionSelect = document.getElementById('clockPositionSelect');
+    if (clockPositionSelect) appSettings.clockPosition = clockPositionSelect.value;
+
     // Save user info updates
     const settingsUserName = document.getElementById('settingsUserName');
     const settingsUserPin = document.getElementById('settingsUserPin');
@@ -1493,6 +1647,9 @@ function applyAppSettings() {
     if (appSettings.aiProvider) {
         updateRobotIcon(appSettings.aiProvider);
     }
+
+    // Update Dashboard Grid (Positioning etc)
+    updateDashboardGrid();
 }
 
 function updateHeaderIcons() {
@@ -4624,6 +4781,21 @@ function saveTask(skipped) {
         });
     }
 
+    // Category
+    const categorySelect = document.getElementById('taskCategorySelect');
+    if (categorySelect) {
+        currentTask.category = categorySelect.value;
+    } else {
+        currentTask.category = 'Allgemein';
+    }
+
+    // Intelligence: Auto-add to Shopping List if category is 'Einkauf'
+    if (currentTask.category === 'Einkauf') {
+        shoppingItems.push({ id: Date.now().toString() + "_auto", text: currentTask.keyword, done: false });
+        saveShopping();
+        updateShoppingUI();
+    }
+
     // Attachment
     if (currentFileBase64) {
         currentTask.file = {
@@ -4726,11 +4898,12 @@ function renderTasks() {
         const locStr = task.details.location ? escapeHtml(task.details.location) : '';
         const phoneStr = task.details.phone ? escapeHtml(task.details.phone) : '';
         const emailStr = task.details.email ? escapeHtml(task.details.email) : '';
+        const categoryIcon = getCategoryIcon(task.category);
 
         return `
         <div class="task-card ${task.priority} ${task.done ? 'done' : ''}" onclick="openTaskDetail('${task.id}')">
             <div class="task-header">
-                <span class="task-title">${escapeHtml(task.keyword)}</span>
+                <span class="task-title">${categoryIcon} ${escapeHtml(task.keyword)}</span>
                 <span class="task-priority ${task.priority}">${task.priority === 'urgent' ? '🔥 WICHTIG' : '📋 Normal'}</span>
             </div>
             <div class="task-meta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">
@@ -4901,6 +5074,18 @@ function renderTaskDetailContent() {
                     </div>
                     <textarea id="magicRawInput" style="height: 35px; font-size: 0.75rem; margin-top: 5px;" placeholder="Grok-Antwort hier einfügen..."></textarea>
                 </div>
+                
+                <div class="form-group">
+                    <label>🏷️ Kategorie</label>
+                    <select id="editTaskCategory" class="settings-select">
+                        <option value="Allgemein" ${task.category === 'Allgemein' ? 'selected' : ''}>✨ Allgemein</option>
+                        <option value="Privat" ${task.category === 'Privat' ? 'selected' : ''}>👤 Privat</option>
+                        <option value="Arbeit" ${task.category === 'Arbeit' ? 'selected' : ''}>💼 Arbeit</option>
+                        <option value="Einkauf" ${task.category === 'Einkauf' ? 'selected' : ''}>🛒 Einkauf</option>
+                        <option value="Finanzen" ${task.category === 'Finanzen' ? 'selected' : ''}>💰 Finanzen</option>
+                        <option value="Gesundheit" ${task.category === 'Gesundheit' ? 'selected' : ''}>💊 Gesundheit</option>
+                    </select>
+                </div>
         `;
 
         const detailLabels = {
@@ -5014,6 +5199,7 @@ function saveTaskEdits() {
     currentTask.keyword = document.getElementById('editTaskTitle').value.trim();
     currentTask.details.notes = document.getElementById('editTaskNotes').value.trim();
     currentTask.deadline = document.getElementById('editTaskDeadline').value;
+    currentTask.category = document.getElementById('editTaskCategory').value;
 
     const detailKeys = ['phone', 'email', 'location', 'person', 'amount', 'birthday', 'website'];
     detailKeys.forEach(key => {
@@ -7154,6 +7340,29 @@ function updateDashboard() {
             });
             dashAppointments.textContent = todayTasks.length;
 
+            // Check if any appointment is "soon" (within 30 minutes)
+            const now = new Date();
+            const soonThreshold = 30 * 60 * 1000; // 30 minutes in ms
+            const isSoon = todayTasks.some(t => {
+                if (t.done) return false;
+                const dateStr = t.deadline || (t.details && t.details['📅 Wann?']);
+                if (!dateStr) return false;
+
+                const taskTime = new Date(dateStr).getTime();
+                const diff = taskTime - now.getTime();
+                // Blink if meeting starts in the next 30 mins OR has started in the last 15 mins but isn't done
+                return (diff <= soonThreshold && diff >= -15 * 60 * 1000);
+            });
+
+            const cardAppointments = document.getElementById('card_appointments');
+            if (cardAppointments) {
+                if (isSoon) {
+                    cardAppointments.classList.add('blinking-card');
+                } else {
+                    cardAppointments.classList.remove('blinking-card');
+                }
+            }
+
             if (dashAppointmentsList) {
                 dashAppointmentsList.innerHTML = '';
                 if (todayTasks.length > 0) {
@@ -7241,6 +7450,36 @@ function updateDashboard() {
                 }
             } else {
                 dashTasksList.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:4px;">Alles erledigt!</div>';
+            }
+        }
+
+        // --- NEW: Habits Blinking Logic ---
+        const dashHabitsCard = document.getElementById('card_habits');
+        if (dashHabitsCard && typeof habits !== 'undefined') {
+            const now = new Date();
+            const hour = now.getHours();
+            const uncompleted = habits.some(h => !h.done);
+            // Blink if it's after 16:00 and habits are still unfinished
+            if (uncompleted && hour >= 16) {
+                dashHabitsCard.classList.add('blinking-card');
+            } else {
+                dashHabitsCard.classList.remove('blinking-card');
+            }
+        }
+
+        // --- NEW: Health Blinking Logic ---
+        const dashHealthCard = document.getElementById('card_health');
+        if (dashHealthCard && typeof waterIntake !== 'undefined' && typeof meds !== 'undefined') {
+            const thirsty = waterIntake.amount < (waterIntake.goal / 2);
+            const pendingMeds = meds.some(m => !m.done);
+            const now = new Date();
+            const hour = now.getHours();
+
+            // Blink if thirsty after 14:00 OR any meds are not taken
+            if (pendingMeds || (thirsty && hour >= 14)) {
+                dashHealthCard.classList.add('blinking-card');
+            } else {
+                dashHealthCard.classList.remove('blinking-card');
             }
         }
 
@@ -9049,3 +9288,442 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// Organizer Functions
+window.updateOrganizerStats = function () {
+    if (!statTasksCreated || !statTasksDone || !statCompletionRate) return;
+
+    const createdCount = tasks.length;
+    const doneCount = tasks.filter(t => t.done).length;
+    const rate = createdCount > 0 ? Math.round((doneCount / createdCount) * 100) : 0;
+
+    statTasksCreated.textContent = createdCount;
+    statTasksDone.textContent = doneCount;
+    statCompletionRate.textContent = rate + '%';
+};
+
+window.exportData = function (format) {
+    const data = {
+        tasks: tasks,
+        expenses: expenses,
+        alarms: alarms,
+        contacts: savedContacts,
+        settings: appSettings,
+        exportDate: new Date().toISOString()
+    };
+
+    if (format === 'json') {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `taskforce_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        showToast('Backup (JSON) heruntergeladen', 'success');
+    } else if (format === 'csv') {
+        // Simple CSV for Tasks
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Typ,Titel,Datum,Status,Details\n";
+
+        tasks.forEach(t => {
+            const row = [
+                "Aufgabe",
+                t.keyword,
+                t.deadline || '',
+                t.done ? 'Erledigt' : 'Offen',
+                JSON.stringify(t.details).replace(/"/g, '""')
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        expenses.forEach(e => {
+            const row = [
+                "Ausgabe",
+                e.store,
+                e.date,
+                e.amount + ' €',
+                e.category
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `taskforce_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        showToast('CSV Export heruntergeladen', 'success');
+    }
+};
+
+window.importData = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (confirm('Möchtest du die vorhandenen Daten mit diesem Backup überschreiben?')) {
+                if (data.tasks) {
+                    tasks = data.tasks;
+                    const storageKey = currentUser.teamCode ? `taskforce_tasks_shared_${currentUser.teamCode}` : `taskforce_tasks_${currentUser.id}`;
+                    localStorage.setItem(storageKey, JSON.stringify(tasks));
+                }
+                if (data.expenses) {
+                    expenses = data.expenses;
+                    localStorage.setItem('taskforce_expenses', JSON.stringify(expenses));
+                }
+                if (data.alarms) {
+                    alarms = data.alarms;
+                    localStorage.setItem('taskforce_alarms', JSON.stringify(alarms));
+                }
+                if (data.settings) {
+                    appSettings = data.settings;
+                    localStorage.setItem('taskforce_settings', JSON.stringify(appSettings));
+                }
+
+                showToast('Daten erfolgreich wiederhergestellt!', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        } catch (err) {
+            showToast('Ungültiges Backup-Format', 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsText(file);
+};
+
+window.getCategoryIcon = function (cat) {
+    const map = {
+        'Allgemein': '✨',
+        'Privat': '👤',
+        'Arbeit': '💼',
+        'Einkauf': '🛒',
+        'Finanzen': '💰',
+        'Gesundheit': '💊'
+    };
+    return map[cat] || '📌';
+};
+
+// === Intelligent Daily Features Functions ===
+
+window.openShoppingModal = function () {
+    shoppingModal.classList.remove('hidden');
+    updateShoppingUI();
+};
+
+window.addShoppingItem = function () {
+    const text = shoppingInput.value.trim();
+    if (text) {
+        shoppingItems.push({ id: Date.now().toString(), text, done: false });
+        shoppingInput.value = '';
+        saveShopping();
+        updateShoppingUI();
+    }
+};
+
+window.toggleShoppingItem = function (id) {
+    const item = shoppingItems.find(i => i.id === id);
+    if (item) {
+        item.done = !item.done;
+        saveShopping();
+        updateShoppingUI();
+    }
+};
+
+function saveShopping() {
+    localStorage.setItem('taskforce_shopping', JSON.stringify(shoppingItems));
+}
+
+window.updateShoppingUI = function () {
+    if (!shoppingListContainer) return;
+    shoppingListContainer.innerHTML = shoppingItems.map(item => `
+        <div class="shopping-item ${item.done ? 'checked' : ''}">
+            <div style="display:flex; align-items:center; gap:10px; flex:1;" onclick="toggleShoppingItem('${item.id}')">
+                <span class="shopping-check">${item.done ? '✅' : '⬜'}</span>
+                <span style="${item.done ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHtml(item.text)}</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="editShoppingItem('${item.id}')" style="background:none; border:none; color:var(--primary); cursor:pointer; padding:5px;"><i data-lucide="edit-2" style="width:16px; height:16px;"></i></button>
+                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:5px;"><i data-lucide="trash-2" style="width:16px; height:16px;"></i></button>
+            </div>
+        </div>
+    `).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const dashEl = document.getElementById('dashShoppingItems');
+    if (dashEl) dashEl.textContent = shoppingItems.filter(i => !i.done).length;
+};
+
+window.editShoppingItem = function (id) {
+    const item = shoppingItems.find(i => i.id === id);
+    if (item) {
+        const next = prompt("Artikel bearbeiten:", item.text);
+        if (next && next.trim()) {
+            item.text = next.trim();
+            saveShopping();
+            updateShoppingUI();
+        }
+    }
+};
+
+window.deleteShoppingItem = function (id) {
+    shoppingItems = shoppingItems.filter(i => i.id !== id);
+    saveShopping();
+    updateShoppingUI();
+};
+
+window.clearDoneShoppingItems = function () {
+    shoppingItems = shoppingItems.filter(i => !i.done);
+    saveShopping();
+    updateShoppingUI();
+};
+
+window.openHabitModal = function () {
+    habitModal.classList.remove('hidden');
+    updateHabitUI();
+};
+
+window.addHabit = function (name) {
+    habits.push({ id: Date.now().toString(), name, done: false });
+    saveHabits();
+    updateHabitUI();
+};
+
+window.toggleHabit = function (id) {
+    const habit = habits.find(h => h.id === id);
+    if (habit) {
+        habit.done = !habit.done;
+        saveHabits();
+        updateHabitUI();
+    }
+};
+
+function saveHabits() {
+    localStorage.setItem('taskforce_habits', JSON.stringify(habits));
+}
+
+window.updateHabitUI = function () {
+    if (!habitListContainer) return;
+    habitListContainer.innerHTML = habits.map(h => `
+        <div class="habit-item">
+            <div style="display:flex; align-items:center; gap:10px; flex:1;" onclick="toggleHabit('${h.id}')">
+                <div class="habit-checkbox ${h.done ? 'checked' : ''}"></div>
+                <span style="${h.done ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHtml(h.name)}</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="editHabit('${h.id}')" style="background:none; border:none; color:var(--primary); cursor:pointer; padding:5px;"><i data-lucide="edit-2" style="width:16px; height:16px;"></i></button>
+                <button onclick="deleteHabit('${h.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:5px;"><i data-lucide="trash-2" style="width:16px; height:16px;"></i></button>
+            </div>
+        </div>
+    `).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const doneCount = habits.filter(h => h.done).length;
+    const totalCount = habits.length;
+    const dashEl = document.getElementById('dashHabits');
+    const barEl = document.getElementById('habitProgressBar');
+    if (dashEl) dashEl.textContent = `${doneCount}/${totalCount}`;
+    if (barEl) barEl.style.width = totalCount > 0 ? `${(doneCount / totalCount) * 100}%` : '0%';
+};
+
+window.editHabit = function (id) {
+    const habit = habits.find(h => h.id === id);
+    if (habit) {
+        const next = prompt("Gewohnheit bearbeiten:", habit.name);
+        if (next && next.trim()) {
+            habit.name = next.trim();
+            saveHabits();
+            updateHabitUI();
+        }
+    }
+};
+
+window.deleteHabit = function (id) {
+    if (confirm("Möchtest du diese Gewohnheit wirklich löschen?")) {
+        habits = habits.filter(h => h.id !== id);
+        saveHabits();
+        updateHabitUI();
+    }
+};
+
+window.openHealthModal = function () {
+    healthModal.classList.remove('hidden');
+    updateHealthUI();
+};
+
+window.addWater = function (amount) {
+    waterIntake.amount = Math.max(0, waterIntake.amount + amount);
+    localStorage.setItem('taskforce_water', JSON.stringify(waterIntake));
+    updateHealthUI();
+};
+
+window.updateHealthUI = function () {
+    if (waterAmountEl) waterAmountEl.textContent = waterIntake.amount;
+    const waterGoalEl = document.getElementById('waterGoalDisplay');
+    if (waterGoalEl) waterGoalEl.textContent = waterIntake.goal;
+
+    if (waterProgressEl) {
+        const pct = Math.min(100, (waterIntake.amount / waterIntake.goal) * 100);
+        waterProgressEl.style.width = `${pct}%`;
+    }
+
+    // Medications rendering
+    if (medListContainer) {
+        medListContainer.innerHTML = meds.map(m => `
+            <div class="habit-item">
+                <div style="display:flex; align-items:center; gap:10px; flex:1;" onclick="toggleMed('${m.id}')">
+                    <div class="habit-checkbox ${m.done ? 'checked' : ''}"></div>
+                    <span style="${m.done ? 'text-decoration:line-through; opacity:0.6;' : ''}">💊 ${escapeHtml(m.name)}</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="editMed('${m.id}')" style="background:none; border:none; color:var(--primary); cursor:pointer; padding:5px;"><i data-lucide="edit-2" style="width:16px; height:16px;"></i></button>
+                    <button onclick="deleteMed('${m.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:5px;"><i data-lucide="trash-2" style="width:16px; height:16px;"></i></button>
+                </div>
+            </div>
+        `).join('') + `
+            <button onclick="promptAddMed()" class="btn-small-outline full-width" style="margin-top:10px;">+ Medikament hinzufügen</button>
+        `;
+        lucide.createIcons();
+    }
+
+    // Status Logic
+    const healthStatusEl = document.getElementById('dashHealthStatus');
+    if (healthStatusEl) {
+        if (waterIntake.amount >= waterIntake.goal) healthStatusEl.textContent = 'Hydriert! 🌊';
+        else if (waterIntake.amount < 500) healthStatusEl.textContent = 'Durstig 🏜️';
+        else healthStatusEl.textContent = 'Fit 💪';
+    }
+};
+
+window.editMed = function (id) {
+    const med = meds.find(m => m.id === id);
+    if (med) {
+        const newName = prompt("Medikament bearbeiten:", med.name);
+        if (newName && newName.trim()) {
+            med.name = newName.trim();
+            saveMeds();
+            updateHealthUI();
+        }
+    }
+};
+
+window.deleteMed = function (id) {
+    if (confirm("Möchtest du dieses Medikament wirklich löschen?")) {
+        meds = meds.filter(m => m.id !== id);
+        saveMeds();
+        updateHealthUI();
+    }
+};
+
+// === Translator Logic ===
+
+window.handleTranslation = async function (text, targetLang) {
+    const resultEl = document.getElementById('transResult');
+    resultEl.textContent = 'Übersetze...';
+
+    try {
+        const prompt = `Translate the following German text to the language code ${targetLang}. Provide ONLY the translation without quotes or extra text: "${text}"`;
+        const translation = await getAIResponse(prompt);
+        resultEl.textContent = translation;
+    } catch (e) {
+        resultEl.textContent = 'Fehler bei der Übersetzung.';
+        showToast('Übersetzung fehlgeschlagen', 'error');
+    }
+};
+
+window.speakText = function (text, langCode) {
+    if (!window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = langCode;
+    window.speechSynthesis.speak(utterance);
+};
+
+window.startConversationMode = function () {
+    const targetLang = document.getElementById('transTargetLang').value;
+    showToast('Gesprächsmodus aktiv. Bitte sprechen...', 'info');
+
+    startVoiceRecognition(text => {
+        document.getElementById('transInput').value = text;
+        handleTranslation(text, targetLang).then(() => {
+            const result = document.getElementById('transResult').textContent;
+            speakText(result, targetLang);
+        });
+    });
+};
+
+
+window.promptAddMed = function () {
+    const name = prompt("Name des Medikaments / Vitamins:");
+    if (name) {
+        meds.push({ id: Date.now().toString(), name, done: false });
+        saveMeds();
+        updateHealthUI();
+    }
+};
+
+window.toggleMed = function (id) {
+    const med = meds.find(m => m.id === id);
+    if (med) {
+        med.done = !med.done;
+        saveMeds();
+        updateHealthUI();
+    }
+};
+
+function saveMeds() {
+    localStorage.setItem('taskforce_meds', JSON.stringify(meds));
+}
+
+window.updateWeatherUI = function () {
+    const weatherEl = document.getElementById('headerWeather');
+    const megaWeatherEls = document.querySelectorAll('.mega-weather-dynamic');
+
+    // Simulate real weather or use geolocation if available
+    const temp = 18 + Math.floor(Math.random() * 5);
+    const icons = ['☀️', '🌤️', '⛅'];
+    const iconsLucide = ['sun', 'sun', 'cloud-sun'];
+    const idx = Math.floor(Math.random() * icons.length);
+    const icon = icons[idx];
+    const iconLucide = iconsLucide[idx];
+
+    if (weatherEl) {
+        weatherEl.innerHTML = `<span>${icon} ${temp}°C</span>`;
+    }
+
+    megaWeatherEls.forEach(el => {
+        el.innerHTML = `<i data-lucide="${iconLucide}"></i> <span>${temp}°C</span>`;
+    });
+
+    if (megaWeatherEls.length > 0 && typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+};
+
+window.checkDailyReset = function () {
+    const today = new Date().toISOString().split('T')[0];
+    const lastReset = waterIntake.lastReset || '';
+
+    if (lastReset !== today) {
+        // Reset water
+        waterIntake.amount = 0;
+        waterIntake.lastReset = today;
+        localStorage.setItem('taskforce_water', JSON.stringify(waterIntake));
+
+        // Reset habits
+        habits.forEach(h => h.done = false);
+        saveHabits();
+
+        // Reset meds
+        meds.forEach(m => m.done = false);
+        saveMeds();
+
+        updateHabitUI();
+        updateHealthUI();
+    }
+};
+
+

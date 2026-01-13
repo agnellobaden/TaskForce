@@ -28,6 +28,7 @@
 
     <link rel="stylesheet" href="compact-view.css">
     <link rel="stylesheet" href="ultra-compact.css">
+    <link rel="stylesheet" href="clock-cards.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Chart.js -->
@@ -438,7 +439,10 @@
 
                     <div id="mainClock" class="header-clock" onclick="openCalendarView()" style="cursor: pointer;">
                         <span class="clock-time">--:--</span>
-                        <span id="headerDate" class="header-date">--.--.</span>
+                        <div class="header-weather-row">
+                            <span id="headerDate" class="header-date">--.--.</span>
+                            <span id="headerWeather" class="header-weather"><i data-lucide="cloud-sun"></i> 22°C</span>
+                        </div>
                     </div>
                     <!-- Small indicator for pending syncs if any -->
                     <span id="syncIndicator" class="sync-indicator hidden"></span>
@@ -466,6 +470,8 @@
                             <button class="menu-item" id="sideCommBtn">📱 Kommunikation & Kontakt</button>
                             <button class="menu-item" id="sideDriveBtn"><i data-lucide="car"></i> Fahrt-Modus
                                 (Dashboard)</button>
+                            <button class="menu-item" id="sideTranslatorBtn"><i data-lucide="languages"></i> Übersetzer
+                                (Voice)</button>
                             <button class="menu-item" id="sideAlarmBtn"><i data-lucide="bell"></i> Wecker /
                                 Alarme</button>
                             <button class="menu-item" id="sideNightstandBtn"><i data-lucide="moon"></i> Nachtmodus
@@ -475,6 +481,8 @@
                             <label>System</label>
                             <button class="menu-item" id="sideSettingsBtn"><i data-lucide="settings"></i>
                                 Einstellungen</button>
+                            <button class="menu-item" id="sideOrganizerBtn"><i data-lucide="layout"></i>
+                                Organizer & Daten</button>
                             <button class="menu-item" id="sideSyncBtn"><i data-lucide="refresh-cw"></i> Daten
                                 synchronisieren</button>
                             <button class="menu-item logout" id="sideLogoutBtn"><i data-lucide="log-out"></i>
@@ -527,6 +535,9 @@
                         <button id="quickMailBtn" class="btn-comm-quick" title="E-Mail">
                             <span class="icon-label">E-Mail</span>
                         </button>
+                        <button id="quickTranslateBtn" class="btn-comm-quick" title="Übersetzer">
+                            <span class="icon-label">Dolmetscher</span>
+                        </button>
                         <button id="mobileExpenseBtn" class="btn-comm-quick" title="Kostenkontrolle">
                             <span class="icon-label">Kosten</span>
                         </button>
@@ -552,6 +563,38 @@
         <section class="dashboard-wrapper">
             <section class="dashboard-content" id="dashboardContent">
                 <div class="dashboard-grid">
+                    <!-- Dashboard Uhr & Datum - Enhanced Design -->
+                    <!-- Dashboard Mega-Uhr & Datum - Premium Design -->
+                    <div class="dashboard-card card-clock-mega" id="card_mega_clock" draggable="true"
+                        onclick="openCalendarView()">
+                        <div class="mega-clock-container">
+                            <div class="mega-clock-left">
+                                <div id="dashClockValue" class="mega-time clock-value-dynamic">00:00</div>
+                                <div class="mega-seconds-wrapper">
+                                    <span id="dashClockSecondsValue"
+                                        class="mega-seconds clock-seconds-dynamic">00</span>
+                                    <span class="mega-seconds-label">SEK</span>
+                                </div>
+                            </div>
+                            <div class="mega-clock-right">
+                                <div id="dashClockWeekday" class="mega-weekday clock-weekday-dynamic">Mittwoch</div>
+                                <div class="mega-date-row">
+                                    <span id="dashDateValue" class="mega-date clock-date-dynamic">01.01.</span>
+                                    <span id="dashYearValue" class="mega-year clock-year-dynamic">2026</span>
+                                </div>
+                                <div id="dashDateWeekday" class="mega-full-date clock-full-date-dynamic">1. Januar</div>
+                            </div>
+                        </div>
+                        <div class="mega-clock-footer">
+                            <div class="mega-weather mega-weather-dynamic" id="megaWeather">
+                                <i data-lucide="cloud-sun"></i> <span>22°C</span>
+                            </div>
+                            <div class="mega-status">
+                                <span class="status-dot"></span> System bereit
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Termine -->
                     <div class="dashboard-card" id="card_appointments" draggable="true"
                         onclick="showQuickChoice('appointment')">
@@ -608,6 +651,39 @@
                             </div>
                         </div>
                         <div id="dashTasksList" class="dash-list-container"></div>
+                    </div>
+
+                    <!-- NEU: Habits -->
+                    <div class="dashboard-card" id="card_habits" draggable="true" onclick="openHabitModal()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="flame"></i>
+                            <h4>Habits</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashHabits">0/0</div>
+                        <div class="dashboard-card-label">Geschafft</div>
+                        <div id="habitProgressMini" class="habit-bar-container">
+                            <div class="habit-bar" id="habitProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- NEU: Einkauf -->
+                    <div class="dashboard-card" id="card_shopping" draggable="true" onclick="openShoppingModal()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="shopping-cart"></i>
+                            <h4>Einkauf</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashShoppingItems">0</div>
+                        <div class="dashboard-card-label">Artikel</div>
+                    </div>
+
+                    <!-- NEU: Health -->
+                    <div class="dashboard-card" id="card_health" draggable="true" onclick="openHealthModal()">
+                        <div class="dashboard-card-header">
+                            <i data-lucide="heart"></i>
+                            <h4>Health</h4>
+                        </div>
+                        <div class="dashboard-card-value" id="dashHealthStatus">Fit</div>
+                        <div class="dashboard-card-label">Status</div>
                     </div>
 
                     <!-- Kosten -->
@@ -738,6 +814,17 @@
                 <div class="modal-body">
                     <div id="questionsContainer">
                         <!-- Dynamische Fragen werden hier eingefügt -->
+                    </div>
+                    <div class="form-group">
+                        <label><i data-lucide="tag"></i> Kategorie</label>
+                        <select id="taskCategorySelect" class="settings-select">
+                            <option value="Allgemein">✨ Allgemein</option>
+                            <option value="Privat">👤 Privat</option>
+                            <option value="Arbeit">💼 Arbeit</option>
+                            <option value="Einkauf">🛒 Einkauf</option>
+                            <option value="Finanzen">💰 Finanzen</option>
+                            <option value="Gesundheit">💊 Gesundheit</option>
+                        </select>
                     </div>
                     <div class="form-group task-file-upload">
                         <button type="button" id="toggleUploadBtn" class="btn-link-small"><i
@@ -1103,6 +1190,19 @@
                         </small>
                         <button id="testAiBtn" class="btn-link-small" style="margin-top: 0.5rem;">🚀 Ausgewählte KI
                             öffnen</button>
+                    </div>
+
+                    <div class="form-group"
+                        style="margin-top: 1rem; border-top: 1px solid var(--border-glass); padding-top: 1rem;">
+                        <label>🕒 Uhrzeit & Datum Position</label>
+                        <select id="clockPositionSelect" class="settings-select">
+                            <option value="top">Oben (Standard)</option>
+                            <option value="bottom">Unten (bei den Karten)</option>
+                            <option value="both">Beide (Oben & Unten)</option>
+                        </select>
+                        <small style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-top: 0.5rem;">
+                            Wähle, ob die große Uhr oben oder unten im Dashboard erscheinen soll.
+                        </small>
                     </div>
 
                     <!-- NEW: Google Maps Key Input -->
@@ -1535,6 +1635,175 @@
             }
         });
     </script>
+
+    <!-- Organizer Modal -->
+    <div id="organizerModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="layout"></i> Organizer & Daten</h2>
+                <button class="modal-close-icon" id="closeOrganizerBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="organizer-grid">
+                    <div class="organizer-card" onclick="exportData('csv')">
+                        <i data-lucide="download"></i>
+                        <span>CSV Export</span>
+                        <p>Aufgaben & Kosten</p>
+                    </div>
+                    <div class="organizer-card" onclick="exportData('json')">
+                        <i data-lucide="file-json"></i>
+                        <span>Backup (JSON)</span>
+                        <p>Alle Daten sichern</p>
+                    </div>
+                    <div class="organizer-card" onclick="document.getElementById('importInput').click()">
+                        <i data-lucide="upload"></i>
+                        <span>Wiederherstellen</span>
+                        <p>Backup einspielen</p>
+                        <input type="file" id="importInput" class="hidden" accept=".json" onchange="importData(event)">
+                    </div>
+                </div>
+
+                <div class="organizer-stats-section" style="margin-top: 2rem;">
+                    <h3>Produktivität</h3>
+                    <div class="stats-overview">
+                        <div class="stat-box">
+                            <span id="statTasksCreated">0</span>
+                            <label>Erstellt</label>
+                        </div>
+                        <div class="stat-box">
+                            <span id="statTasksDone">0</span>
+                            <label>Erledigt</label>
+                        </div>
+                        <div class="stat-box">
+                            <span id="statCompletionRate">0%</span>
+                            <label>Rate</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shopping List Modal -->
+    <div id="shoppingModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="shopping-cart"></i> Einkaufsliste</h2>
+                <button class="modal-close-icon" id="closeShoppingBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="shopping-input-group">
+                    <input type="text" id="shoppingInput" placeholder="Brot, Milch, Eier..." class="settings-input">
+                    <button id="addShoppingItemBtn" class="btn-primary-small">Hinzufügen</button>
+                </div>
+                <div id="shoppingListContainer" class="shopping-list-items">
+                    <!-- Items come here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clearShoppingBtn" class="btn-small-outline">Alle erledigten löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Habit Tracker Modal -->
+    <div id="habitModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="flame"></i> Gewohnheiten</h2>
+                <button class="modal-close-icon" id="closeHabitBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="habitListContainer" class="habit-list-items">
+                    <!-- Habits come here -->
+                </div>
+                <button id="addHabitBtn" class="btn-small-outline full-width">+ Neue Gewohnheit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Modal -->
+    <div id="healthModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="heart"></i> Health & Meds</h2>
+                <button class="modal-close-icon" id="closeHealthBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="health-section">
+                    <h3>💊 Medikamente</h3>
+                    <div id="medListContainer" class="med-list">
+                        <!-- Meds come here -->
+                    </div>
+                </div>
+                <div class="health-section">
+                    <h3>💧 Wasser</h3>
+                    <div class="water-tracker">
+                        <button onclick="addWater(-250)" class="btn-circle">-</button>
+                        <div class="water-display">
+                            <span id="waterAmount">0</span> / <span id="waterGoalDisplay" onclick="editWaterGoal()"
+                                style="cursor:pointer; text-decoration:underline;">2000</span> ml
+                            <div class="water-bar">
+                                <div id="waterProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <button onclick="addWater(250)" class="btn-circle">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Translator Modal -->
+    <div id="translatorModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i data-lucide="languages"></i> Simultan-Übersetzer</h2>
+                <button class="modal-close-icon" id="closeTranslatorBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="translator-controls" style="margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; opacity:0.8;">Ziel-Sprache:</label>
+                    <select id="transTargetLang" class="settings-select" style="width:100%;">
+                        <option value="en">Englisch 🇺🇸</option>
+                        <option value="es">Spanisch 🇪🇸</option>
+                        <option value="fr">Französisch 🇫🇷</option>
+                        <option value="it">Italienisch 🇮🇹</option>
+                        <option value="tr">Türkisch 🇹🇷</option>
+                        <option value="ru">Russisch 🇷🇺</option>
+                        <option value="ar">Arabisch 🇦🇪</option>
+                    </select>
+                </div>
+
+                <div class="translation-box">
+                    <label style="display:block; margin-bottom:5px; opacity:0.8;">Eingabe (Deutsch)</label>
+                    <div class="input-with-mic"
+                        style="position: relative; display: flex; align-items: center; gap: 10px;">
+                        <textarea id="transInput" placeholder="Sprechen oder Tippen..." rows="2" class="settings-input"
+                            style="flex: 1;"></textarea>
+                        <button id="transMicBtn" class="btn-voice-round"
+                            style="background:var(--primary); color:white; border:none; border-radius:50%; width:44px; height:44px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i
+                                data-lucide="mic"></i></button>
+                    </div>
+                </div>
+
+                <div class="translation-box result" id="transResultContainer"
+                    style="margin-top:20px; padding:20px; background:rgba(255,255,255,0.05); border-radius:12px; border:1px solid var(--border-glass);">
+                    <label style="display:block; margin-bottom:10px; opacity:0.6; font-size:0.8rem;">Übersetzung</label>
+                    <div id="transResult" class="trans-result-text"
+                        style="font-size:1.3rem; font-weight:700; color:var(--primary-light); margin-bottom:15px; min-height:1.5em;">
+                        ...</div>
+                    <button id="transSpeakBtn" class="btn-voice-round small"
+                        style="background:var(--success); color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i
+                            data-lucide="volume-2"></i></button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="startConvoBtn" class="btn-primary" style="width: 100%;">Gesprächsmodus starten</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize Lucide icons immediately
         lucide.createIcons();
@@ -1549,6 +1818,10 @@
             lucide.createIcons();
         });
     </script>
+
+    <!-- Clock and Date Update Script -->
+    <script src="clock-update.js"></script>
+
 </body>
 
 </html>

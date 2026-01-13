@@ -1,0 +1,252 @@
+/* Mega Clock and Date Card Styling - Premium Design */
+
+.card-clock-mega {
+    grid-column: span 2;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-clock-mega::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card-clock-mega:hover {
+    transform: translateY(-8px) scale(1.01);
+    border-color: var(--primary-light);
+    box-shadow: 0 20px 50px rgba(99, 102, 241, 0.3);
+}
+
+.mega-clock-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* Left Side: Time */
+.mega-clock-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.mega-time {
+    font-size: 4.5rem;
+    font-weight: 900;
+    letter-spacing: -2px;
+    background: linear-gradient(to bottom, #fff, #a5b4fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.5));
+    line-height: 1;
+}
+
+.mega-seconds-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.mega-seconds {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--secondary);
+    opacity: 0.9;
+}
+
+.mega-seconds-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    opacity: 0.6;
+}
+
+/* Right Side: Date */
+.mega-clock-right {
+    text-align: right;
+}
+
+.mega-weekday {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+}
+
+.mega-date-row {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.mega-date {
+    color: #fff;
+}
+
+.mega-year {
+    color: var(--text-muted);
+    font-weight: 300;
+    margin-left: 0.25rem;
+}
+
+.mega-full-date {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+/* Footer Section */
+.mega-clock-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+.mega-weather {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.mega-weather i {
+    color: #fbbf24;
+    /* Golden Sun */
+    filter: drop-shadow(0 0 5px #fbbf24);
+}
+
+.mega-status {
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--success);
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes card-urgent-blink {
+
+    0%,
+    100% {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        border-color: var(--secondary);
+        box-shadow: 0 0 20px var(--secondary);
+        background: rgba(244, 63, 94, 0.2);
+    }
+}
+
+.blinking-card {
+    animation: card-urgent-blink 1.5s infinite ease-in-out !important;
+    border-width: 2px !important;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .card-clock-mega {
+        padding: 1.5rem;
+        min-height: auto;
+    }
+
+    .mega-time {
+        font-size: 3.2rem;
+    }
+
+    .mega-weekday {
+        font-size: 1.1rem;
+    }
+
+    .mega-date-row {
+        font-size: 1.4rem;
+    }
+
+    .mega-seconds {
+        font-size: 1.2rem;
+    }
+}
+
+/* Widget Mode specific adjustments */
+body.widget-mode .card-clock-mega {
+    grid-column: span 2 !important;
+    padding: 1rem !important;
+    min-height: 120px !important;
+}
+
+body.widget-mode .mega-time {
+    font-size: 3rem !important;
+}
+
+body.widget-mode .mega-clock-footer {
+    display: none !important;
+    /* Hide footer in tight widget mode */
+}
