@@ -1,6 +1,12 @@
 html {
     font-size: 110%;
-    /* Slightly larger base font */
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
 }
 
 :root {
@@ -365,7 +371,7 @@ body {
     width: 100%;
     max-width: 100vw;
     min-height: 100vh;
-    -webkit-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 70%;
 }
 
 body::before {
@@ -6415,18 +6421,24 @@ body.widget-mode #toggleWidgetModeBtn {
     display: flex !important;
 }
 
-body.widget-mode .app-container {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+body.widget-mode,
+body.widget-mode html {
+    width: 100% !important;
+    height: 100% !important;
     margin: 0 !important;
-    width: 100vw !important;
-    /* Force width */
-    max-width: 100vw !important;
-    /* Strict max width */
-    overflow-x: hidden !important;
-    /* Hard Prevent horizontal scroll */
+    padding: 0 !important;
+    overflow: hidden !important;
+    /* Lock scroll */
+}
+
+body.widget-mode .app-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    /* Safer than vw */
+    height: 100% !important;
+    max-width: none !important;
+    overflow: hidden !important;
 }
 
 body.widget-mode .dashboard-wrapper {
@@ -6451,7 +6463,8 @@ body.widget-mode .dashboard-grid {
     /* Distribute rows evenly */
     gap: 8px !important;
     /* Reduce gap slightly */
-    padding: 8px !important;
+    padding: 10px 10px 10px 25px !important;
+    /* Extra padding on LEFT to shift right */
     overflow: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
