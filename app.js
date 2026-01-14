@@ -125,6 +125,21 @@ const app = {
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double'; // Default to 2 columns
 
+        // Firebase Default Config Migration
+        if (!this.state.cloud) this.state.cloud = {};
+        if (!this.state.cloud.firebaseConfig || this.state.cloud.firebaseConfig.length < 5) {
+            this.state.cloud.firebaseConfig = JSON.stringify({
+                apiKey: "AIzaSyCdiwAhgLBNnIdgvpWW3qpeTaKoSy1nTM0",
+                authDomain: "taskforce-91683.firebaseapp.com",
+                projectId: "taskforce-91683",
+                storageBucket: "taskforce-91683.firebasestorage.app",
+                messagingSenderId: "203568113458",
+                appId: "1:203568113458:web:666709ae3263977a43592b",
+                measurementId: "G-K8GQZGB8KE"
+            }, null, 2);
+            this.saveState();
+        }
+
         // Default Key Migration
         const defKey = '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';
         if (this.state.aiConfig.provider === 'openai' && (!this.state.aiConfig.openaiKey || this.state.aiConfig.openaiKey.length < 10)) {
@@ -148,10 +163,16 @@ const app = {
         }
     },
 
-    saveState() {
+    saveState(skipSync = false) {
         try {
             localStorage.setItem('taskforce_state', JSON.stringify(this.state));
             this.gamification.updateUI();
+
+            // Auto-Sync Push (Debounced)
+            if (!skipSync && this.cloud && this.cloud.push) {
+                clearTimeout(this._syncTimer);
+                this._syncTimer = setTimeout(() => this.cloud.push(), 2000);
+            }
         } catch (e) { console.error("Save Error", e); }
     },
 
@@ -200,12 +221,12 @@ const app = {
                 app.state.user = {
                     name: name,
                     password: pass,
-                    teamName: '',
-                    team: [],
+                    teamName: name, // Default Team Name is Username
+                    team: [{ id: Date.now(), name: name }],
                     isLoggedIn: true
                 };
                 app.saveState();
-                alert(`Registrierung erfolgreich! Bitte beim nächsten Login deinen Team-Namen angeben.`);
+                alert(`Registrierung erfolgreich! Dein Team-Key ist "${name}".`);
                 this.closeOverlay();
             } else {
                 // Login Check
@@ -1658,110 +1679,110 @@ const app = {
         }
     },
 
-    // --- CLOUD SYNC MODULE (Supabase) ---
+    // --- CLOUD SYNC MODULE (Firebase) ---
     cloud: {
-        client: null,
+        db: null,
+        unsubscribe: null,
         init() {
-            if (app.state.cloud && app.state.cloud.url && app.state.cloud.key && window.createClient) {
+            if (app.state.cloud && app.state.cloud.firebaseConfig && window.firebase) {
                 try {
-                    this.client = window.createClient(app.state.cloud.url, app.state.cloud.key);
+                    const config = JSON.parse(app.state.cloud.firebaseConfig);
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(config);
+                    }
+                    this.db = firebase.firestore();
+
                     const status = document.getElementById('syncStatus');
-                    if (status) status.innerHTML = '<span style="color:var(--success)">🟢 Bereit</span>';
-                    console.log("Supabase Client Initialized");
-                    // Auto-pull on init
-                    this.sync(false);
-                } catch (e) { console.error("Cloud Init Failed", e); }
+                    if (status) status.innerHTML = '<span style="color:var(--success)">🟢 Online</span>';
+                    console.log("Firebase Initialized");
+
+                    this.listen(); // Start Real-Time Listener
+                } catch (e) { console.error("Firebase Init Failed", e); }
             }
         },
-        async sync(manual = false) {
-            if (!this.client) {
-                if (manual) alert("Bitte erst Supabase URL & Key in den Einstellungen hinterlegen.");
-                return;
-            }
+        listen() {
+            if (!this.db || !app.state.user.teamName) return;
+            if (this.unsubscribe) this.unsubscribe(); // Clear old listener
+
             const team = app.state.user.teamName;
-            if (!team) {
-                if (manual) alert("Kein Team-Name gefunden. Bitte erst anmelden.");
-                return;
+            console.log("Starting Sync Listener for Team:", team);
+
+            this.unsubscribe = this.db.collection('taskforce_sync').doc(team)
+                .onSnapshot((doc) => {
+                    if (doc.exists && !doc.metadata.hasPendingWrites) {
+                        const cloudState = doc.data().data;
+                        this.mergeIncoming(cloudState);
+                        const status = document.getElementById('syncStatus');
+                        if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Live Sync (${new Date().toLocaleTimeString()})</span>`;
+                    }
+                });
+        },
+        mergeIncoming(cloudState) {
+            if (!cloudState) return;
+            let changed = false;
+
+            // Helper to merge arrays uniquely by ID
+            const mergeArray = (localArr, cloudArr) => {
+                if (!cloudArr) return false;
+                let mod = false;
+                const localIds = new Set(localArr.map(x => x.id));
+                cloudArr.forEach(item => {
+                    if (!localIds.has(item.id)) { localArr.push(item); mod = true; }
+                });
+                return mod;
+            };
+
+            if (mergeArray(app.state.tasks, cloudState.tasks)) changed = true;
+            if (mergeArray(app.state.events, cloudState.events)) changed = true;
+            if (mergeArray(app.state.expenses, cloudState.expenses)) changed = true;
+            if (mergeArray(app.state.habits, cloudState.habits)) changed = true;
+            // Health Data
+            if (cloudState.healthData) {
+                const localIds = new Set((app.state.healthData || []).map(x => x.id));
+                if (!app.state.healthData) app.state.healthData = [];
+                cloudState.healthData.forEach(h => {
+                    if (!localIds.has(h.id)) { app.state.healthData.push(h); changed = true; }
+                });
             }
 
-            const status = document.getElementById('syncStatus');
-            if (status) status.innerHTML = '🟡 Sync läuft...';
+            if (changed) {
+                app.saveState(true); // Skip Push to avoid loop
+                app.renderDashboard();
+                if (app.tasks) app.tasks.render();
+                if (app.calendar) app.calendar.render();
+                if (app.finance) app.finance.render();
+                if (app.habits) app.habits.render();
+                if (app.health) app.health.render();
+                console.log("☁️ Incoming Data Merged");
+            }
+        },
+        async push() {
+            if (!this.db || !app.state.user.teamName) return;
+            const team = app.state.user.teamName;
+
+            const payload = {
+                data: {
+                    tasks: app.state.tasks,
+                    events: app.state.events,
+                    expenses: app.state.expenses,
+                    habits: app.state.habits,
+                    healthData: app.state.healthData || [],
+                    last_updated: new Date().toISOString()
+                },
+                updated_at: new Date().toISOString()
+            };
 
             try {
-                // 1. PULL: Get latest data from cloud
-                // Table 'taskforce_sync' must exist with columns: id (text, PK), data (jsonb), updated_at (timestamptz)
-                // We use 'team' as the ID.
-                const { data, error } = await this.client
-                    .from('taskforce_sync')
-                    .select('*')
-                    .eq('id', team)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') throw error; // 116 is 'not found' which is fine for first time
-
-                let cloudState = data ? data.data : null;
-
-                // MERGE STRATEGY: 
-                // Simple strategy: Cloud wins if timestamp is newer, OR merge arrays unique by ID
-                if (cloudState) {
-                    // Merge Tasks
-                    if (cloudState.tasks) {
-                        const localIds = new Set(app.state.tasks.map(x => x.id));
-                        cloudState.tasks.forEach(t => {
-                            if (!localIds.has(t.id)) app.state.tasks.push(t);
-                        });
-                    }
-                    // Merge Events
-                    if (cloudState.events) {
-                        const localIds = new Set(app.state.events.map(x => x.id));
-                        cloudState.events.forEach(e => {
-                            if (!localIds.has(e.id)) app.state.events.push(e);
-                        });
-                    }
-                    // Merge Expenses
-                    if (cloudState.expenses) {
-                        const localIds = new Set(app.state.expenses.map(x => x.id));
-                        cloudState.expenses.forEach(e => {
-                            if (!localIds.has(e.id)) app.state.expenses.push(e);
-                        });
-                    }
-
-                    // Note: We don't overwrite settings/user, only content
-                    app.saveState();
-                    console.log("Cloud Data Merged");
-                }
-
-                // 2. PUSH: Save merged state back to cloud
-                const payload = {
-                    id: team,
-                    data: {
-                        tasks: app.state.tasks,
-                        events: app.state.events,
-                        expenses: app.state.expenses,
-                        habits: app.state.habits,
-                        healthData: app.state.healthData,
-                        last_updated: new Date().toISOString()
-                    },
-                    updated_at: new Date().toISOString()
-                };
-
-                const { error: pushError } = await this.client
-                    .from('taskforce_sync')
-                    .upsert(payload);
-
-                if (pushError) throw pushError;
-
-                if (status) status.innerHTML = `<span style="color:var(--success)">🟢 Sync OK (${new Date().toLocaleTimeString()})</span>`;
-                if (manual) alert("Synchronisation erfolgreich! ✅");
-
-                // Refresh UI
-                app.renderDashboard();
-
-            } catch (e) {
-                console.error("Sync Error:", e);
-                if (status) status.innerHTML = '<span style="color:var(--danger)">🔴 Fehler</span>';
-                if (manual) alert("Sync Fehler: " + e.message + "\n\n(Prüfe ob Tabelle 'taskforce_sync' existiert!)");
-            }
+                await this.db.collection('taskforce_sync').doc(team).set(payload, { merge: true });
+                const status = document.getElementById('syncStatus');
+                if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gesendet (${new Date().toLocaleTimeString()})</span>`;
+            } catch (e) { console.error("Push Error", e); }
+        },
+        async sync(manual = false) {
+            if (!this.db) { if (manual) alert("Kein Sync möglich (Config fehlt)."); return; }
+            this.push();
+            this.listen();
+            if (manual) alert("Sync & Push ausgeführt.");
         }
     },
 
@@ -1784,9 +1805,10 @@ const app = {
 
             // Render Cloud Config
             if (app.state.cloud) {
-                document.getElementById('syncUrl').value = app.state.cloud.url || '';
-                document.getElementById('syncKey').value = app.state.cloud.key || '';
-                if (app.state.cloud.url && app.state.cloud.key && app.cloud.client) {
+                const confInput = document.getElementById('firebaseConfigInput');
+                if (confInput) confInput.value = app.state.cloud.firebaseConfig || '';
+
+                if (app.state.cloud.firebaseConfig && app.cloud.db) {
                     document.getElementById('syncStatus').innerHTML = '<span style="color:var(--success)">🟢 Bereit</span>';
                 }
             }
@@ -1850,8 +1872,7 @@ const app = {
         },
         saveCloudConfig() {
             if (!app.state.cloud) app.state.cloud = {};
-            app.state.cloud.url = document.getElementById('syncUrl').value.trim();
-            app.state.cloud.key = document.getElementById('syncKey').value.trim();
+            app.state.cloud.firebaseConfig = document.getElementById('firebaseConfigInput').value.trim();
             app.saveState();
             // Try to init immediately
             app.cloud.init();

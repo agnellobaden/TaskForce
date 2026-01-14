@@ -722,24 +722,21 @@
                             </div>
                         </div>
 
-                        <!-- Supabase JS -->
-                        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+                        <!-- Firebase JS SDKs -->
+                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
                         <div class="card" style="border: 1px solid var(--accent);">
-                            <h3><i data-lucide="cloud"></i> Team Sync (Cloud)</h3>
+                            <h3><i data-lucide="flame"></i> Team Sync (Firebase)</h3>
                             <p class="text-muted text-sm" style="margin-bottom:15px;">
-                                Verbinde dich mit einer kostenlosen <b>Supabase</b> Datenbank, um Laptop & Handy zu
-                                synchronisieren.
+                                Verbinde dich mit deiner <b>Google Firebase</b> Datenbank.
+                                <br>Kopiere dein Konfigurations-Objekt (JSON) hier rein.
                             </p>
                             <div class="form-group">
-                                <label class="form-label">Supabase URL</label>
-                                <input type="text" id="syncUrl" class="form-input" placeholder="https://xyz.supabase.co"
-                                    onchange="app.settings.saveCloudConfig()">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Supabase Anon Key</label>
-                                <input type="password" id="syncKey" class="form-input" placeholder="eyJ..."
-                                    onchange="app.settings.saveCloudConfig()">
+                                <label class="form-label">Firebase Config (JSON)</label>
+                                <textarea id="firebaseConfigInput" class="form-input" rows="6"
+                                    placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'
+                                    onchange="app.settings.saveCloudConfig()"></textarea>
                             </div>
                             <div
                                 style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
