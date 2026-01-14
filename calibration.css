@@ -1,0 +1,80 @@
+/* Urgency and Route Features */
+
+/* Blinking Animation for Imminent Appointments */
+@keyframes blink-red {
+    0% {
+        background-color: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    50% {
+        background-color: rgba(239, 68, 68, 0.4);
+        border-color: rgba(239, 68, 68, 1);
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+    }
+
+    100% {
+        background-color: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+}
+
+.event-urgent {
+    border-left: 3px solid var(--danger);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.event-imminent {
+    animation: blink-red 1.5s infinite ease-in-out;
+    border: 1px solid var(--danger) !important;
+}
+
+/* Route Button */
+.btn-route {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-route:hover {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Detailed Event Card */
+.event-card-detail {
+    background: var(--bg-surface);
+    padding: 15px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    transition: var(--transition-fast);
+}
+
+.event-card-detail:hover {
+    background: var(--bg-surface-hover);
+}
+
+.event-meta-row {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+.event-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}

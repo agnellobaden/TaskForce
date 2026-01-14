@@ -1,0 +1,105 @@
+/* Mobile Sidebar Visibility Override v3 */
+
+@media (max-width: 768px) {
+
+    /* 1. Ensure the container logic is correct */
+    .sidebar {
+        display: block !important;
+        /* Force block */
+        position: fixed;
+        left: -280px;
+        /* Hidden state */
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        background: #0f172a;
+        /* Ensure bg is opaque */
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 1000000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow-y: auto;
+        /* enable scrolling */
+        padding-top: 60px;
+        /* Space for close button if needed */
+    }
+
+    /* 2. OPEN STATE */
+    .sidebar.open {
+        transform: translateX(280px);
+        /* Move ON screen */
+        left: -280px;
+        /* Keep base left */
+        box-shadow: 10px 0 25px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 3. Items inside must be visible */
+    .sidebar .nav-item,
+    .sidebar .nav-category {
+        display: flex !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* 4. Close Button in Sidebar */
+    #sidebarCloseBtn {
+        display: flex !important;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000001;
+    }
+
+    /* 5. Mobile Toggle Button (Menu) Fix */
+    .mobile-menu-toggle {
+        display: flex !important;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 999999;
+        width: 50px;
+        height: 50px;
+        background-color: #0f172a;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        color: white;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 6. Header Optimization: Date only */
+    .user-welcome h2 {
+        display: none !important;
+    }
+
+    .top-bar {
+        justify-content: center !important;
+        padding-top: 10px;
+        margin-bottom: 20px !important;
+    }
+
+    .user-welcome {
+        margin: 0 !important;
+        text-align: center;
+    }
+
+    #currentDateDisplay {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        color: var(--text-main) !important;
+        text-transform: capitalize;
+        opacity: 1 !important;
+    }
+
+    .top-actions {
+        display: none !important;
+    }
+}

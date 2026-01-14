@@ -1,0 +1,46 @@
+/* === EDIT/DELETE BUTTON STYLES === */
+.btn-small {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+}
+
+.btn-small:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.btn-edit {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-edit:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-delete {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-nav {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.btn-nav:hover {
+    background: rgba(34, 197, 94, 0.2);
+}

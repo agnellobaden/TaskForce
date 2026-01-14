@@ -1,0 +1,41 @@
+/* Mobile Menu Button - New Postion (Bottom Right Floating) */
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: flex !important;
+        position: fixed;
+        /* Move to Bottom Right corner */
+        top: auto !important;
+        left: auto !important;
+        bottom: 90px;
+        /* Above the bottom nav bar (approx 60-70px high) */
+        right: 20px;
+
+        z-index: 999999;
+
+        width: 56px;
+        height: 56px;
+
+        background-color: var(--primary);
+        /* Use Primary Color (Blue/Accent) */
+        border: none;
+        border-radius: 50%;
+        /* Circle */
+        color: white;
+
+        align-items: center;
+        justify-content: center;
+
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        transition: transform 0.2s;
+    }
+
+    .mobile-menu-toggle:active {
+        transform: scale(0.9);
+    }
+
+    /* Ensure the padding in header is removed since button is gone from top */
+    .top-bar {
+        padding-left: 20px !important;
+    }
+}

@@ -1,0 +1,112 @@
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .calendar-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr) !important;
+        font-size: 0.8rem;
+    }
+
+    .appointment-sidebar {
+        display: block !important;
+        /* Force show on mobile below calendar */
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+    }
+
+    .event-card-detail {
+        padding: 10px;
+    }
+
+    .view-section {
+        padding-bottom: 80px;
+        /* Space for bottom nav */
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    /* Make calendar cells bigger on mobile for touch */
+    .calendar-day {
+        min-height: 60px;
+    }
+
+    .day-number {
+        font-size: 0.8rem;
+    }
+
+    .event-marker {
+        display: none;
+        /* Hide text markers on small mobile, show dots? */
+    }
+
+    .calendar-day.today::after,
+    .calendar-day:has(.event-marker)::after {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 6px;
+        background: var(--secondary);
+        border-radius: 50%;
+        margin: 2px auto;
+    }
+}
+
+/* Night Stand Mode */
+#view-nightstand {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    /* Very dim by default */
+    font-family: inherit;
+    transition: color 0.5s;
+}
+
+#view-nightstand.active-bright {
+    color: #ef4444;
+    /* Red for night vision */
+}
+
+.night-clock {
+    font-size: 20vw;
+    font-weight: bold;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.night-date {
+    font-size: 5vw;
+    margin-top: 10px;
+    opacity: 0.7;
+}
+
+.night-alarm {
+    margin-top: 20px;
+    font-size: 4vw;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wake-lock-btn {
+    position: absolute;
+    bottom: 20px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #333;
+    color: #555;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}

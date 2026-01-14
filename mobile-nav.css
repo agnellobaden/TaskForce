@@ -1,0 +1,108 @@
+/* Mobile Navigation Enhancements */
+.mobile-nav {
+    display: none;
+    /* Default hidden on desktop */
+}
+
+@media (max-width: 768px) {
+    .mobile-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 10px 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        border-top: 1px solid var(--border);
+        z-index: 100;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-item-mobile {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.7rem;
+        cursor: pointer;
+        width: 60px;
+    }
+
+    .nav-item-mobile.active {
+        color: var(--primary);
+    }
+
+    /* Central Voice Button */
+    .nav-item-voice {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #f43f5e, #e11d48);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+        transform: translateY(-20px);
+        /* Float up */
+        border: 4px solid #0f172a;
+        /* Border to match bg */
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .nav-item-voice:active {
+        transform: translateY(-18px) scale(0.95);
+    }
+
+    /* Floating Action Button - Hide it if we have the voice button */
+    .btn-floating {
+        display: none !important;
+    }
+
+    /* Ensure content view has padding */
+    .view-section {
+        padding-bottom: 90px !important;
+    }
+}
+
+/* Edit Toolbar for Events */
+.event-edit-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-edit {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+.btn-nav {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}

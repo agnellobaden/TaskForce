@@ -1,0 +1,127 @@
+/* Calendar Specific Styles */
+.calendar-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    height: 100%;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    flex: 1;
+}
+
+.calendar-day-header {
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 10px 0;
+    font-size: 0.9rem;
+}
+
+.calendar-day {
+    background: rgba(255, 255, 255, 0.03);
+    min-height: 80px;
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.calendar-day:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.today {
+    border: 1px solid var(--primary);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.day-number {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.calendar-day.today .day-number {
+    background: var(--primary);
+    color: white;
+}
+
+.event-marker {
+    font-size: 0.7rem;
+    background: var(--secondary);
+    color: #000;
+    padding: 2px 4px;
+    border-radius: 4px;
+    width: 100%;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Voice Animation */
+.voice-listening {
+    animation: pulse-red 1.5s infinite;
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+}
+
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    }
+}
+
+/* Appointment List Side Panel (Desktop) */
+.appointment-sidebar {
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border);
+    padding: var(--spacing-md);
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 1000px) {
+    .appointment-sidebar {
+        display: none;
+        /* Hide side panel on smaller screens, show as modal or toggle */
+    }
+}

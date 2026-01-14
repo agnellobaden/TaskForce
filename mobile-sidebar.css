@@ -1,0 +1,57 @@
+/* Mobile Navigation & Sidebar Fixes */
+
+/* 1. Show Menu Toggle on Mobile Header */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+        margin-right: 15px;
+    }
+
+    .top-bar {
+        padding-left: 15px;
+        /* Adjust for logo/toggle */
+    }
+
+    /* 2. Sidebar Drawer Style for Mobile */
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        /* Hidden by default */
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        transition: left 0.3s ease;
+        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar.open {
+        left: 0;
+        /* Slide in */
+    }
+
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+        backdrop-filter: blur(2px);
+    }
+
+    .sidebar.open+.sidebar-overlay {
+        display: block;
+    }
+}
+
+/* 3. Restore Drive Mode Button in Mobile Nav if missing, or ensure it's in the Sidebar */
+/* The user asked for "Fahr Modus" to be back. It is in the "Tools" grid, but we can add it to the bottom nav or sidebar. */
+/* We will ensure it is in the Sidebar (which is the "Leiste" user can't see). */

@@ -1,0 +1,143 @@
+/* Mobile Optimization - Final Layer */
+
+@media (max-width: 768px) {
+
+    /* 1. Global Reset for Mobile */
+    body,
+    html {
+        overflow-x: hidden;
+        width: 100vw;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    /* 2. Compact Grid Layout */
+    .dashboard-grid,
+    .grid-container {
+        display: grid !important;
+        /* Columns are handled by modern-theme.css (1fr or 2fr based on setting) */
+        gap: 12px !important;
+        padding-bottom: 100px !important;
+    }
+
+    /* 3. Compact Cards */
+    .card,
+    .card-hero {
+        padding: 12px !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        /* Performance */
+        border-radius: 12px !important;
+    }
+
+    /* 4. Text Scaling */
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.3rem !important;
+    }
+
+    .card-title {
+        font-size: 0.9rem !important;
+    }
+
+    .card-value {
+        font-size: 1.8rem !important;
+    }
+
+    .text-sm {
+        font-size: 0.8rem !important;
+    }
+
+    /* 5. Inputs (Prevent Zoom) */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* 6. Drive Mode Mobile Fixes */
+    #view-drive {
+        padding-top: env(safe-area-inset-top) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+
+    #driveRouteList {
+        padding-bottom: 100px !important;
+    }
+
+    /* 7. Hide Desktop Elements */
+    .desktop-only {
+        display: none !important;
+    }
+
+    /* 8. Fix Mobile Nav overlapping content */
+    .main-content {
+        padding: 15px !important;
+        padding-bottom: 110px !important;
+        padding-top: 80px !important;
+        /* Space for top header */
+    }
+
+    /* 9. Header Adjustments */
+    .top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 10px 15px !important;
+        z-index: 50;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        height: 70px;
+    }
+
+    .user-welcome h2 {
+        font-size: 1.1rem !important;
+    }
+
+    .mobile-menu-toggle {
+        position: static !important;
+        /* We use the header layout now */
+        background: transparent !important;
+        border: none !important;
+        width: auto !important;
+        height: auto !important;
+        box-shadow: none !important;
+        margin-right: 10px;
+    }
+
+    /* 10. Quick Actions Grid Mobile */
+    .card h3 {
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .action-btn-tile {
+        padding: 8px !important;
+    }
+
+    .action-btn-tile span {
+        font-size: 0.75rem !important;
+    }
+
+    /* 11. Calendar & Tasks */
+    .calendar-day {
+        height: 40px !important;
+        font-size: 0.9rem !important;
+    }
+
+    .event-marker {
+        height: 4px !important;
+        font-size: 0 !important;
+    }
+
+    /* Dots only on mobile */
+
+    .task-item {
+        padding: 10px !important;
+    }
+}

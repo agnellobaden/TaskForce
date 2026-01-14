@@ -1,0 +1,60 @@
+/* HERO CARD STYLES */
+
+.card-hero {
+    /* Full width on desktop grid (if 3 cols, span 1 to -1) */
+    grid-column: 1 / -1;
+
+    /* Standout Design */
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+    border: 1px solid var(--primary);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+
+    /* Typography */
+    /* Ensure content is readable */
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-hero .card-title {
+    font-size: 1.4rem;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Event Item Styling inside Hero */
+.hero-event-item {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border-left: 5px solid var(--primary);
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+}
+
+.hero-event-item:active {
+    transform: scale(0.98);
+}
+
+.hero-event-item.urgent {
+    border-left-color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Ensure ALL cards are readable - prevent cut off */
+.card,
+.card-hero {
+    white-space: normal;
+    overflow: visible;
+    /* Allow popups/shadows */
+    word-wrap: break-word;
+}
+
+/* Mobile: Just standard column flow, but keep hero visual */
+@media (max-width: 768px) {
+    .card-hero {
+        grid-column: span 1;
+        /* Reset to auto span */
+        margin-bottom: 15px;
+    }
+}
