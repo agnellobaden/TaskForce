@@ -1191,8 +1191,51 @@ const app = {
         const weatherEl = document.getElementById('heroWeather');
         if (!weatherEl) return;
 
+        const runIPFallback = () => {
+            fetch('https://ipapi.co/json/')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.latitude && d.longitude) {
+                        const lat = d.latitude;
+                        const lon = d.longitude;
+                        const hour = new Date().getHours();
+                        let greeting = "Guten Tag";
+                        if (hour < 11) greeting = "Guten Morgen";
+                        else if (hour > 18) greeting = "Guten Abend";
+
+                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.current) {
+                                    const temp = Math.round(data.current.temperature_2m);
+                                    const code = data.current.weather_code;
+                                    let icon = 'cloud-sun';
+                                    if (code === 0) icon = 'sun';
+                                    else if (code <= 3) icon = 'cloud-sun';
+                                    else if (code <= 48) icon = 'cloud';
+                                    else if (code <= 67) icon = 'cloud-rain';
+                                    else if (code <= 71) icon = 'snowflake';
+                                    else if (code <= 77) icon = 'snowflake';
+                                    else if (code <= 82) icon = 'cloud-rain';
+                                    else if (code <= 99) icon = 'cloud-lightning';
+
+                                    weatherEl.innerHTML = `
+                                      <div style="font-size:0.8rem; opacity:0.8; margin-bottom:2px;">${greeting}</div>
+                                      <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
+                                         <i data-lucide="${icon}" size="16"></i> ${temp}°C
+                                      </div>
+                                 `;
+                                    if (window.lucide) lucide.createIcons();
+                                }
+                            });
+                    }
+                }).catch(e => {
+                    weatherEl.innerHTML = '<i data-lucide="wifi-off"></i> --';
+                });
+        };
+
         if (!navigator.geolocation) {
-            weatherEl.innerHTML = '<i data-lucide="cloud-off"></i> No GPS';
+            runIPFallback();
             return;
         }
 
@@ -1238,8 +1281,8 @@ const app = {
                 weatherEl.innerHTML = '<i data-lucide="wifi-off"></i> --°C';
             }
         }, (err) => {
-            console.warn("GPS Access denied", err);
-            weatherEl.innerHTML = '<i data-lucide="map-pin-off"></i> GPS?';
+            console.warn("GPS Access denied, using IP fallback.", err);
+            runIPFallback();
         });
     },
 
@@ -3695,6 +3738,7 @@ const app = {
                 const cat = document.querySelector('input[name="taskCategory"]:checked').value;
                 app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat);
                 this.close();
+                app.navigateTo('dashboard');
             }
         },
         submitExpense() {
@@ -3705,6 +3749,7 @@ const app = {
             if (d && a && date) {
                 app.finance.add(a, d, date, u);
                 this.close();
+                app.navigateTo('dashboard');
             }
         },
         submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); } },
@@ -3717,18 +3762,19 @@ const app = {
                 stock: parseInt(document.getElementById('reminderStock').value) || 0,
                 notes: document.getElementById('reminderNotes').value
             };
-            if (data.name && data.time) {
-                app.health.addReminder(data);
-                this.close();
-            }
+            app.health.addReminder(data);
+            this.close();
+            app.navigateTo('dashboard');
         },
         submitHydrationSettings() {
+            // (Setting update stays on page or optionally dashboard... User said "whatever I save")
+            // Assuming settings might be fine to stay, but strictly "egal was speichere" -> Home
             app.state.hydrationGoal = parseFloat(document.getElementById('hydrationGoal').value) || 2.5;
             app.state.hydrationReminderInterval = parseInt(document.getElementById('hydrationInterval').value) || 120;
             app.state.hydrationReminderMethod = document.getElementById('hydrationMethod').value;
             app.state.hydrationReminderEnabled = document.getElementById('hydrationEnabled').checked;
 
-            // Weight reminder settings
+            // Weight settings
             app.state.weightReminderEnabled = document.getElementById('weightEnabled').checked;
             app.state.weightReminderDay = parseInt(document.getElementById('weightDay').value);
 
@@ -3737,6 +3783,7 @@ const app = {
             app.health.startWeightReminder();
             app.health.render();
             this.close();
+            app.navigateTo('dashboard');
         },
         submitHabit() {
             const name = document.getElementById('habitName').value;
@@ -3751,6 +3798,7 @@ const app = {
                 app.habits.render();
                 app.renderDashboard();
                 this.close();
+                app.navigateTo('dashboard');
             }
         },
         submitEvent() {
@@ -3764,7 +3812,11 @@ const app = {
                 notes: document.getElementById('evtNotes').value,
                 urgent: document.getElementById('evtUrgent').checked
             };
-            if (data.title && data.date && data.time) { app.calendar.addEvent(data); this.close(); }
+            if (data.title && data.date && data.time) {
+                app.calendar.addEvent(data);
+                this.close();
+                app.navigateTo('dashboard');
+            }
         }
     },
     contacts: {
@@ -3774,6 +3826,8 @@ const app = {
             app.saveState();
             this.render();
             app.renderDashboard();
+            app.modals.close(); // Close if open
+            app.navigateTo('dashboard');
         },
         delete(id) {
             app.state.contacts = app.state.contacts.filter(c => c.id !== id);
