@@ -1181,6 +1181,66 @@ const app = {
                 app.notifications.check();
             }
         }, 1000);
+
+        // Start Weather Update Loop
+        this.updateWeather();
+        setInterval(() => this.updateWeather(), 600000); // Update every 10 mins
+    },
+
+    async updateWeather() {
+        const weatherEl = document.getElementById('heroWeather');
+        if (!weatherEl) return;
+
+        if (!navigator.geolocation) {
+            weatherEl.innerHTML = '<i data-lucide="cloud-off"></i> No GPS';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+
+            try {
+                // Determine Greeting based on time
+                const hour = new Date().getHours();
+                let greeting = "Guten Tag";
+                if (hour < 11) greeting = "Guten Morgen";
+                else if (hour > 18) greeting = "Guten Abend";
+
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+                const data = await res.json();
+
+                if (data.current) {
+                    const temp = Math.round(data.current.temperature_2m);
+                    const code = data.current.weather_code;
+
+                    // Simple WMO Code Map
+                    let icon = 'cloud-sun';
+                    if (code === 0) icon = 'sun';
+                    else if (code <= 3) icon = 'cloud-sun';
+                    else if (code <= 48) icon = 'cloud';
+                    else if (code <= 67) icon = 'cloud-rain';
+                    else if (code <= 71) icon = 'snowflake';
+                    else if (code <= 77) icon = 'snowflake';
+                    else if (code <= 82) icon = 'cloud-rain';
+                    else if (code <= 99) icon = 'cloud-lightning';
+
+                    weatherEl.innerHTML = `
+                         <div style="font-size:0.8rem; opacity:0.8; margin-bottom:2px;">${greeting}</div>
+                         <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="${icon}" size="16"></i> ${temp}°C
+                         </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                }
+            } catch (e) {
+                console.error("Weather fetch failed", e);
+                weatherEl.innerHTML = '<i data-lucide="wifi-off"></i> --°C';
+            }
+        }, (err) => {
+            console.warn("GPS Access denied", err);
+            weatherEl.innerHTML = '<i data-lucide="map-pin-off"></i> GPS?';
+        });
     },
 
     // --- NOTIFICATIONS MODULE ---
@@ -2807,9 +2867,27 @@ const app = {
                 .onSnapshot((doc) => {
                     if (doc.exists && !doc.metadata.hasPendingWrites) {
                         const cloudState = doc.data().data;
-                        this.mergeIncoming(cloudState);
+                        this.mergeIncoming(cloudState); // Load Cloud Data
+
                         const status = document.getElementById('syncStatus');
                         if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Live Sync (${new Date().toLocaleTimeString()})</span>`;
+                    } else if (!doc.exists && !doc.metadata.hasPendingWrites) {
+                        // NEW TEAM DETECTED (No cloud data found)
+                        // "sollen meine ganzen anderen termine nicht drin stehen"
+                        // Clear local data to start fresh for this new individual team
+                        console.log("New Team detected. Clearing local state.");
+                        app.state.tasks = [];
+                        app.state.events = [];
+                        app.state.expenses = [];
+                        app.state.habits = [];
+                        app.state.healthData = [];
+                        app.state.alarms = [];
+
+                        app.saveState(); // Save empty state locally
+                        app.renderDashboard(); // Update UI
+
+                        // Optional: Create initial empty doc in cloud? 
+                        // Or wait for first user action to create it via pushState.
                     }
                 });
         },
