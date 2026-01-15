@@ -1,0 +1,176 @@
+/* === ADDITIONAL MOBILE OPTIMIZATIONS === */
+@media (max-width: 480px) {
+
+    /* Extra small screens (phones in portrait) */
+    .main-content {
+        padding: 8px;
+        padding-bottom: 110px;
+    }
+
+    .dashboard-grid {
+        gap: 10px;
+        padding-bottom: 110px;
+        /* Respects user's column preference */
+    }
+
+    /* Single column mode gets full width cards */
+    .dashboard-grid.single-column-mode>.card {
+        grid-column: span 1 !important;
+    }
+
+    .card {
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .card-title {
+        font-size: 0.8rem;
+    }
+
+    .card-value {
+        font-size: 1.3rem;
+    }
+
+    /* Hero clock smaller on very small screens */
+    .clock-large {
+        font-size: 2rem !important;
+    }
+
+    .hero-clock-card {
+        margin: -8px -8px 10px -8px !important;
+        grid-column: span 2 !important;
+        /* Hero always full width */
+    }
+
+    /* Smaller buttons on small screens */
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-small {
+        width: 26px;
+        height: 26px;
+    }
+
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Compact top bar */
+    .top-bar {
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    /* Calendar optimization for small screens */
+    .calendar-day {
+        min-height: 50px;
+        padding: 3px;
+        font-size: 0.7rem;
+    }
+
+    .day-number {
+        font-size: 0.8rem;
+    }
+
+    .event-marker {
+        font-size: 0.6rem;
+        padding: 1px 3px;
+    }
+
+    /* Form elements */
+    .form-input,
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+        padding: 10px !important;
+    }
+
+    /* Modal full screen on small devices */
+    #modalContent {
+        width: 98% !important;
+        max-height: 95vh;
+        padding: 12px;
+    }
+
+    /* Compact mobile nav */
+    .mobile-nav {
+        padding: 6px 0;
+    }
+
+    .nav-item-mobile {
+        font-size: 0.65rem;
+    }
+
+    .voice-inner {
+        width: 50px;
+        height: 50px;
+    }
+
+    /* Task and expense entries more compact */
+    .task-item,
+    .expense-entry,
+    .health-entry {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+
+    /* Communication tiles smaller */
+    .comm-tile {
+        padding: 10px;
+    }
+
+    .tile-circle {
+        width: 36px;
+        height: 36px;
+    }
+
+    .comm-tile span {
+        font-size: 0.65rem;
+    }
+}
+
+/* === LANDSCAPE MOBILE OPTIMIZATION === */
+@media (max-width: 768px) and (orientation: landscape) {
+    .main-content {
+        padding: 10px;
+        padding-bottom: 80px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+    }
+
+    .hero-clock-card {
+        grid-column: span 2 !important;
+    }
+
+    .clock-large {
+        font-size: 2rem !important;
+    }
+
+    .mobile-nav {
+        padding: 4px 0;
+    }
+}
+
+/* === SAFE AREA INSETS FOR NOTCHED DEVICES === */
+@supports (padding: max(0px)) {
+    .main-content {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-bottom: max(100px, env(safe-area-inset-bottom));
+    }
+
+    .mobile-nav {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    .top-bar {
+        padding-top: max(0px, env(safe-area-inset-top));
+    }
+}

@@ -53,8 +53,37 @@
 /* Mobile: Just standard column flow, but keep hero visual */
 @media (max-width: 768px) {
     .card-hero {
-        grid-column: span 1;
-        /* Reset to auto span */
+        grid-column: span 2 !important;
+        /* Hero always full width on mobile */
         margin-bottom: 15px;
+    }
+
+    /* Hero footer responsive layout */
+    .hero-footer {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: space-between;
+    }
+
+    /* Layout toggle button mobile optimization */
+    .hero-footer button {
+        font-size: 0.7rem !important;
+        padding: 5px 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-footer {
+        gap: 6px;
+    }
+
+    .hero-footer button {
+        font-size: 0.65rem !important;
+        padding: 4px 8px !important;
+    }
+
+    .hero-footer button i {
+        width: 12px !important;
+        height: 12px !important;
     }
 }

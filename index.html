@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="mobile-menu-fab.css">
     <link rel="stylesheet" href="hero-cards.css">
     <link rel="stylesheet" href="mobile-optimize.css">
+    <link rel="stylesheet" href="mobile-optimizations.css">
     <link rel="stylesheet" href="button-toolbar.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -221,6 +222,14 @@
                             <div class="weather-brief" id="heroWeather">
                                 <i data-lucide="cloud-sun" size="18"></i> 22°C
                             </div>
+                            <button onclick="app.settings.toggleLayoutQuick()"
+                                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='rgba(255,255,255,0.4)'"
+                                onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.2)'"
+                                title="Layout wechseln">
+                                <i data-lucide="layout-grid" size="14" id="layoutToggleIcon"></i>
+                                <span id="layoutToggleText">2 Spalten</span>
+                            </button>
                             <div class="status-pill">
                                 <span class="status-dot"></span> System bereit
                             </div>
@@ -233,7 +242,8 @@
 
 
 
-                        <div class="card card-communication" style="grid-column: span 1;">
+                        <div id="dashboardCommunicationCard" class="card card-communication"
+                            style="grid-column: span 1;">
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
@@ -285,7 +295,7 @@
                         </div>
 
                         <!-- 4. TASKS & EINKAUF (Parallel) -->
-                        <div class="card" style="grid-column: span 1;"
+                        <div id="dashboardTasksCard" class="card" style="grid-column: span 1;"
                             onclick="app.tasks.filter('todo'); app.navigateTo('tasks')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
@@ -297,7 +307,7 @@
                             <div id="dashboardTaskPreview"></div>
                         </div>
 
-                        <div class="card" style="grid-column: span 1;"
+                        <div id="dashboardShoppingCard" class="card" style="grid-column: span 1;"
                             onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
@@ -327,7 +337,8 @@
                         </div>
 
                         <!-- 6. FINANZEN & WECKER (Utilities) -->
-                        <div class="card" style="grid-column: span 1;" onclick="app.navigateTo('finance')">
+                        <div id="dashboardFinanceCard" class="card" style="grid-column: span 1;"
+                            onclick="app.navigateTo('finance')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
@@ -601,7 +612,12 @@
 
                     <!-- History -->
                     <div class="card" style="grid-column: span 2;">
-                        <h3><i data-lucide="history"></i> Ausgaben Historie</h3>
+                        <div class="card-header">
+                            <span class="card-title"><i data-lucide="history"></i> Ausgaben Historie</span>
+                            <button class="btn-small btn-primary" onclick="app.modals.open('addExpense')">
+                                <i data-lucide="plus" size="16"></i> Neu
+                            </button>
+                        </div>
                         <div id="expenseHistory" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
                         </div>
                     </div>

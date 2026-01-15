@@ -114,6 +114,13 @@ const app = {
 
         // Listen for back button
         window.addEventListener('popstate', (event) => {
+            // Check if modal is open
+            const o = document.getElementById('modalOverlay');
+            if (o && !o.classList.contains('hidden')) {
+                app.modals.close(true); // Close, but skip history.back() as we are already there
+                return;
+            }
+
             if (event.state && event.state.page) {
                 this.navigateTo(event.state.page, true); // true = don't push to history
             } else {
@@ -956,6 +963,7 @@ const app = {
         }
 
         // --- DASHBOARD CARD URGENCY BLINKING ---
+        // --- DASHBOARD CARD URGENCY BLINKING & STYLING ---
         const toggleCardBlink = (id, condition) => {
             const el = document.getElementById(id);
             if (el) {
@@ -968,21 +976,83 @@ const app = {
         const hasUrgentTasks = app.state.tasks.some(t => !t.done && t.category !== 'shopping' && t.urgent);
         toggleCardBlink('dashboardTasksCard', hasUrgentTasks);
 
-        // 2. Shopping (Already handled in preview potentially, but applied to container now)
+        // 2. Shopping
         const hasUrgentShopping = app.state.tasks.some(t => !t.done && t.category === 'shopping' && t.urgent);
         toggleCardBlink('dashboardShoppingCard', hasUrgentShopping);
 
-        // 3. Finance
-        const hasUrgentFinance = (app.state.expenses || []).some(e => e.urgent);
-        toggleCardBlink('dashboardFinanceCard', hasUrgentFinance);
+        // 3. Communications (Check Calendar for keywords: Anruf, Call, Telefon)
+        const todayEvents = app.state.events.filter(e => e.start.startsWith(todayStr));
+        const hasImportantCall = todayEvents.some(e => {
+            const txt = (e.title + ' ' + (e.notes || '')).toLowerCase();
+            return txt.includes('anruf') || txt.includes('call') || txt.includes('telefon') || txt.includes('wichtig');
+        });
+        toggleCardBlink('dashboardCommunicationCard', hasImportantCall);
+
+        // 4. Finance (Colors instead of blinking)
+        const finCard = document.getElementById('dashboardFinanceCard');
+        const finTitle = finCard ? finCard.querySelector('.card-title') : null;
+        if (finCard) {
+            finCard.classList.remove('border-yellow', 'border-red', 'blink-urgent', 'blink-warning', 'blink-danger');
+
+            // Reset Icon (remove warning if exists)
+            if (finTitle) {
+                const warningIcon = finTitle.querySelector('.fin-warning-icon');
+                if (warningIcon) warningIcon.remove();
+            }
+
+            // Priority 1: Critical Budget Usage (> 85%)
+            if (budgetPercent > 85) {
+                finCard.classList.add('blink-danger');
+                // Add Icon
+                if (finTitle) {
+                    finTitle.innerHTML += ` <i data-lucide="alert-triangle" class="fin-warning-icon text-danger" style="margin-left:5px;"></i>`;
+                }
+            }
+            // Priority 2: Warning Budget Usage (> 50%)
+            else if (budgetPercent > 50) {
+                finCard.classList.add('blink-warning');
+            }
+            // Priority 3: Check for specific urgent items if budget is fine
+            else {
+                const hasUrgentExpense = (app.state.expenses || []).some(e => e.urgent);
+                if (hasUrgentExpense) finCard.classList.add('blink-urgent');
+            }
+        }
 
         // 4. Health
-        const hasUrgentHealth = (app.state.healthData || []).some(e => e.urgent);
-        toggleCardBlink('dashboardHealthCard', hasUrgentHealth);
+        // "Vitalität soll wenn es über eine stunde nicht getrunken worden ist soll rat erscheinen"
+        // Check time since last drink
+        const nowMs = Date.now();
+        const waterEntries = (app.state.healthData || [])
+            .filter(d => d.type === 'water')
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        const lastDrinkTime = waterEntries.length > 0 ? new Date(waterEntries[0].timestamp).getTime() : 0;
+        const timeSinceDrink = nowMs - lastDrinkTime;
+        const oneHourMs = 60 * 60 * 1000;
+
+        // Critical: No drink for > 1 Hour AND it is daytime (08:00 - 22:00)
+        const currentHour = new Date().getHours();
+        const isDaytime = currentHour >= 8 && currentHour <= 22;
+        const hydrationCritical = isDaytime && (timeSinceDrink > oneHourMs);
+
+        const healthCard = document.getElementById('dashboardHealthCard');
+        if (healthCard) {
+            healthCard.classList.remove('blink-urgent', 'blink-danger');
+
+            if (hydrationCritical) {
+                healthCard.classList.add('blink-danger'); // "soll rot erscheinen"
+            } else {
+                const hasUrgentHealth = (app.state.healthData || []).some(e => e.urgent);
+                if (hasUrgentHealth) healthCard.classList.add('blink-urgent');
+            }
+        }
 
         // 5. Habits
         const hasUrgentHabits = (app.state.habits || []).some(h => h.urgent);
         toggleCardBlink('dashboardHabitsCard', hasUrgentHabits);
+
+
 
         // 6. Alarms Preview
         const alarmPreview = document.getElementById('dashboardAlarmsPreview');
@@ -1007,6 +1077,13 @@ const app = {
             }
         }
         toggleCardBlink('dashboardAlarmsCard', (app.state.alarms || []).some(a => a.active));
+
+        // Update layout toggle button text
+        const layoutBtnText = document.getElementById('layoutToggleText');
+        if (layoutBtnText) {
+            const currentLayout = app.state.dashboardLayout || 'double';
+            layoutBtnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
+        }
 
         if (window.lucide) lucide.createIcons();
     },
@@ -2841,6 +2918,32 @@ const app = {
             app.saveState();
             this.applyVoiceIconPreference();
         },
+        toggleLayoutQuick() {
+            // Toggle between single and double column
+            const currentLayout = app.state.dashboardLayout || 'double';
+            const newLayout = currentLayout === 'single' ? 'double' : 'single';
+
+            app.state.dashboardLayout = newLayout;
+            app.saveState();
+            this.applyLayoutPreference();
+
+            // Update button text and icon
+            const btnText = document.getElementById('layoutToggleText');
+            const btnIcon = document.getElementById('layoutToggleIcon');
+
+            if (btnText) {
+                btnText.textContent = newLayout === 'single' ? '1 Spalte' : '2 Spalten';
+            }
+
+            // Optional: Show brief feedback
+            if (window.lucide) lucide.createIcons();
+
+            // Update settings dropdown if on settings page
+            const settingsSelect = document.getElementById('dashboardLayoutSelect');
+            if (settingsSelect) {
+                settingsSelect.value = newLayout;
+            }
+        },
         updateAIProvider() {
             const provider = document.getElementById('aiProviderSelect').value;
             document.querySelectorAll('.ai-config-fields').forEach(el => el.classList.add('hidden'));
@@ -2892,6 +2995,9 @@ const app = {
             const c = document.getElementById('modalContent');
             if (!o || !c) return;
             o.classList.remove('hidden');
+
+            // Push history state so back button closes modal
+            window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
 
             if (type === 'addContact') {
                 c.innerHTML = `
@@ -3114,10 +3220,16 @@ const app = {
                 const amount = data.amount || '';
                 c.innerHTML = `
                 <div style="padding:20px;">
-                    <h3>Ausgabe erfassen</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; position:sticky; top:0; background:var(--bg-card); z-index:10; padding:10px 0; border-bottom:1px solid var(--border);">
+                        <h3 style="margin:0;">Ausgabe erfassen</h3>
+                        <button class="btn btn-primary btn-small" onclick="app.modals.submitExpense()">▼ Speichern</button>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Wofür?</label>
-                        <input id="expDesc" class="form-input" value="${desc}" placeholder="z.B. Lebensmittel">
+                        <div style="display:flex; gap:5px;">
+                            <input id="expDesc" class="form-input" value="${desc}" placeholder="z.B. Lebensmittel">
+                            <button class="btn-secondary" onclick="app.voice.listenTo('expDesc')" title="Spracheingabe"><i data-lucide="mic"></i></button>
+                        </div>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <div class="form-group">
@@ -3132,7 +3244,9 @@ const app = {
                     <div class="form-group">
                         <label><input type="checkbox" id="expUrgent"> 🔥 Wichtig / Dringend</label>
                     </div>
-                    <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="margin-top:10px;width:100%;">Speichern</button>
+                    <div style="position: sticky; bottom: -20px; background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px; margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px;">
+                         <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="width:100%;">Speichern</button>
+                    </div>
                 </div>`;
             } else if (type === 'addHealthReminder') {
                 c.innerHTML = `
@@ -3226,78 +3340,108 @@ const app = {
             } else if (type === 'addTeamMember') {
                 c.innerHTML = `<div style="padding:20px;"><h3>Mitarbeiter hinzufügen</h3><input id="teamMemberName" class="form-input" placeholder="Name"><button class="btn btn-primary" onclick="app.modals.submitTeamMember()" style="margin-top:10px;width:100%;">Hinzufügen</button></div>`;
             } else if (type === 'dailyStatus') {
-                // Calculate Stats
-                const t = app.state.tasks || [];
-                const tot = t.length;
-                const done = t.filter(x => x.done).length;
-                const urg = t.filter(x => !x.done && x.urgent).length;
-                const open = tot - done;
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                const dateDisplay = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                // Finance Today
-                const todayStr = new Date().toISOString().split('T')[0];
-                const finToday = (app.state.expenses || []).filter(e => e.date && e.date.startsWith(todayStr)).reduce((a, b) => a + b.amount, 0);
+                // --- DATA ---
+                const events = (app.state.events || [])
+                    .filter(e => e.start.startsWith(todayStr))
+                    .sort((a, b) => new Date(a.start) - new Date(b.start));
 
-                // Events Today
-                const evToday = (app.state.events || []).filter(e => e.start.startsWith(todayStr)).length;
+                const tasksOpen = (app.state.tasks || []).filter(t => !t.done && t.category !== 'shopping');
+                const tasksUrgent = tasksOpen.filter(t => t.urgent);
 
-                // Lists Generation
-                const urgentItems = t.filter(x => !x.done && x.urgent).map(task =>
-                    `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--danger);">
-                        <span>🔥 ${task.title}</span>
-                    </div>`
-                ).join('') || '<div class="text-muted text-sm" style="padding:8px;">Keine dringenden Aufgaben.</div>';
+                const habitsToday = (app.state.habits || []).filter(h => !h.days || h.days.includes(now.getDay()));
+                const habitsDone = habitsToday.filter(h => h.history && h.history.includes(todayStr)).length;
 
-                const openItems = t.filter(x => !x.done && !x.urgent && x.category !== 'shopping').map(task =>
-                    `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <span>${task.title}</span>
-                    </div>`
-                ).join('') || '<div class="text-muted text-sm" style="padding:8px;">Alles erledigt.</div>';
+                const spentToday = (app.state.expenses || [])
+                    .filter(e => e.date === todayStr)
+                    .reduce((sum, e) => sum + e.amount, 0);
 
-                const doneItems = t.filter(x => x.done).slice(0, 5).map(task =>
-                    `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); text-decoration:line-through; color:var(--text-muted);">
-                        <span>${task.title}</span>
-                    </div>`
-                ).join('') || '<div class="text-muted text-sm" style="padding:8px;">Noch nichts erledigt.</div>';
+                const waterToday = (app.state.healthData || [])
+                    .filter(d => d.type === 'water' && d.date === todayStr)
+                    .reduce((sum, d) => sum + d.value, 0);
+                const waterGoal = app.state.hydrationGoal || 2.5;
 
+                // --- UI ---
                 c.innerHTML = `
-                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
-                    <h3><i data-lucide="activity"></i> Tages-Check</h3>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; margin-top:10px;">
-                        <div class="card" style="margin:0; text-align:center; padding:15px; background:rgba(239,68,68,0.1);">
-                            <div style="font-size:1.5rem; font-weight:bold; color:var(--danger);">${urg}</div>
-                            <div class="text-muted text-xs">Dringend</div>
+                <div style="padding: 20px 20px 80px 20px; max-height: 85vh; overflow-y: auto;">
+                    <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted);" onclick="app.modals.close()"><i data-lucide="x"></i></button>
+                    
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Tages-Check</h2>
+                        <div class="text-muted">${dateDisplay}</div>
+                    </div>
+
+                    ${tasksUrgent.length > 0 ? `
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
+                        <div style="color: var(--danger); font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="alert-triangle"></i> Dringend!
                         </div>
-                        <div class="card" style="margin:0; text-align:center; padding:15px; background:rgba(255,255,255,0.05);">
-                            <div style="font-size:1.5rem; font-weight:bold;">${open}</div>
-                            <div class="text-muted text-xs">Offen</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${tasksUrgent.map(t => `<div style="background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 8px; font-size: 0.95rem;">${t.title}</div>`).join('')}
                         </div>
-                         <div class="card" style="margin:0; text-align:center; padding:15px; background:rgba(34,197,94,0.1);">
-                            <div style="font-size:1.5rem; font-weight:bold; color:var(--success);">${done}</div>
-                            <div class="text-muted text-xs">Erledigt</div>
+                    </div>` : ''}
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="calendar" size="18" class="text-primary"></i> Termine Heute</h4>
+                        ${events.length > 0 ? `
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                ${events.map(e => {
+                    const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const isPast = new Date(e.start) < now;
+                    return `
+                                    <div style="display: flex; align-items: center; gap: 15px; opacity: ${isPast ? 0.5 : 1}; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px;">
+                                        <div style="background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; min-width: 60px; text-align: center;">${time}</div>
+                                        <div>
+                                            <div style="font-weight: 600;">${e.title}</div>
+                                            ${e.location ? `<div class="text-xs text-muted">📍 ${e.location}</div>` : ''}
+                                        </div>
+                                    </div>`;
+                }).join('')}
+                            </div>
+                        ` : `<div class="text-muted text-sm" style="padding:10px; text-align:center; background:rgba(255,255,255,0.03); border-radius:10px;">Heute keine Termine mehr.</div>`}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                        <div class="card" style="padding: 15px; margin: 0; background: rgba(255,255,255,0.03);">
+                            <div class="text-muted text-xs mb-1">Aufgaben</div>
+                            <div style="font-size: 1.4rem; font-weight: bold;">${tasksOpen.length} <span class="text-sm text-muted font-normal">Offen</span></div>
                         </div>
-                         <div class="card" style="margin:0; text-align:center; padding:15px; background:rgba(59,130,246,0.1);">
-                            <div style="font-size:1.5rem; font-weight:bold; color:var(--primary);">${finToday}€</div>
-                            <div class="text-muted text-xs">Ausgaben</div>
+                        <div class="card" style="padding: 15px; margin: 0; background: rgba(255,255,255,0.03);">
+                            <div class="text-muted text-xs mb-1">Habits</div>
+                            <div style="font-size: 1.4rem; font-weight: bold;">${habitsDone}/${habitsToday.length}</div>
+                            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+                                <div style="height: 100%; width: ${habitsToday.length ? (habitsDone / habitsToday.length) * 100 : 0}%; background: var(--success);"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Detailed Lists -->
-                    <div style="margin-bottom:15px;">
-                        <h4 style="color:var(--danger); border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:5px;">Dringend</h4>
-                        ${urgentItems}
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="bar-chart-2" size="18" class="text-accent"></i> Status</h4>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="droplet" class="text-primary"></i>
+                                    <span>Wasser</span>
+                                </div>
+                                <div style="font-weight: bold;">${waterToday.toFixed(1)} / ${waterGoal} L</div>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="euro" class="text-danger"></i>
+                                    <span>Ausgaben</span>
+                                </div>
+                                <div style="font-weight: bold;">${spentToday.toFixed(2)} €</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style="margin-bottom:15px;">
-                        <h4 style="color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:5px;">Offen</h4>
-                        ${openItems}
-                    </div>
-
-                    <div style="margin-bottom:15px;">
-                        <h4 style="color:var(--success); border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:5px;">Erledigt (Top 5)</h4>
-                        ${doneItems}
-                    </div>
-
-                <button class="btn btn-primary" onclick="app.modals.close()" style="width:100%;">Alles Klar 👍</button>
+                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size:1.1rem;" onclick="app.modals.close()">
+                        Alles Klar ✅
+                    </button>
+                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
                 </div>`;
             } else if (type === 'addHabit') {
                 const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -3336,10 +3480,15 @@ const app = {
             }
             if (window.lucide) lucide.createIcons();
         },
-        close() {
+        close(fromHistory = false) {
             const o = document.getElementById('modalOverlay');
             if (o) o.classList.add('hidden');
             app.editingId = null;
+
+            // Create loop breaker
+            if (!fromHistory) {
+                window.history.back();
+            }
         },
         // Old saveAlarm removed - now handled by app.alarms.save
         submitTask() {

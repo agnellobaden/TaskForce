@@ -207,6 +207,7 @@ h4 {
 .main-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--spacing-lg);
     position: relative;
 }
@@ -263,14 +264,18 @@ h4 {
 .dashboard-grid {
     display: grid;
     /* Max 2 columns on desktop (1fr 1fr), but also responsive */
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-md);
     /* Reduced gap */
     padding-bottom: 80px;
     /* Space for mobile nav */
-    max-width: 1200px;
-    /* Optional constraint */
+    max-width: 100%;
+    /* Prevent overflow */
+    width: 100%;
+    /* Full width of container */
     margin: 0 auto;
+    box-sizing: border-box;
+    /* Include padding in width calculation */
 }
 
 /* Single Column Mode (User Preference) */
@@ -375,20 +380,94 @@ h4 {
     }
 
     /* Mobile Layout Adjustments */
+    .main-content {
+        padding: 12px;
+        /* Reduced padding for mobile */
+        padding-bottom: 100px;
+        /* Extra space for mobile nav */
+    }
+
     .dashboard-grid {
-        /* Allow 2 columns by default (inherit from main), unless single-column-mode is active */
+        /* Keep 2 columns by default (respects user preference) */
+        gap: 12px;
+        padding-bottom: 100px;
+        /* Extra space for mobile nav */
+    }
+
+    /* Single column mode when user selects it */
+    .dashboard-grid.single-column-mode {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* All cards span full width ONLY in single-column mode */
+    .dashboard-grid.single-column-mode>.card {
+        grid-column: span 1 !important;
+        max-width: 100%;
+    }
+
+    /* Ensure cards don't overflow */
+    .card {
+        padding: 14px;
+        /* Slightly reduced padding for mobile */
+        overflow: visible;
+        /* Ensure content is visible */
+    }
+
+    /* Card titles smaller on mobile */
+    .card-title {
+        font-size: 0.85rem;
+    }
+
+    .card-value {
+        font-size: 1.5rem;
+        /* Smaller values on mobile */
+    }
+
+    /* Top bar adjustments for mobile */
+    .top-bar {
+        flex-wrap: wrap;
         gap: 10px;
+        margin-bottom: 12px;
     }
 
-    /* In 2-column mode (default), keep hero cards full width */
-    .dashboard-grid:not(.single-column-mode) .card-hero {
-        grid-column: span 2 !important;
+    .top-command-field {
+        flex: 1;
+        min-width: 200px;
     }
 
-    /* Force 1 column ONLY if single-column-mode is active (handled by the main class) 
-       OR if we want a specific fallback, but the user requested "Double" option.
-       We literally just remove the 'grid-template-columns: 1fr !important' so it falls back to the Desktop 'repeat(2, 1fr)'
-    */
+    .top-actions {
+        gap: 6px;
+    }
+
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Hero clock adjustments */
+    .hero-clock-card {
+        margin: -12px -12px 12px -12px !important;
+    }
+
+    .clock-large {
+        font-size: 2.5rem !important;
+    }
+
+    /* Calendar grid mobile optimization */
+    .calendar-day {
+        min-height: 60px;
+        padding: 4px;
+        font-size: 0.75rem;
+    }
+
+    .day-number {
+        font-size: 0.9rem;
+    }
+
+    .event-marker {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+    }
 
     .nav-item-mobile {
         display: flex;
@@ -441,6 +520,30 @@ h4 {
 
     .voice-inner i {
         filter: none !important;
+    }
+
+    /* Form inputs mobile optimization */
+    .form-input {
+        font-size: 16px !important;
+        /* Prevents zoom on iOS */
+    }
+
+    /* Modal adjustments for mobile */
+    #modalContent {
+        width: 95% !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    /* Button adjustments for mobile */
+    .btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-small {
+        width: 28px;
+        height: 28px;
     }
 }
 
@@ -636,6 +739,59 @@ button {
 .appointment-imminent {
     animation: blink-appointment 1.5s ease-in-out infinite;
     border: 2px solid var(--turquoise) !important;
+}
+
+.blink-urgent {
+    animation: blink-appointment 1.5s ease-in-out infinite;
+    border: 2px solid var(--turquoise) !important;
+}
+
+@keyframes blink-yellow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px #f59e0b;
+        border-color: #f59e0b;
+    }
+
+    50% {
+        box-shadow: 0 0 30px #f59e0b;
+        border-color: #ffffff;
+    }
+}
+
+@keyframes blink-red {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px var(--danger);
+        border-color: var(--danger);
+    }
+
+    50% {
+        box-shadow: 0 0 30px var(--danger);
+        border-color: #ffffff;
+    }
+}
+
+.blink-warning {
+    animation: blink-yellow 1.5s ease-in-out infinite;
+    border: 2px solid #f59e0b !important;
+}
+
+.blink-danger {
+    animation: blink-red 1.5s ease-in-out infinite;
+    border: 2px solid var(--danger) !important;
+}
+
+.border-yellow {
+    border: 2px solid #f59e0b !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.border-red {
+    border: 2px solid var(--danger) !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
 
 /* === HABIT PROGRESS BAR STYLES === */
