@@ -649,17 +649,17 @@ const app = {
         },
         archiveOldEvents() {
             const now = new Date();
-            // Aggressive archival: Events that started more than 15 minutes ago are moved to archives
-            const archiveThreshold = new Date(now.getTime() - 15 * 60 * 1000);
+            // Less aggressive archival: Only move events from PREVIOUS days to archives
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-            const toArchive = app.state.events.filter(e => new Date(e.start) < archiveThreshold);
+            const toArchive = app.state.events.filter(e => new Date(e.start) < startOfToday);
 
             if (toArchive.length > 0) {
                 if (!app.state.archives) app.state.archives = [];
                 app.state.archives.push(...toArchive);
 
-                // Keep only events that are still upcoming or barely started
-                app.state.events = app.state.events.filter(e => new Date(e.start) >= archiveThreshold);
+                // Keep only events from today or the future in the main state
+                app.state.events = app.state.events.filter(e => new Date(e.start) >= startOfToday);
 
                 app.saveState();
                 console.log(`Archived ${toArchive.length} old events`);
@@ -707,8 +707,9 @@ const app = {
                     cell.classList.add('today');
                 }
 
-                // Find events for this day
-                const dayEvents = app.state.events.filter(e => {
+                // Find events for this day (including archives)
+                const allPossibleEvents = [...app.state.events, ...(app.state.archives || [])];
+                const dayEvents = allPossibleEvents.filter(e => {
                     const eventDate = new Date(e.start);
                     return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y;
                 });
@@ -750,12 +751,18 @@ const app = {
             this.dashboard.applyVisibility();
         }
 
+        // Render AI Insights
+        if (this.ai && this.ai.renderInsights) {
+            this.ai.renderInsights();
+        }
+
         // Events (Hero)
         const dp = document.getElementById('dashboardEventsPreview');
         if (dp) {
             const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const up = app.state.events
-                .filter(e => new Date(e.start) >= now)
+                .filter(e => new Date(e.start) >= startOfToday)
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 5);
 
@@ -1588,7 +1595,316 @@ const app = {
                     <small>Bitte prüfe deinen API Key in den Einstellungen oder dein Guthaben.</small>
                 </div>`;
             }
-        }
+        },
+        async analyzeState() {
+            const config = app.state.aiConfig;
+            let apiKey = '';
+            if (config.provider === 'openai') apiKey = config.openaiKey;
+            else if (config.provider === 'grok') apiKey = config.grokKey;
+            else if (config.provider === 'gemini') apiKey = config.geminiKey;
+
+            const now = new Date();
+            const container = document.getElementById('aiInsightsList');
+
+            // DIRECT REDIRECT to new Briefing Modal
+            this.presentBriefing();
+            return;
+
+
+        },
+
+        generateLocalBriefing() {
+            // 1. Gather Data (Duplicate logic but necessary for standalone execution)
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const userName = app.state.user.name || 'Chef';
+
+            // Tasks
+            const allTasks = app.state.tasks || [];
+            const urgentTasks = allTasks.filter(t => !t.done && t.urgent);
+            const normalTasks = allTasks.filter(t => !t.done && !t.urgent && t.category !== 'shopping');
+            const shopping = allTasks.filter(t => !t.done && t.category === 'shopping');
+
+            // Events
+            const nextWeek = new Date();
+            nextWeek.setDate(now.getDate() + 14);
+            const events = (app.state.events || [])
+                .filter(e => new Date(e.start) >= now && new Date(e.start) <= nextWeek)
+                .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            // Finance
+            const expenses = app.state.expenses || [];
+            const spent = expenses.filter(e => e.date === todayStr).reduce((acc, curr) => acc + curr.amount, 0);
+
+            // Construct Briefing Text
+            let html = `<h6>Hallo ${userName}, hier ist dein lokaler Status-Bericht:</h6><ul>`;
+            let speech = `Hallo ${userName}. Hier ist dein Status-Bericht. `;
+
+            // Section 1: Tasks
+            if (urgentTasks.length > 0) {
+                html += `<li><strong class="text-danger">Dringend:</strong> ${urgentTasks.map(t => t.title).join(', ')}</li>`;
+                speech += `Achtung, du hast ${urgentTasks.length} dringende Aufgaben: ${urgentTasks.map(t => t.title).join(' und ')}. `;
+            }
+            if (normalTasks.length > 0) {
+                html += `<li><strong>To-Dos:</strong> ${normalTasks.length} offen (${normalTasks.slice(0, 3).map(t => t.title).join(', ')}...)</li>`;
+                speech += `Außerdem warten ${normalTasks.length} weitere Aufgaben auf dich. `;
+            } else if (urgentTasks.length === 0) {
+                html += `<li>Keine offenen Aufgaben.</li>`;
+                speech += `Du hast aktuell keine offenen Aufgaben. Wunderbar. `;
+            }
+
+            if (shopping.length > 0) {
+                html += `<li><strong>Einkauf:</strong> ${shopping.length} Artikel</li>`;
+                speech += `Auf deiner Einkaufsliste stehen ${shopping.length} Artikel. `;
+            }
+
+            // Section 2: Events
+            if (events.length > 0) {
+                html += `<li><strong>Nächste Termine:</strong><ul>`;
+                speech += `Kommen wir zu deinen Terminen. `;
+                events.forEach(e => {
+                    const d = new Date(e.start);
+                    const day = d.toLocaleDateString('de-DE', { weekday: 'long' });
+                    const time = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                    html += `<li>${day} ${time}: ${e.title} ${e.location ? `(${e.location})` : ''}</li>`;
+                    speech += `Am ${day} um ${time} Uhr ist "${e.title}" ${e.location ? 'in ' + e.location : ''}. `;
+                });
+                html += `</ul></li>`;
+            } else {
+                html += `<li>Keine Termine in den nächsten 14 Tagen.</li>`;
+                speech += `Dein Kalender ist für die nächsten zwei Wochen leer. `;
+            }
+
+            // Section 3: Finance
+            if (spent > 0) {
+                speech += `Heute hast du bereits ${spent} Euro ausgegeben. `;
+            }
+
+            html += `</ul>`;
+
+            // Render & Speak
+            app.state.aiInsights = { date: new Date().toISOString(), text: html };
+            app.saveState();
+            this.renderInsights();
+            this.speak(speech);
+        },
+        renderInsights() {
+            const container = document.getElementById('aiInsightsList');
+            const data = app.state.aiInsights;
+            if (container) {
+                if (data && data.text) {
+                    container.innerHTML = `<ul style="padding-left:20px; margin:0;">${data.text}</ul>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                         <button onclick="app.ai.speak('${data.text.replace(/'/g, "\\'").replace(/\n/g, " ").replace(/<[^>]*>/g, "")}')" class="btn-small" title="Vorlesen"><i data-lucide="volume-2" size="14"></i></button>
+                         <div class="text-xs text-muted">Stand: ${new Date(data.date).toLocaleTimeString()}</div>
+                    </div>`;
+                } else {
+                    container.innerHTML = '<div class="text-muted text-sm">Klicke auf "Analysieren", um Tipps zu erhalten.</div>';
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+        speak(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel(); // Stop current speech
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'de-DE';
+
+            // Try to find a female German voice
+            const voices = window.speechSynthesis.getVoices();
+            const femaleVoice = voices.find(v => v.lang.includes('de') && (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Vicki') || v.name.includes('Amelie') || v.name.includes('Marlene') || v.name.includes('Elke')));
+            if (femaleVoice) utterance.voice = femaleVoice;
+
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+
+            window.speechSynthesis.speak(utterance);
+        },
+
+        presentBriefing() {
+            try {
+                // 1. Gather Data (Robustly)
+                const state = app.state || {}; // Safety fallback
+                const now = new Date();
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // 00:00 Today
+
+                const userName = (state.user && state.user.name) ? state.user.name : 'Chef';
+
+                // Format Date nicely
+                const dateOptions = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+                const timeOptions = { hour: '2-digit', minute: '2-digit' };
+                const dateStr = now.toLocaleDateString('de-DE', dateOptions);
+                const timeStr = now.toLocaleTimeString('de-DE', timeOptions);
+                const todayStr = now.toISOString().split('T')[0];
+
+                console.log("Briefing: State loaded", state);
+
+                // Tasks
+                const allTasks = state.tasks || [];
+                // Urgent: Not done AND urgent
+                const urgentTasks = allTasks.filter(t => !t.done && t.urgent);
+                // Normal: Not done AND not urgent AND not shopping
+                const normalTasks = allTasks.filter(t => !t.done && !t.urgent && (t.category || '').toLowerCase() !== 'shopping');
+                // Shopping: Not done AND category is shopping
+                const shopping = allTasks.filter(t => !t.done && (t.category || '').toLowerCase() === 'shopping');
+
+                // Events (From Today 00:00 to +14 Days)
+                const nextWeek = new Date();
+                nextWeek.setDate(now.getDate() + 14);
+
+                const events = (state.events || [])
+                    .filter(e => {
+                        const d = new Date(e.start);
+                        return d >= todayStart && d <= nextWeek;
+                    })
+                    .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+                // Health (Water)
+                const waterToday = (state.healthData || [])
+                    .filter(d => d.type === 'water' && d.date === todayStr)
+                    .reduce((sum, d) => sum + d.value, 0);
+                const waterGoal = state.hydrationGoal || 2.5;
+
+                // Habits
+                const habitsToday = (state.habits || []).filter(h => !h.days || h.days.includes(now.getDay()));
+                const habitsOpen = habitsToday.filter(h => !(h.history && h.history.includes(todayStr)));
+
+                // 2. Build Speech & Modal Content
+                let speech = `Guten Tag ${userName}. Hier ist dein Briefing für ${dateStr}, ${timeStr}. `;
+
+                let html = `<div style="text-align:center; padding-bottom:15px; border-bottom:1px solid var(--border);">
+                    <div style="font-size:2rem; font-weight:bold; letter-spacing:-1px;">${timeStr}</div>
+                    <div style="color:var(--text-muted); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">${dateStr}</div>
+                </div>`;
+
+                // --- EVENTS ---
+                html += `<div style="margin-top:20px;">
+                    <h5 style="color:var(--primary); display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;"><i data-lucide="calendar" size="16"></i> Termine & Events</h5>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:15px;">`;
+
+                if (events.length > 0) {
+                    speech += `Du hast ${events.length} Termine anstehen. `;
+                    html += `<ul style="margin:0; padding-left:0; list-style:none;">`;
+                    events.forEach(e => {
+                        const d = new Date(e.start);
+                        const isToday = d.toDateString() === now.toDateString();
+                        const dText = isToday ? 'Heute' : d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+                        const tText = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        html += `<li style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
+                            <div style="background:rgba(59, 130, 246, 0.1); color:var(--primary); padding:4px 8px; border-radius:6px; font-size:0.85rem; font-weight:bold; min-width:60px; text-align:center;">${tText}<br><span style="font-size:0.7rem; font-weight:normal;">${dText}</span></div>
+                            <div>
+                                <div style="font-weight:600; line-height:1.2;">${e.title}</div>
+                                ${e.location ? `<div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px; margin-top:2px;">📍 ${e.location}</div>` : ''}
+                                ${e.notes ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">📝 ${e.notes}</div>` : ''}
+                            </div>
+                        </li>`;
+                        speech += `Am ${d.toLocaleDateString('de-DE', { weekday: 'long' })} um ${tText} Uhr: ${e.title}. `;
+                    });
+                    html += `</ul>`;
+                } else {
+                    speech += `Keine Termine in den nächsten zwei Wochen. `;
+                    html += `<div style="text-align:center; color:var(--text-muted); padding:10px;">Keine anstehenden Termine gefunden.</div>`;
+                }
+                html += `</div></div>`;
+
+                // --- TASKS ---
+                html += `<div style="margin-top:20px;">
+                    <h5 style="color:var(--accent); display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;"><i data-lucide="check-circle" size="16"></i> Aufgaben</h5>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:15px;">`;
+
+                if (urgentTasks.length > 0) {
+                    const urgentNames = urgentTasks.map(t => t.title).join(', ');
+                    speech += `Achtung, ${urgentTasks.length} dringende Aufgaben: ${urgentNames}. `;
+                    html += `<div style="color:var(--danger); font-weight:bold; margin-bottom:8px; display:flex; align-items:center; gap:5px;"><i data-lucide="flame" size="14"></i> ${urgentTasks.length} Dringend</div>`;
+                    html += `<ul style="margin:0; padding-left:0; list-style:none; margin-bottom:10px;">`;
+                    urgentTasks.forEach(t => html += `<li style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--danger);">${t.title}</li>`);
+                    html += `</ul>`;
+                }
+
+                if (normalTasks.length > 0) {
+                    const taskNames = normalTasks.map(t => t.title).join(', ');
+                    speech += `Auf der To-Do Liste stehen folgende Aufgaben: ${taskNames}. `;
+                    html += `<div style="font-weight:bold; margin-bottom:5px;">To-Dos (${normalTasks.length})</div>`;
+                    html += `<ul style="margin:0; padding-left:0; list-style:none;">`;
+                    normalTasks.forEach(t => html += `<li style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:6px;"><span style="width:6px; height:6px; background:var(--text-muted); border-radius:50%;"></span> ${t.title}</li>`);
+                    html += `</ul>`;
+                }
+
+                if (urgentTasks.length === 0 && normalTasks.length === 0) {
+                    speech += `Alle Aufgaben erledigt. `;
+                    html += `<div style="text-align:center; color:var(--success); padding:10px;">Alles erledigt! ✅</div>`;
+                }
+                html += `</div></div>`;
+
+                // --- SHOPPING ---
+                if (shopping.length > 0) {
+                    const items = shopping.map(t => t.title).join(', ');
+                    speech += `Auf deiner Einkaufsliste stehen: ${items}. `;
+                    html += `<div style="margin-top:20px;">
+                        <h5 style="color:var(--success); display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;"><i data-lucide="shopping-cart" size="16"></i> Einkauf</h5>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:15px; font-size:0.9rem;">
+                            ${shopping.map(t => `<span style="display:inline-block; background:rgba(34,197,94,0.1); color:var(--success); padding:2px 8px; border-radius:12px; margin:2px;">${t.title}</span>`).join('')}
+                        </div>
+                    </div>`;
+                } else {
+                    speech += `Nichts einzukaufen. `;
+                }
+
+                // --- VITALITY & HABITS ---
+                html += `<div style="margin-top:20px;">
+                    <h5 style="color:#3b82f6; display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;"><i data-lucide="activity" size="16"></i> Vitalität & Habits</h5>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:32px; height:32px; background:rgba(59,130,246,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#3b82f6;"><i data-lucide="droplet" size="16"></i></div>
+                                <div>
+                                    <div style="font-size:0.8rem; color:var(--text-muted);">Wasser</div>
+                                    <div style="font-weight:bold;">${waterToday.toFixed(1)} / ${waterGoal} L</div>
+                                </div>
+                            </div>
+                            <div style="font-size:1.2rem;">${waterToday >= waterGoal ? '✅' : '⏳'}</div>
+                        </div>`;
+
+                speech += `Wasserstand: ${waterToday.toFixed(1)} von ${waterGoal} Litern. `;
+
+                if (habitsOpen.length > 0) {
+                    speech += `Noch ${habitsOpen.length} Routinen offen: ${habitsOpen.map(h => h.name).join(', ')}. `;
+                    html += `<div style="margin-top:10px; font-weight:bold; font-size:0.85rem; margin-bottom:5px;">Offene Routinen:</div>
+                             <ul style="margin:0; padding-left:0; list-style:none; font-size:0.9rem;">${habitsOpen.map(h => `<li style="margin-bottom:4px; display:flex; align-items:center; gap:6px;"><i data-lucide="circle" size="12" class="text-muted"></i> ${h.name}</li>`).join('')}</ul>`;
+                } else {
+                    speech += `Alle Routinen erledigt. `;
+                    html += `<div style="text-align:center; color:var(--success); font-size:0.9rem; margin-top:10px;">Alle Routinen erledigt! ✨</div>`;
+                }
+                html += `</div></div>`;
+
+                speech += `Das war's. Viel Erfolg!`;
+
+                // Open Modal
+                if (app.modals && app.modals.open) {
+                    console.log("Opening Modal with content");
+                    app.modals.open('aiBriefing', { html: html });
+                } else {
+                    console.error("app.modals.open not available");
+                    alert("Modal System Error");
+                }
+
+                // Keep icons working
+                setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+
+                // Speak
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    setTimeout(() => this.speak(speech), 500);
+                }
+
+            } catch (e) {
+                console.error("Briefing Error:", e);
+                alert("Fehler beim Briefing: " + e.message);
+            }
+        },
     },
 
     // --- GENERIC MODULES (Compact) ---
@@ -2409,7 +2725,9 @@ const app = {
             const info = this.extractInfo(text);
 
             // Determine intent
-            if (this.isEventIntent(lower)) {
+            if (this.isContactAction(lower)) {
+                return this.processContactAction(text, lower, info);
+            } else if (this.isEventIntent(lower)) {
                 // Direct add if possible
                 if (info.title && info.time) {
                     app.calendar.addEvent({
@@ -2539,6 +2857,69 @@ const app = {
         },
 
         isTaskIntent(text) {
+            const taskKeywords = ['erinner', 'aufgabe', 'todo', 'kaufen', 'einkauf', 'merken', 'notier'];
+            return taskKeywords.some(kw => text.includes(kw));
+        },
+
+        isContactAction(text) {
+            return text.includes('ruf') || text.includes('anruf') || text.includes('schreib') || text.includes('mail') || text.includes('nachricht');
+        },
+
+        processContactAction(text, lower, info) {
+            // Find contact name in text
+            // Strategy: Look for capitalized words that match an existing contact name
+            const contacts = app.state.contacts || [];
+            let targetContact = null;
+
+            // 1. Direct match with extracted info title if available
+            if (info.title) {
+                targetContact = contacts.find(c =>
+                    c.name.toLowerCase().includes(info.title.toLowerCase()) ||
+                    info.title.toLowerCase().includes(c.name.toLowerCase())
+                );
+            }
+
+            // 2. Scan text for known contact names if no direct match
+            if (!targetContact) {
+                targetContact = contacts.find(c => lower.includes(c.name.toLowerCase()));
+            }
+
+            if (!targetContact) {
+                alert("Keinen passenden Kontakt gefunden. Bitte prüfe den Namen.");
+                return true; // Handle visually but fail logic
+            }
+
+            // Determine action type
+            if (lower.includes('ruf') || lower.includes('anruf')) {
+                if (targetContact.phone) {
+                    app.contacts.call(targetContact.phone);
+                    return true;
+                } else {
+                    alert(`Keine Telefonnummer für ${targetContact.name} hinterlegt.`);
+                    return true;
+                }
+            } else if (lower.includes('mail') || lower.includes('email')) {
+                if (targetContact.email) {
+                    app.contacts.mail(targetContact.email);
+                    return true;
+                } else {
+                    alert(`Keine E-Mail für ${targetContact.name} hinterlegt.`);
+                    return true;
+                }
+            } else if (lower.includes('nachricht') || lower.includes('schreib') || lower.includes('whatsapp')) {
+                if (targetContact.phone) {
+                    app.contacts.whatsapp(targetContact.phone);
+                    return true;
+                } else {
+                    alert(`Keine Nummer für WhatsApp bei ${targetContact.name}.`);
+                    return true;
+                }
+            }
+
+            return false; // unmatched action
+        },
+
+        isCommonWord(word) {
             const taskKeywords = ['kaufen', 'einkauf', 'besorgen', 'todo', 'aufgabe', 'erledigen', 'machen'];
             return taskKeywords.some(kw => text.includes(kw));
         },
@@ -3498,6 +3879,19 @@ const app = {
                         <button class="btn-primary" onclick="app.ai.send()"><i data-lucide="send"></i></button>
                     </div>
                  </div>`;
+            } else if (type === 'aiBriefing') {
+                c.innerHTML = `
+                <div style="padding:20px 20px 80px 20px; max-height:85vh; overflow-y:auto; position:relative;">
+                    <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); cursor:pointer;" 
+                            onclick="app.modals.close(); if(window.speechSynthesis) window.speechSynthesis.cancel();">
+                        <i data-lucide="x" size="24"></i>
+                    </button>
+                    ${data.html}
+                    <div style="margin-top:20px; text-align:center;">
+                         <button class="btn btn-primary" onclick="app.modals.close(); if(window.speechSynthesis) window.speechSynthesis.cancel();">Danke, verstanden</button>
+                    </div>
+                </div>
+            `;
             } else if (type === 'addExpense') {
                 const today = new Date().toISOString().split('T')[0];
                 const desc = data.desc || data.title || '';
@@ -3812,6 +4206,7 @@ const app = {
             } else if (type === 'configureWidgets') {
                 const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
                 const cards = [
+                    { id: 'dashboardAiCard', name: 'AI Assistant', icon: 'sparkles' },
                     { id: 'dashboardCommunicationCard', name: 'Kommunikation', icon: 'message-square' },
                     { id: 'dashboardStatusCard', name: 'Tages-Check', icon: 'clipboard-check' },
                     { id: 'dashboardEventsCard', name: 'Zeitplan / Termine', icon: 'calendar' },
@@ -3845,6 +4240,13 @@ const app = {
                     </div>
                      <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:20px;width:100%;">Fertig</button>
                      ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                </div>`;
+            } else if (type === 'aiBriefing') {
+                c.innerHTML = `
+                <div style="padding:20px; max-height:85vh; overflow-y:auto;">
+                    <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted);" onclick="app.modals.close()"><i data-lucide="x"></i></button>
+                    ${data.html}
+                    <button class="btn btn-primary" style="width:100%; margin-top:15px; padding:12px;" onclick="app.modals.close(); window.speechSynthesis.cancel();">Danke, Verstanden</button>
                 </div>`;
             }
             if (window.lucide) lucide.createIcons();
@@ -4229,7 +4631,7 @@ const app = {
         applyVisibility() {
             const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
             const allCards = [
-                'dashboardCommunicationCard', 'dashboardStatusCard', 'dashboardEventsCard',
+                'dashboardAiCard', 'dashboardCommunicationCard', 'dashboardStatusCard', 'dashboardEventsCard',
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard'

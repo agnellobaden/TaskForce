@@ -277,6 +277,26 @@
                             </div>
                         </div>
 
+                        <!-- 2.5 AI INSIGHTS -->
+                        <div id="dashboardAiCard" class="card dash-card"
+                            style="grid-column: span 2; padding: 15px; order: 25; border-left: 2px solid var(--accent); background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(255,255,255,0.02) 100%);"
+                            draggable="true">
+                            <div class="card-header" style="margin-bottom: 10px;">
+                                <span class="card-title" style="display:flex; align-items:center; gap:8px;">
+                                    <i data-lucide="sparkles" class="text-accent" size="18"></i>
+                                    <span>AI Assistant</span>
+                                </span>
+                                <button onclick="app.ai.analyzeState()" class="btn btn-primary"
+                                    style="padding: 6px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="play" size="14"></i> Analyse starten
+                                </button>
+                            </div>
+                            <div id="aiInsightsList" style="font-size: 0.9rem; line-height: 1.5;">
+                                <div class="text-muted text-sm">Klicke auf <i data-lucide="refresh-cw" size="12"
+                                        style="display:inline;"></i>, um deine Daten zu analysieren.</div>
+                            </div>
+                        </div>
+
                         <!-- 3. HERO: Termine (Consolidated Window) -->
                         <div class="card dash-card" id="dashboardEventsCard"
                             style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
