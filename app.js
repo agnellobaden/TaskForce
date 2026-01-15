@@ -636,30 +636,9 @@ const app = {
             this.updateDashboardBlinking();
         },
         updateDashboardBlinking() {
-            const now = new Date();
+            // Whole card blinking disabled per user request
             const dashCard = document.getElementById('dashboardEventsCard');
-            if (!dashCard) return;
-
-            // Check if any upcoming event is imminent
-            const upcomingEvents = app.state.events.filter(e => new Date(e.start) >= now);
-
-            // If No events, definitely no blinking
-            if (upcomingEvents.length === 0) {
-                dashCard.classList.remove('appointment-imminent');
-                return;
-            }
-
-            const hasImminentEvent = upcomingEvents.some(e => {
-                const start = new Date(e.start);
-                const diffMins = (start - now) / 1000 / 60;
-                return (diffMins > -15 && diffMins < 30) || (e.urgent && diffMins > -60 && diffMins < 120);
-            });
-
-            if (hasImminentEvent) {
-                dashCard.classList.add('appointment-imminent');
-            } else {
-                dashCard.classList.remove('appointment-imminent');
-            }
+            if (dashCard) dashCard.classList.remove('appointment-imminent');
         },
         archiveOldEvents() {
             const now = new Date();
@@ -772,11 +751,12 @@ const app = {
                 dp.innerHTML = up.map((e, index) => {
                     const start = new Date(e.start);
                     const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const diffMins = (start - now) / 1000 / 60;
                     return `
-                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)';">
+                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}';">
                             <div style="width: 75px; font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px;">${timeStr}</div>
                             <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
-                                <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-turquoise">🔥</span>' : ''}</div>
+                                <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
                                     ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
@@ -787,7 +767,7 @@ const app = {
                                 </div>
                             </div>
                             <div style="display:flex; align-items:center; margin-left:10px;">
-                                 ${e.urgent ? '<div style="width:10px; height:10px; border-radius:50%; background:var(--turquoise); box-shadow: 0 0 12px var(--turquoise); margin-right:15px;"></div>' : ''}
+                                 ${e.urgent || (diffMins > -15 && diffMins < 30) ? '<div style="width:10px; height:10px; border-radius:50%; background:#06b6d4; box-shadow: 0 0 12px #06b6d4; margin-right:15px;"></div>' : ''}
                                  <i data-lucide="chevron-right" size="18" class="text-muted" style="opacity:0.5;"></i>
                             </div>
                         </div>
@@ -898,8 +878,8 @@ const app = {
                         <div style="display:flex; flex-direction:column; gap:10px;">
                 `;
 
-                habitsHtml += todayHabits.map(h => {
-                    const isDone = h.history && h.history.includes(todayStr);
+                habitsHtml += todayHabits.filter(h => !(h.history && h.history.includes(todayStr))).map(h => {
+                    const isDone = false; // They are all not done because we filtered
                     return `
                         <div style="display:flex; align-items:center; justify-content:space-between; transition: all 0.3s; ${isDone ? 'opacity: 0.5;' : ''}" class="habit-checklist-item">
                             <div style="display:flex; align-items:center; gap:12px; flex:1; cursor:pointer;" onclick="event.stopPropagation(); app.habits.toggleToday(${h.id})">
@@ -922,7 +902,7 @@ const app = {
                 habPreview.innerHTML = habitsHtml;
                 habPreview.style.display = 'block';
             } else {
-                habPreview.innerHTML = '<div style="text-align:center; padding:20px;"><i data-lucide="coffee" class="text-muted" size="32"></i><p class="text-muted text-sm" style="margin-top:10px;">Heute keine Habits geplant.<br>Genieße deinen freien Tag!</p></div>';
+                habPreview.innerHTML = '<div style="text-align:center; padding:20px;"><i data-lucide="check-circle" class="text-success" size="32"></i><p class="text-success text-sm" style="margin-top:10px;">Alle Habits für heute erledigt!<br>Super Leistung!</p></div>';
             }
         }
 
@@ -939,10 +919,10 @@ const app = {
         if (healthPreview) {
             healthPreview.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px;">
-                    <button onclick="app.health.quickAddWater()" 
-                            style="background:none; border:none; cursor:pointer; font-size:3rem; transition:transform 0.2s; filter:drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));"
-                            onmouseover="this.style.transform='scale(1.1)'" 
-                            onmouseout="this.style.transform='scale(1)'"
+                    <button onclick="event.stopPropagation(); app.health.quickAddWater()" 
+                            style="background:rgba(59, 130, 246, 0.1); border:1px solid rgba(59, 130, 246, 0.3); cursor:pointer; width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.5rem; transition:all 0.2s; filter:drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));"
+                            onmouseover="this.style.transform='scale(1.1)'; this.style.background='rgba(59, 130, 246, 0.2)';" 
+                            onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59, 130, 246, 0.1)';"
                             title="Klicken um 0.25L hinzuzufügen">
                         💧
                     </button>
@@ -1087,6 +1067,7 @@ const app = {
         }
 
         if (this.shortcuts) this.shortcuts.render();
+        if (this.dashboard) this.dashboard.applyOrder();
         if (window.lucide) lucide.createIcons();
     },
 
@@ -1193,99 +1174,77 @@ const app = {
         const weatherEl = document.getElementById('heroWeather');
         if (!weatherEl) return;
 
-        const runIPFallback = () => {
-            fetch('https://ipapi.co/json/')
-                .then(r => r.json())
-                .then(d => {
-                    if (d.latitude && d.longitude) {
-                        const lat = d.latitude;
-                        const lon = d.longitude;
-                        const hour = new Date().getHours();
-                        let greeting = "Guten Tag";
-                        if (hour < 11) greeting = "Guten Morgen";
-                        else if (hour > 18) greeting = "Guten Abend";
+        const updateUI = (temp, code) => {
+            let icon = 'cloud-sun';
+            if (code === 0) icon = 'sun';
+            else if (code <= 3) icon = 'cloud-sun';
+            else if (code <= 48) icon = 'cloud';
+            else if (code <= 67) icon = 'cloud-rain';
+            else if (code <= 71) icon = 'snowflake';
+            else if (code <= 77) icon = 'snowflake';
+            else if (code <= 82) icon = 'cloud-rain';
+            else if (code <= 99) icon = 'cloud-lightning';
 
-                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`)
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.current) {
-                                    const temp = Math.round(data.current.temperature_2m);
-                                    const code = data.current.weather_code;
-                                    let icon = 'cloud-sun';
-                                    if (code === 0) icon = 'sun';
-                                    else if (code <= 3) icon = 'cloud-sun';
-                                    else if (code <= 48) icon = 'cloud';
-                                    else if (code <= 67) icon = 'cloud-rain';
-                                    else if (code <= 71) icon = 'snowflake';
-                                    else if (code <= 77) icon = 'snowflake';
-                                    else if (code <= 82) icon = 'cloud-rain';
-                                    else if (code <= 99) icon = 'cloud-lightning';
-
-                                    weatherEl.innerHTML = `
-                                      <div style="font-size:0.8rem; opacity:0.8; margin-bottom:2px;">${greeting}</div>
-                                      <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
-                                         <i data-lucide="${icon}" size="16"></i> ${temp}°C
-                                      </div>
-                                 `;
-                                    if (window.lucide) lucide.createIcons();
-                                }
-                            });
-                    }
-                }).catch(e => {
-                    weatherEl.innerHTML = '<i data-lucide="wifi-off"></i> --';
-                });
+            weatherEl.innerHTML = `
+                 <div style="font-weight:bold; display:flex; align-items:center; gap:8px; font-size: 1.2rem;">
+                    <i data-lucide="${icon}" size="20"></i> ${temp}°C
+                 </div>
+            `;
+            if (window.lucide) lucide.createIcons();
         };
 
-        if (!navigator.geolocation) {
-            runIPFallback();
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-
+        const fetchWeatherData = async (lat, lon) => {
             try {
-                // Determine Greeting based on time
-                const hour = new Date().getHours();
-                let greeting = "Guten Tag";
-                if (hour < 11) greeting = "Guten Morgen";
-                else if (hour > 18) greeting = "Guten Abend";
-
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
                 const data = await res.json();
-
                 if (data.current) {
-                    const temp = Math.round(data.current.temperature_2m);
-                    const code = data.current.weather_code;
-
-                    // Simple WMO Code Map
-                    let icon = 'cloud-sun';
-                    if (code === 0) icon = 'sun';
-                    else if (code <= 3) icon = 'cloud-sun';
-                    else if (code <= 48) icon = 'cloud';
-                    else if (code <= 67) icon = 'cloud-rain';
-                    else if (code <= 71) icon = 'snowflake';
-                    else if (code <= 77) icon = 'snowflake';
-                    else if (code <= 82) icon = 'cloud-rain';
-                    else if (code <= 99) icon = 'cloud-lightning';
-
-                    weatherEl.innerHTML = `
-                         <div style="font-size:0.8rem; opacity:0.8; margin-bottom:2px;">${greeting}</div>
-                         <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
-                            <i data-lucide="${icon}" size="16"></i> ${temp}°C
-                         </div>
-                    `;
-                    if (window.lucide) lucide.createIcons();
+                    updateUI(Math.round(data.current.temperature_2m), data.current.weather_code);
+                    return true;
                 }
-            } catch (e) {
-                console.error("Weather fetch failed", e);
-                weatherEl.innerHTML = '<i data-lucide="wifi-off"></i> --°C';
-            }
-        }, (err) => {
-            console.warn("GPS Access denied, using IP fallback.", err);
+            } catch (e) { console.error("Weather fetch failed", e); }
+            return false;
+        };
+
+        const runIPFallback = async () => {
+            try {
+                // Try multiple IP geo services
+                const services = [
+                    'https://ipapi.co/json/',
+                    'https://freeipapi.com/api/json'
+                ];
+                for (const url of services) {
+                    try {
+                        const r = await fetch(url);
+                        const d = await r.json();
+                        const lat = d.latitude || d.latitude_2m;
+                        const lon = d.longitude || d.longitude_2m;
+                        if (lat && lon) {
+                            if (await fetchWeatherData(lat, lon)) return;
+                        }
+                    } catch (e) { continue; }
+                }
+            } catch (e) { }
+
+            // Absolute Fallback: Berlin
+            await fetchWeatherData(52.52, 13.40);
+        };
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    if (!await fetchWeatherData(pos.coords.latitude, pos.coords.longitude)) {
+                        runIPFallback();
+                    }
+                },
+                (err) => {
+                    console.warn("Geolocation denied or failed, using IP fallback.");
+                    runIPFallback();
+                },
+                { timeout: 5000 }
+            );
+        } else {
             runIPFallback();
-        });
+        }
     },
 
     // --- NOTIFICATIONS MODULE ---
@@ -1684,6 +1643,7 @@ const app = {
             app.saveState();
             this.render();
             app.renderDashboard();
+            app.navigateTo('dashboard');
         },
         delete(id) {
             if (confirm("Ausgabe wirklich löschen?")) {
@@ -1701,6 +1661,7 @@ const app = {
                 app.saveState();
                 this.render();
                 app.renderDashboard();
+                app.navigateTo('dashboard');
             }
         },
         render() {
@@ -1817,7 +1778,14 @@ const app = {
         }
     },
     habits: {
-        toggleUrgency(id) { const h = app.state.habits.find(x => x.id === id); if (h) { h.urgent = !h.urgent; app.saveState(); this.render(); } },
+        toggleUrgency(id) {
+            const h = app.state.habits.find(x => x.id === id);
+            if (h) {
+                h.urgent = !h.urgent;
+                app.saveState();
+                this.render();
+            }
+        },
         add() {
             app.modals.open('addHabit');
         },
@@ -1922,6 +1890,7 @@ const app = {
                 reminder = confirm("Möchtest du eine wöchentliche Erinnerung?");
                 this.addWeight(value, reminder);
             }
+            app.navigateTo('dashboard');
         },
         lastWaterReminder: null,
         hydrationCheckInterval: null,
@@ -2223,6 +2192,7 @@ const app = {
                 item.value = newValue;
                 app.saveState();
                 this.render();
+                app.navigateTo('dashboard');
             }
         },
         delete(id) {
@@ -2351,6 +2321,7 @@ const app = {
                 app.state.dailyTaskGoal = goal;
                 app.saveState();
                 this.updateUI();
+                app.navigateTo('dashboard');
             }
         },
         updateUI() {
@@ -2754,8 +2725,9 @@ const app = {
             }
 
             app.saveState();
-            app.modals.open('setAlarm');
             app.renderDashboard();
+            app.modals.close();
+            app.navigateTo('dashboard');
         }
     },
     async requestWakeLock() { if ('wakeLock' in navigator) { try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } } },
@@ -2956,35 +2928,52 @@ const app = {
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            // To handle deletions and updates properly, we trust the cloud state
-            // if it's coming from a remote change.
+            const merge = (key, fallback) => {
+                if (cloudState[key] !== undefined) return cloudState[key];
+                return app.state[key] || fallback;
+            };
 
-            // Compare stringified versions for quick dirty check
-            const localVersion = JSON.stringify({
+            // Compare versions for quick dirty check
+            const localCompare = {
                 tasks: app.state.tasks,
                 events: app.state.events,
                 expenses: app.state.expenses,
                 habits: app.state.habits,
                 healthData: app.state.healthData || [],
-                alarms: app.state.alarms || []
-            });
+                alarms: app.state.alarms || [],
+                contacts: app.state.contacts || [],
+                shortcuts: app.state.shortcuts || [],
+                xp: app.state.xp || 0,
+                level: app.state.level || 1,
+                ui: app.state.ui || {}
+            };
 
-            const cloudVersion = JSON.stringify({
-                tasks: cloudState.tasks,
-                events: cloudState.events,
-                expenses: cloudState.expenses,
-                habits: cloudState.habits,
-                healthData: cloudState.healthData || [],
-                alarms: cloudState.alarms || []
-            });
+            const cloudCompare = {
+                tasks: merge('tasks', []),
+                events: merge('events', []),
+                expenses: merge('expenses', []),
+                habits: merge('habits', []),
+                healthData: merge('healthData', []),
+                alarms: merge('alarms', []),
+                contacts: merge('contacts', []),
+                shortcuts: merge('shortcuts', []),
+                xp: merge('xp', 0),
+                level: merge('level', 1),
+                ui: merge('ui', {})
+            };
 
-            if (localVersion !== cloudVersion) {
-                app.state.tasks = cloudState.tasks || [];
-                app.state.events = cloudState.events || [];
-                app.state.expenses = cloudState.expenses || [];
-                app.state.habits = cloudState.habits || [];
-                app.state.healthData = cloudState.healthData || [];
-                app.state.alarms = cloudState.alarms || [];
+            if (JSON.stringify(localCompare) !== JSON.stringify(cloudCompare)) {
+                app.state.tasks = cloudCompare.tasks;
+                app.state.events = cloudCompare.events;
+                app.state.expenses = cloudCompare.expenses;
+                app.state.habits = cloudCompare.habits;
+                app.state.healthData = cloudCompare.healthData;
+                app.state.alarms = cloudCompare.alarms;
+                app.state.contacts = cloudCompare.contacts;
+                app.state.shortcuts = cloudCompare.shortcuts;
+                app.state.xp = cloudCompare.xp;
+                app.state.level = cloudCompare.level;
+                app.state.ui = cloudCompare.ui;
 
                 app.saveState(true); // Skip Push to avoid loop
                 app.renderDashboard();
@@ -3035,6 +3024,12 @@ const app = {
                     expenses: app.state.expenses,
                     habits: app.state.habits,
                     healthData: app.state.healthData || [],
+                    alarms: app.state.alarms || [],
+                    contacts: app.state.contacts || [],
+                    shortcuts: app.state.shortcuts || [],
+                    xp: app.state.xp || 0,
+                    level: app.state.level || 1,
+                    ui: app.state.ui || {},
                     last_updated: new Date().toISOString()
                 },
                 updated_at: new Date().toISOString()
@@ -3213,19 +3208,37 @@ const app = {
             app.state.aiConfig.openaiKey = document.getElementById('openaiKeyInput').value;
             app.state.aiConfig.grokKey = document.getElementById('grokKeyInput').value;
             app.state.aiConfig.geminiKey = document.getElementById('geminiKeyInput').value;
+
+            // Save User Name as well if present
+            const nameInput = document.getElementById('settingsUserName');
+            if (nameInput) app.state.user.name = nameInput.value;
+
+            if (!silent) {
+                // User requested behavior: Deactivate Membership on Save
+                app.state.user.isPro = false;
+                app.user.applyProStatus();
+            }
+
             app.saveState();
-            if (!silent) alert("AI-Einstellungen wurden erfolgreich gespeichert! ✅");
+
+            if (!silent) {
+                app.user.updateHeader();
+                app.renderDashboard();
+                app.navigateTo('dashboard');
+            }
         },
         saveCloudConfig() {
             if (!app.state.cloud) app.state.cloud = {};
             app.state.cloud.firebaseConfig = document.getElementById('firebaseConfigInput').value.trim();
             app.saveState();
             app.cloud.init();
+            app.navigateTo('dashboard');
         },
         saveProfile() {
             app.state.user.name = document.getElementById('settingsUserName').value;
             app.saveState();
             app.user.updateHeader();
+            app.navigateTo('dashboard');
         },
         savePassword() {
             const p1 = document.getElementById('settingsPass1').value;
@@ -3233,7 +3246,7 @@ const app = {
             if (p1 && p1 === p2) {
                 app.state.user.password = p1;
                 app.saveState();
-                alert("Passwort geändert! ✅");
+                app.navigateTo('dashboard');
             } else {
                 alert("Passwörter stimmen nicht überein.");
             }
@@ -3817,7 +3830,7 @@ const app = {
                 app.navigateTo('dashboard');
             }
         },
-        submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); } },
+        submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); app.navigateTo('dashboard'); } },
         submitHealthReminder() {
             const data = {
                 name: document.getElementById('reminderName').value,
@@ -3867,6 +3880,7 @@ const app = {
                 app.saveState();
                 app.shortcuts.render();
                 this.close();
+                app.navigateTo('dashboard');
             }
         },
         submitHabit() {
@@ -3900,6 +3914,27 @@ const app = {
                 app.calendar.addEvent(data);
                 this.close();
                 app.navigateTo('dashboard');
+
+                // Auto-scroll to Events Card to confirm entry
+                setTimeout(() => {
+                    const card = document.getElementById('dashboardEventsCard');
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Visual Feedback
+                        const oldTrans = card.style.transition;
+                        const oldBorder = card.style.borderColor;
+
+                        card.style.transition = 'all 0.5s ease';
+                        card.style.borderColor = 'var(--primary)';
+                        card.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.3)';
+
+                        setTimeout(() => {
+                            card.style.borderColor = oldBorder;
+                            card.style.boxShadow = '';
+                            setTimeout(() => card.style.transition = oldTrans, 500);
+                        }, 2000);
+                    }
+                }, 300);
             }
         }
     },
