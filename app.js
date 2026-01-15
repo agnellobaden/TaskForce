@@ -3,7 +3,7 @@
 const app = {
     // Default State
     state: {
-        user: { name: '', team: [] },
+        user: { name: '', team: [], isPro: false },
         currentPage: 'dashboard',
         xp: 0,
         level: 1,
@@ -12,10 +12,9 @@ const app = {
         habits: [],
         events: [],
         healthData: [],
-        archives: [], // New Archive for old events
-        waterGoal: 2.5, // Liter pro Tag
+        contacts: [],
+        alarms: [],
         dailyTaskGoal: 5, // Anzahl Aufgaben pro Tag
-        alarm: { time: '07:00', active: false },
         aiConfig: {
             provider: 'openai',
             openaiKey: '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',
@@ -64,6 +63,7 @@ const app = {
             this.tasks.render();
             this.finance.render();
             this.habits.render();
+            this.health.init();
             this.health.render();
             this.team.render();
             this.calendar.init();
@@ -73,19 +73,29 @@ const app = {
 
             // Apply User Preferences
             this.settings.applyLayoutPreference();
+            this.settings.applyVoiceIconPreference();
 
-            // Re-apply Alarm State
-            if (this.state.alarm && this.state.alarm.active) {
-                const dis = document.getElementById('activeAlarmDisplay');
-                if (dis) dis.textContent = `An: ${this.state.alarm.time} Uhr`;
-                const ndis = document.getElementById('nightAlarmDisplay');
-                if (ndis) { ndis.classList.remove('hidden'); ndis.querySelector('span').textContent = this.state.alarm.time; }
+            // Re-apply Alarm State (Show next active alarm if any)
+            if (this.state.alarms && this.state.alarms.length > 0) {
+                const nextAlarm = this.state.alarms.find(a => a.active);
+                if (nextAlarm) {
+                    const dis = document.getElementById('activeAlarmDisplay');
+                    if (dis) dis.textContent = `An: ${nextAlarm.time} (${nextAlarm.title})`;
+                    const ndis = document.getElementById('nightAlarmDisplay');
+                    if (ndis) { ndis.classList.remove('hidden'); ndis.querySelector('span').textContent = nextAlarm.time; }
+                }
             }
 
             // Global Click Listeners for Mobile Sidebar
             document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', () => {
                 if (this.isSidebarOpen) this.toggleSidebar();
             }));
+
+            // Browser Back Button Support
+            this.setupBackButton();
+
+            // Apply Pro status to UI
+            this.user.applyProStatus();
 
             // Create Icons safely
             if (window.lucide) lucide.createIcons();
@@ -94,6 +104,23 @@ const app = {
             console.error("Critical Init Error:", e);
             alert("Fehler beim Starten der App: " + e.message);
         }
+    },
+
+    // --- BROWSER BACK BUTTON SUPPORT ---
+    navigationHistory: [],
+    setupBackButton() {
+        // Track initial state
+        window.history.replaceState({ page: this.state.currentPage }, '', '');
+
+        // Listen for back button
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.page) {
+                this.navigateTo(event.state.page, true); // true = don't push to history
+            } else {
+                // If no state, go to dashboard
+                this.navigateTo('dashboard', true);
+            }
+        });
     },
 
     // --- STATE MANAGEMENT ---
@@ -118,6 +145,8 @@ const app = {
         if (!this.state.user.name) this.state.user.name = 'Creator';
 
         if (!this.state.events) this.state.events = [];
+        if (!this.state.contacts) this.state.contacts = [];
+        if (!this.state.expenses) this.state.expenses = [];
         if (!this.state.tasks) this.state.tasks = [];
         if (!this.state.habits) this.state.habits = [];
         if (!this.state.archives) this.state.archives = [];
@@ -147,6 +176,37 @@ const app = {
             this.saveState();
         }
 
+        // Pro Status Migration
+        if (this.state.user && this.state.user.isPro === undefined) {
+            this.state.user.isPro = false;
+            this.saveState();
+        }
+
+        // Multi-Alarm Migration
+        if (!this.state.alarms) {
+            this.state.alarms = [];
+            if (this.state.alarm) {
+                // Convert old single alarm to new array format
+                this.state.alarms.push({
+                    id: Date.now(),
+                    title: 'Erster Wecker',
+                    time: this.state.alarm.time || '07:00',
+                    active: this.state.alarm.active || false,
+                    days: this.state.alarm.days || [1, 2, 3, 4, 5],
+                    sound: 'melody'
+                });
+                delete this.state.alarm;
+            } else {
+                // Add defaults if none exist
+                this.state.alarms = [
+                    { id: 1, title: 'Morgen-Routine', time: '07:00', active: true, days: [1, 2, 3, 4, 5], sound: 'melody' },
+                    { id: 2, title: 'Wochenende-Ausschlafen', time: '09:30', active: false, days: [0, 6], sound: 'nature' }
+                ];
+            }
+            this.saveState();
+        }
+
+        // --- PREVIOUS MIGRATIONS ---
         // Migrate Tasks to support Categories
         if (this.state.tasks.some(t => !t.category)) {
             this.state.tasks.forEach(t => {
@@ -159,6 +219,20 @@ const app = {
                     }
                 }
             });
+            this.saveState();
+        }
+
+        // Default Habits Migration
+        if (this.state.habits.length === 0) {
+            this.state.habits = [
+                { id: 101, name: 'Tabletten einnehmen', streak: 0, goal: 30, time: '08:00', days: [0, 1, 2, 3, 4, 5, 6], urgent: true, history: [] },
+                { id: 102, name: 'Hund laufen', streak: 0, goal: 30, time: '17:00', days: [0, 1, 2, 3, 4, 5, 6], urgent: false, history: [] }
+            ];
+            this.saveState();
+        }
+        // Voice Icon Preference
+        if (!this.state.voiceIconMode) {
+            this.state.voiceIconMode = 'logo';
             this.saveState();
         }
     },
@@ -194,9 +268,26 @@ const app = {
             if (m === 'register') {
                 document.getElementById('authPassRepeatField').classList.remove('hidden');
                 document.getElementById('authTeamField').classList.add('hidden');
+                document.getElementById('teamToggleContainer').classList.add('hidden');
             } else {
                 document.getElementById('authPassRepeatField').classList.add('hidden');
-                document.getElementById('authTeamField').classList.remove('hidden');
+                document.getElementById('teamToggleContainer').classList.remove('hidden');
+
+                // Keep team field hidden unless checkbox is checked
+                this.updateTeamFieldVisibility();
+            }
+        },
+        toggleTeamField() {
+            const cb = document.getElementById('useTeamSync');
+            if (cb) cb.checked = !cb.checked;
+            this.updateTeamFieldVisibility();
+        },
+        updateTeamFieldVisibility() {
+            const field = document.getElementById('authTeamField');
+            const cb = document.getElementById('useTeamSync');
+            if (field && cb) {
+                if (cb.checked) field.classList.remove('hidden');
+                else field.classList.add('hidden');
             }
         },
         logout() {
@@ -226,23 +317,32 @@ const app = {
                     isLoggedIn: true
                 };
                 app.saveState();
-                alert(`Registrierung erfolgreich! Dein Team-Key ist "${name}".`);
+                alert(`Registrierung erfolgreich! Willkommen, ${name}. ✨`);
                 this.closeOverlay();
+                app.cloud.init();
             } else {
                 // Login Check
-                if (!team) { alert("Bitte deinen Team-Namen (Sync-Key) eingeben!"); return; }
+                const useTeam = document.getElementById('useTeamSync').checked;
+                const teamInput = document.getElementById('authTeam').value.trim();
+
+                // If team sync is active, team key is REQUIRED. If not, use username.
+                if (useTeam && !teamInput) {
+                    alert("Bitte Team-Namen eingeben oder Haken entfernen.");
+                    return;
+                }
+
+                const teamToUse = useTeam ? teamInput : name;
 
                 if (app.state.user && app.state.user.name === name) {
-
                     // Update Team Name on Login
-                    app.state.user.teamName = team;
+                    app.state.user.teamName = teamToUse;
 
                     // LEGACY MIGRATION
                     if (!app.state.user.password && pass) {
                         app.state.user.password = pass;
                         app.state.user.isLoggedIn = true;
                         app.saveState();
-                        alert("Passwort festgelegt. ✅");
+                        alert(`Passwort festgelegt. ✅\nTeam: ${teamToUse}`);
                         this.closeOverlay();
                         return;
                     }
@@ -251,6 +351,7 @@ const app = {
                         app.state.user.isLoggedIn = true;
                         app.saveState();
                         this.closeOverlay();
+                        app.cloud.init();
                     } else {
                         alert("Falsches Passwort! Zugriff verweigert. 🔒");
                     }
@@ -272,6 +373,53 @@ const app = {
             if (n) n.textContent = app.state.user.name || 'Gast';
             const ava = document.getElementById('headerUserAvatar');
             if (ava && app.state.user.name) ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${app.state.user.name}" alt="User">`;
+        },
+        upgradeToPro() {
+            app.state.user.isPro = true;
+            app.saveState();
+            this.applyProStatus();
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#8b5cf6', '#d946ef', '#3b82f6']
+                });
+            }
+        },
+        applyProStatus() {
+            const banner = document.getElementById('proUpgradeBanner');
+            const badge = document.getElementById('proBadge');
+            const sLabel = document.getElementById('settingsProLabel');
+            const sContainer = document.getElementById('settingsProUpgradeContainer');
+            const tCard = document.getElementById('toolsProCard');
+            const wCard = document.getElementById('dashboardWalletCard');
+            const mSupport = document.getElementById('menuSupportItem');
+
+            if (app.state.user.isPro) {
+                if (banner) banner.classList.add('hidden');
+                if (badge) badge.classList.remove('hidden');
+                if (sLabel) sLabel.innerHTML = '👑 TASKFORCE PRO ACTIVE';
+                if (sContainer) sContainer.classList.add('hidden');
+                if (tCard) tCard.classList.add('hidden');
+                if (wCard) wCard.classList.remove('hidden');
+                if (mSupport) {
+                    mSupport.innerHTML = '<i data-lucide="heart" class="text-danger"></i> Support (Pro Aktiv)';
+                    mSupport.onclick = () => app.navigateTo('settings');
+                }
+            } else {
+                if (banner) banner.classList.add('hidden');
+                if (badge) badge.classList.add('hidden');
+                if (sLabel) sLabel.innerHTML = 'STANDARD VERSION';
+                if (sContainer) sContainer.classList.remove('hidden');
+                if (tCard) tCard.classList.add('hidden');
+                if (wCard) wCard.classList.remove('hidden');
+                if (mSupport) {
+                    mSupport.innerHTML = '<i data-lucide="heart" class="text-danger"></i> Support & Pro';
+                    mSupport.onclick = () => app.navigateTo('settings');
+                }
+            }
+            if (window.lucide) lucide.createIcons();
         }
     },
 
@@ -336,7 +484,7 @@ const app = {
         });
     },
 
-    navigateTo(page) {
+    navigateTo(page, skipHistory = false) {
         this.state.currentPage = page;
         document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
 
@@ -354,10 +502,19 @@ const app = {
             else i.classList.remove('active');
         });
 
+        // Push to browser history (unless we're navigating via back button)
+        if (!skipHistory) {
+            window.history.pushState({ page: page }, '', '');
+        }
+
         if (page === 'calendar') app.calendar.render();
         if (page === 'team') app.team.render();
         if (page === 'health') app.health.render();
-        if (page === 'settings') app.settings.render();
+        if (page === 'contacts') app.contacts.render();
+        if (page === 'settings') {
+            app.settings.render();
+            app.settings.initPayPal();
+        }
     },
 
     // --- CALENDAR & EVENTS ---
@@ -516,79 +673,79 @@ const app = {
                 app.renderDashboard();
             }
         },
+        deleteEvent(id) {
+            if (confirm("Termin wirklich löschen?")) {
+                app.state.events = app.state.events.filter(e => e.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
         render() {
             const grid = document.getElementById('calendarGrid');
             const label = document.getElementById('calMonthDisplay');
-            const list = document.getElementById('upcomingEventsList');
-            const routeBtn = document.getElementById('calcDailyRouteBtn');
 
             if (!grid || !label) return;
 
-            const mn = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+            const mn = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
             label.textContent = `${mn[this.currentViewDate.getMonth()]} ${this.currentViewDate.getFullYear()}`;
-
-            if (routeBtn) routeBtn.classList.remove('hidden');
 
             grid.innerHTML = '';
             const y = this.currentViewDate.getFullYear();
             const m = this.currentViewDate.getMonth();
             const startOffset = (new Date(y, m, 1).getDay() || 7) - 1;
 
-            for (let i = 0; i < startOffset; i++) grid.innerHTML += '<div class="calendar-day empty"></div>';
+            // Empty cells for offset
+            for (let i = 0; i < startOffset; i++) {
+                grid.innerHTML += '<div class="calendar-day empty"></div>';
+            }
 
             const today = new Date();
             const dim = new Date(y, m + 1, 0).getDate();
 
+            // Render days
             for (let d = 1; d <= dim; d++) {
                 const cell = document.createElement('div');
                 cell.className = 'calendar-day';
-                if (today.getDate() === d && today.getMonth() === m && today.getFullYear() === y) cell.classList.add('today');
 
-                const de = app.state.events.filter(e => {
-                    const x = new Date(e.start);
-                    return x.getDate() === d && x.getMonth() === m && x.getFullYear() === y;
+                // Highlight today
+                if (today.getDate() === d && today.getMonth() === m && today.getFullYear() === y) {
+                    cell.classList.add('today');
+                }
+
+                // Find events for this day
+                const dayEvents = app.state.events.filter(e => {
+                    const eventDate = new Date(e.start);
+                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y;
                 });
 
-                cell.innerHTML = `<div class="day-number">${d}</div>` + de.map(ev => `<div class="event-marker" style="${ev.urgent ? 'background:var(--danger)' : ''}">${ev.title}</div>`).join('');
+                // Build day content
+                let dayContent = `<div class="day-number">${d}</div>`;
+
+                // Add event markers
+                if (dayEvents.length > 0) {
+                    dayContent += '<div class="event-markers">';
+                    dayEvents.forEach(ev => {
+                        const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        dayContent += `<div class="event-marker ${ev.urgent ? 'urgent' : ''}" title="${ev.title} - ${eventTime}">${ev.title}</div>`;
+                    });
+                    dayContent += '</div>';
+                }
+
+                cell.innerHTML = dayContent;
+
+                // Click handler: Open form with pre-filled date
                 cell.onclick = () => {
                     app.editingId = null;
-                    app.modals.open('addEvent', { date: `${y}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}` });
+                    const dateStr = `${y}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+                    app.modals.open('addEvent', { date: dateStr });
                 };
+
                 grid.appendChild(cell);
             }
 
-            if (list) {
-                list.innerHTML = '';
-                const up = app.state.events.filter(e => new Date(e.start) >= new Date().setHours(0, 0, 0, 0)).slice(0, 10);
-
-                if (!up.length) list.innerHTML = '<div class="text-muted text-sm">Keine Termine.</div>';
-                else up.forEach(e => {
-                    const ed = new Date(e.start);
-                    const row = document.createElement('div');
-                    row.id = `event-card-${e.id}`;
-                    row.className = `event-card-detail ${e.urgent ? 'blink-urgent' : ''}`;
-                    row.innerHTML = `
-                        <div style="font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <button class="btn-toggle-urgent ${e.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.calendar.toggleUrgency(${e.id})"><i data-lucide="flame" size="14"></i></button>
-                                <span style="font-size:1.1rem;">${e.title}</span>
-                            </div>
-                        <div class="text-muted text-sm" style="margin-bottom:8px;">
-                            ${ed.toLocaleDateString()} ${ed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        ${e.location ? `<div class="event-meta-row"><i data-lucide="map-pin" size="14"></i> ${e.location}</div>` : ''}
-                        ${e.phone ? `<div class="event-meta-row"><i data-lucide="phone" size="14"></i> ${e.phone}</div>` : ''}
-                        
-                        <div class="event-edit-toolbar">
-                             <button class="btn-small btn-edit" onclick="app.calendar.editEvent(${e.id})"><i data-lucide="pencil" size="14"></i> Bearbeiten</button>
-                             ${e.location ? `<button class="btn-small btn-nav" onclick="window.open('https://maps.google.com/?q=${encodeURIComponent(e.location)}','_blank')"><i data-lucide="navigation" size="14"></i> Navi</button>` : ''}
-                             <button class="btn-small btn-delete" onclick="app.calendar.deleteEvent(${e.id})"><i data-lucide="trash" size="14"></i></button>
-                        </div>
-                    `;
-                    list.appendChild(row);
-                });
-            }
             this.checkUrgency();
+            if (window.lucide) lucide.createIcons();
         }
     },
 
@@ -605,23 +762,25 @@ const app = {
 
             if (up.length > 0) {
                 dp.innerHTML = up.map((e, index) => {
-                    const isFirst = index === 0; // Highlight the very first one
                     const start = new Date(e.start);
+                    const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     return `
-                        <div class="hero-event-item ${e.urgent ? 'blink-urgent' : ''}" style="${isFirst ? 'border-width: 6px; background: rgba(255,255,255,0.08);' : ''}">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <div style="font-weight: bold; font-size: ${isFirst ? '1.3rem' : '1.1rem'}; color: white;">${e.title}${e.urgent ? ' 🔥' : ''}</div>
-                                    <div class="text-muted text-sm" style="margin-top:4px;">
-                                        <i data-lucide="clock" size="14"></i> ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        <span style="margin: 0 8px;">|</span>
-                                        ${e.location ? `<i data-lucide="map-pin" size="14"></i> ${e.location}` : '<i data-lucide="home" size="14"></i> Kein Ort'}
-                                    </div>
+                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)';">
+                            <div style="width: 75px; font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px;">${timeStr}</div>
+                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-turquoise">🔥</span>' : ''}</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
+                                    ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
                                 </div>
-                                <div style="display:flex; gap:8px;">
-                                    <button class="btn-toggle-urgent ${e.urgent ? 'is-urgent' : ''}" style="width:36px;height:36px;" onclick="event.stopPropagation(); app.calendar.toggleUrgency(${e.id})"><i data-lucide="flame"></i></button>
-                                    ${e.location ? `<button class="btn-primary" style="padding: 8px;" onclick="window.open('https://maps.google.com/?q=${encodeURIComponent(e.location)}','_blank')"><i data-lucide="navigation"></i></button>` : ''}
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
+                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="color: #ffffff; text-decoration: none; font-size: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.12)'; this.style.borderColor='rgba(255, 255, 255, 0.4)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.15)'"><i data-lucide="phone" size="12"></i> ${e.phone}</a>` : ''}
+                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="color: #ffffff; text-decoration: none; font-size: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.12)'; this.style.borderColor='rgba(255, 255, 255, 0.4)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.15)'"><i data-lucide="mail" size="12"></i> E-Mail</a>` : ''}
                                 </div>
+                            </div>
+                            <div style="display:flex; align-items:center; margin-left:10px;">
+                                 ${e.urgent ? '<div style="width:10px; height:10px; border-radius:50%; background:var(--turquoise); box-shadow: 0 0 12px var(--turquoise); margin-right:15px;"></div>' : ''}
+                                 <i data-lucide="chevron-right" size="18" class="text-muted" style="opacity:0.5;"></i>
                             </div>
                         </div>
                      `;
@@ -666,29 +825,26 @@ const app = {
         if (elW) elW.textContent = sumW.toFixed(0) + '€';
         if (elY) elY.textContent = sumY.toFixed(0) + '€';
 
-        // Chart
-        const ctx = document.getElementById('dashboardFinanceChart');
-        if (ctx) {
-            // Destroy old chart instance if exists
-            if (app.dashboardChart) app.dashboardChart.destroy();
+        // Finance Budget Overview Update
+        const budget = app.state.monthlyBudget || 2000;
+        const remaining = budget - sumM;
+        const budgetPercent = Math.min((sumM / budget) * 100, 100);
 
-            app.dashboardChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Woche', 'Rest (Monat)'],
-                    datasets: [{
-                        data: [sumW, Math.max(0, sumM - sumW)],
-                        backgroundColor: ['#dc2626', '#334155'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    cutout: '70%',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
-                }
-            });
+        const dfB = document.getElementById('dashFinBudget');
+        const dfR = document.getElementById('dashFinRemaining');
+        const dfBar = document.getElementById('dashFinBudgetBar');
+
+        if (dfB) dfB.textContent = budget.toFixed(0) + '€';
+        if (dfR) {
+            dfR.textContent = remaining.toFixed(0) + '€';
+            dfR.style.color = remaining >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+        if (dfBar) {
+            dfBar.style.width = budgetPercent + '%';
+            // Scale color from green to red based on budget usage
+            if (budgetPercent > 90) dfBar.style.background = 'var(--danger)';
+            else if (budgetPercent > 70) dfBar.style.background = '#f59e0b'; // Amber
+            else dfBar.style.background = 'linear-gradient(90deg, #10b981, #059669)';
         }
 
         // Shopping List Preview (Count View)
@@ -704,34 +860,93 @@ const app = {
              `;
         }
 
-        // Habits Preview
+        // Habits Checklist Preview
         const habPreview = document.getElementById('dashboardHabitsPreview');
         if (habPreview && app.state.habits) {
-            const activeH = app.state.habits.slice(0, 4);
-            if (activeH.length > 0) {
-                habPreview.innerHTML = activeH.map(h => {
-                    // Check if done today logic (simplified)
-                    const todayStr = new Date().toISOString().split('T')[0];
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0-6
+            const todayStr = today.toISOString().split('T')[0];
+
+            // Filter habits for today (if days specified)
+            const todayHabits = app.state.habits.filter(h => {
+                if (!h.days || h.days.length === 0) return true;
+                return h.days.includes(dayOfWeek);
+            });
+
+            if (todayHabits.length > 0) {
+                const completedCount = todayHabits.filter(h => h.history && h.history.includes(todayStr)).length;
+                const habitProgress = Math.min((completedCount / todayHabits.length) * 100, 100);
+                const allDone = habitProgress === 100;
+
+                let habitsHtml = `
+                    <div style="width:100%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span class="text-xs text-muted" style="text-transform:uppercase;">Tages-Fortschritt</span>
+                            <span class="text-xs" style="font-weight:bold; color:${allDone ? 'var(--success)' : 'var(--primary)'}">${completedCount}/${todayHabits.length}</span>
+                        </div>
+                        <div class="habit-progress-container" style="margin-bottom:15px; height:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                            <div class="habit-progress-bar" style="width: ${habitProgress}%; background: ${allDone ? 'linear-gradient(90deg, #10b981, #34d399)' : 'linear-gradient(90deg, var(--primary), var(--accent))'}; box-shadow: ${allDone ? '0 0 10px rgba(16,185,129,0.4)' : 'none'};"></div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                `;
+
+                habitsHtml += todayHabits.map(h => {
                     const isDone = h.history && h.history.includes(todayStr);
-                    return `<div style="width:10px; height:10px; border-radius:50%; background:${isDone ? 'var(--success)' : 'var(--bg-surface)'}; border:1px solid var(--border);" class="${h.urgent ? 'blink-urgent' : ''}" title="${h.name}"></div>`;
+                    return `
+                        <div style="display:flex; align-items:center; justify-content:space-between; transition: all 0.3s; ${isDone ? 'opacity: 0.5;' : ''}" class="habit-checklist-item">
+                            <div style="display:flex; align-items:center; gap:12px; flex:1; cursor:pointer;" onclick="event.stopPropagation(); app.habits.toggleToday(${h.id})">
+                                <div class="checkbox-circle ${isDone ? 'checked' : ''}" style="width:22px; height:22px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                                    ${isDone ? '<i data-lucide="check" size="14" style="color:white"></i>' : ''}
+                                </div>
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="${isDone ? 'text-decoration:line-through; color:var(--text-muted);' : 'font-weight:600; font-size:1rem;'}">${h.name}</span>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        ${h.time ? `<span class="text-xs text-muted"><i data-lucide="clock" size="10" style="vertical-align:middle;"></i> ${h.time}</span>` : ''}
+                                        ${h.urgent && !isDone ? '<span class="text-xs" style="color:var(--danger); font-weight:bold;">🔥 Wichtig</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 }).join('');
+
+                habitsHtml += `</div></div>`;
+                habPreview.innerHTML = habitsHtml;
+                habPreview.style.display = 'block';
             } else {
-                habPreview.innerHTML = '<span class="text-muted text-sm">Keine Habits.</span>';
+                habPreview.innerHTML = '<div style="text-align:center; padding:20px;"><i data-lucide="coffee" class="text-muted" size="32"></i><p class="text-muted text-sm" style="margin-top:10px;">Heute keine Habits geplant.<br>Genieße deinen freien Tag!</p></div>';
             }
         }
 
-        // Health Dashboard Summary
+        // Health Dashboard Summary - Interactive Water Card
         const todayStr = new Date().toISOString().split('T')[0];
         const waterToday = (app.state.healthData || [])
             .filter(d => d.type === 'water' && d.date === todayStr)
             .reduce((sum, d) => sum + d.value, 0);
-        const waterGoal = app.state.waterGoal || 2.5;
 
-        const dashWaterText = document.getElementById('dashboardWaterText');
-        const dashWaterBar = document.getElementById('dashboardWaterBar');
-        if (dashWaterText) dashWaterText.textContent = `${waterToday.toFixed(1)} / ${waterGoal}L`;
-        if (dashWaterBar) dashWaterBar.style.width = Math.min((waterToday / waterGoal) * 100, 100) + '%';
+        const waterGoal = app.state.hydrationGoal || 2.5;
+        const waterPercent = Math.min((waterToday / waterGoal) * 100, 100);
 
+        const healthPreview = document.getElementById('dashboardHealthPreview');
+        if (healthPreview) {
+            healthPreview.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px;">
+                    <button onclick="app.health.quickAddWater()" 
+                            style="background:none; border:none; cursor:pointer; font-size:3rem; transition:transform 0.2s; filter:drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));"
+                            onmouseover="this.style.transform='scale(1.1)'" 
+                            onmouseout="this.style.transform='scale(1)'"
+                            title="Klicken um 0.25L hinzuzufügen">
+                        💧
+                    </button>
+                    <div style="width:100%; background:rgba(255,255,255,0.1); height:8px; border-radius:4px; overflow:hidden;">
+                        <div style="width:${waterPercent}%; height:100%; background:linear-gradient(90deg, #3b82f6, #06b6d4); transition:width 0.5s ease;"></div>
+                    </div>
+                    <div class="text-sm text-muted">${waterToday.toFixed(2)}L / ${waterGoal}L</div>
+                </div>
+            `;
+        }
+
+        // Update Urgency Blinking
         // Status Text Update
         const statusText = document.getElementById('statusSummaryText');
         if (statusText) {
@@ -769,6 +984,30 @@ const app = {
         const hasUrgentHabits = (app.state.habits || []).some(h => h.urgent);
         toggleCardBlink('dashboardHabitsCard', hasUrgentHabits);
 
+        // 6. Alarms Preview
+        const alarmPreview = document.getElementById('dashboardAlarmsPreview');
+        if (alarmPreview && app.state.alarms) {
+            const activeAlarms = app.state.alarms.filter(a => a.active);
+            if (activeAlarms.length > 0) {
+                alarmPreview.innerHTML = activeAlarms.map(a => {
+                    const daysLabels = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+                    const daysStr = a.days.length === 7 ? 'Täglich' : (a.days.length === 5 && !a.days.includes(0) && !a.days.includes(6) ? 'Mo-Fr' : a.days.map(d => daysLabels[d]).join(', '));
+                    return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid rgba(59, 130, 246, 0.2);">
+                            <div>
+                                <div style="font-weight:bold; font-size:1rem;">${a.time}</div>
+                                <div class="text-xs text-muted">${a.title || 'Wecker'} • ${daysStr}</div>
+                            </div>
+                            <i data-lucide="bell" size="14" class="text-primary"></i>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                alarmPreview.innerHTML = '<div class="text-muted text-sm">Alle Wecker sind aus.</div>';
+            }
+        }
+        toggleCardBlink('dashboardAlarmsCard', (app.state.alarms || []).some(a => a.active));
+
         if (window.lucide) lucide.createIcons();
     },
 
@@ -776,27 +1015,66 @@ const app = {
         setInterval(() => {
             const now = new Date();
             const t = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const s = now.getSeconds().toString().padStart(2, '0');
+            const ds = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-            const clockEl = document.getElementById('clockTime');
-            if (clockEl) clockEl.textContent = t;
+            // Hero Clock Update (Dashboard)
+            const ht = document.getElementById('heroClockTime');
+            if (ht) ht.textContent = t;
+
+            const hs = document.getElementById('heroClockSeconds');
+            if (hs) hs.textContent = s;
+
+            const hd = document.getElementById('heroClockDay');
+            if (hd) hd.textContent = now.toLocaleDateString('de-DE', { weekday: 'long' }).toUpperCase();
+
+            const hDate = document.getElementById('heroClockDate');
+            if (hDate) hDate.textContent = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const hm = document.getElementById('heroClockMonth');
+            if (hm) hm.textContent = now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+            const clockSidebar = document.getElementById('clockTimeSidebar');
+            if (clockSidebar) clockSidebar.textContent = t;
+
+            const dateSidebar = document.getElementById('clockDateSidebar');
+            if (dateSidebar) dateSidebar.textContent = ds;
 
             const driveClk = document.getElementById('driveClock');
             if (driveClk) driveClk.textContent = t;
 
             const driveDate = document.getElementById('driveDate');
-            if (driveDate) driveDate.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (driveDate) driveDate.textContent = ds;
 
             const d = document.getElementById('currentDateDisplay');
-            if (d) d.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (d) d.textContent = ds;
 
             app.nightstand.update();
 
-            // Check Alarm (Active & exact minute match, run once per minute by checking seconds < 2)
-            if (app.state.alarm && app.state.alarm.active && now.getSeconds() < 2) {
-                if (t === app.state.alarm.time) {
-                    alert("⏰ WECKER: Es ist " + t + " Uhr!");
-                    // Simple blocking alert for now, could be sound later
-                }
+            // --- MULTI-ALARM CHECK ---
+            if (this.state.alarms && now.getSeconds() < 2) {
+                const currentDay = now.getDay();
+                this.state.alarms.forEach(alarm => {
+                    if (alarm.active && alarm.time === t) {
+                        const alarmDays = alarm.days || [];
+                        if (alarmDays.includes(currentDay)) {
+                            // Sound Selection
+                            const sounds = {
+                                'melody': 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+                                'digital': 'https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3',
+                                'nature': 'https://assets.mixkit.co/active_storage/sfx/2434/2434-preview.mp3',
+                                'classic': 'https://assets.mixkit.co/active_storage/sfx/2192/2192-preview.mp3'
+                            };
+                            const soundUrl = sounds[alarm.sound] || sounds['melody'];
+
+                            const audio = new Audio(soundUrl);
+                            audio.play().catch(() => { });
+
+                            // Visual Alert removed as per user request (no popup)
+                            console.log(`⏰ WECKER: ${alarm.title || 'Alarm'} - ${t} Uhr`);
+                        }
+                    }
+                });
             }
 
             // --- SYSTEM NOTIFICATION CHECKS ---
@@ -922,9 +1200,10 @@ const app = {
                 const eventDate = new Date(e.start);
                 const ed = new Date(e.start).setHours(0, 0, 0, 0);
 
-                // Only show if it matches today AND hasn't expired > 30 mins ago
+                // Only show events for today that haven't started yet
+                // This excludes all past/expired events from the drive mode route
                 return ed === today &&
-                    (eventDate.getTime() + (30 * 60 * 1000)) > nowTime &&
+                    eventDate.getTime() > nowTime && // Event is in the future
                     e.location && e.location.trim().length > 0;
             });
             routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -961,12 +1240,17 @@ const app = {
                             ${!isLast ? '<div style="width:2px; flex:1; background:rgba(255,255,255,0.1);"></div>' : ''}
                         </div>
                         <div style="padding-bottom: ${isLast ? '0' : '20px'}; flex:1;">
-                            <div class="card" style="margin:0; padding:15px; border-left: 3px solid var(--primary);">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                                    <span style="font-weight:bold;">${e.title}</span>
-                                    <span class="text-muted text-sm">${time} Uhr</span>
+                            <div class="card" style="margin:0 0 15px 0; padding:20px; border-left: 4px solid var(--primary); background: rgba(255,255,255,0.05); border-radius: 16px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                    <span style="font-weight:800; font-size:1.1rem; color:#fff;">${e.title}</span>
+                                    <span style="color: var(--primary); font-weight:bold; font-size:1rem;">${time} Uhr</span>
                                 </div>
-                                <div class="text-sm text-muted"><i data-lucide="map-pin" size="12"></i> ${e.location}</div>
+                                <div class="text-sm text-muted" style="display:flex; align-items:center; gap:8px;">
+                                    <i data-lucide="map-pin" size="14"></i> <span style="font-size: 0.95rem;">${e.location}</span>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" style="color: var(--primary); display:flex; align-items:center; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px;" title="In Google Maps öffnen">
+                                        <i data-lucide="external-link" size="14"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>`;
@@ -985,9 +1269,16 @@ const app = {
             }
 
             const today = new Date().setHours(0, 0, 0, 0);
+            const nowTime = new Date().getTime();
+
             const routeEvents = app.state.events.filter(e => {
+                const eventDate = new Date(e.start);
                 const ed = new Date(e.start).setHours(0, 0, 0, 0);
-                return ed === today && e.location && e.location.trim().length > 0;
+
+                // Only include future events for today with a location
+                return ed === today &&
+                    eventDate.getTime() > nowTime && // Event is in the future
+                    e.location && e.location.trim().length > 0;
             });
             routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
 
@@ -1154,7 +1445,15 @@ const app = {
         }
     },
     finance: {
-        toggleUrgency(id) { const e = app.state.expenses.find(x => x.id === id); if (e) { e.urgent = !e.urgent; app.saveState(); this.render(); } },
+        toggleUrgency(id) {
+            const e = app.state.expenses.find(x => x.id === id);
+            if (e) {
+                e.urgent = !e.urgent;
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
         add(a, d, dateStr, urgent = false) {
             app.state.expenses.push({
                 id: Date.now(),
@@ -1167,48 +1466,149 @@ const app = {
             this.render();
             app.renderDashboard();
         },
+        edit(id) {
+            const e = app.state.expenses.find(x => x.id === id);
+            if (!e) return;
+
+            const newDesc = prompt("Beschreibung:", e.desc);
+            if (newDesc === null) return;
+
+            const newAmount = parseFloat(prompt("Betrag (€):", e.amount));
+            if (isNaN(newAmount)) return;
+
+            e.desc = newDesc;
+            e.amount = newAmount;
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+        },
+        delete(id) {
+            if (confirm("Ausgabe wirklich löschen?")) {
+                app.state.expenses = app.state.expenses.filter(e => e.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
+        setBudget() {
+            const current = app.state.monthlyBudget || 2000;
+            const newBudget = parseFloat(prompt("Monatliches Budget (€):", current));
+            if (newBudget && newBudget > 0) {
+                app.state.monthlyBudget = newBudget;
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
         render() {
-            // Calculate totals
+            // Calculate time periods
             const now = new Date();
-            const currentMonth = now.toISOString().slice(0, 7); // YYYY-MM
+            const today = now.toISOString().split('T')[0];
+            const currentMonth = now.toISOString().slice(0, 7);
+            const currentYear = now.getFullYear().toString();
 
-            const monthExpenses = app.state.expenses.filter(e => e.date && e.date.startsWith(currentMonth));
-            const totalMonth = monthExpenses.reduce((s, e) => s + e.amount, 0);
+            // Week calculation (Monday-Sunday)
+            const startOfWeek = new Date(now);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+            startOfWeek.setDate(diff);
+            startOfWeek.setHours(0, 0, 0, 0);
 
-            // Chart Update (Monthly Focus)
+            // Calculate totals for all periods
+            let totalDay = 0, totalWeek = 0, totalMonth = 0, totalYear = 0;
+
+            app.state.expenses.forEach(e => {
+                const expDate = new Date(e.date);
+                const amount = e.amount;
+
+                if (e.date === today) totalDay += amount;
+                if (expDate >= startOfWeek) totalWeek += amount;
+                if (e.date.startsWith(currentMonth)) totalMonth += amount;
+                if (e.date.startsWith(currentYear)) totalYear += amount;
+            });
+
+            // Budget
+            const budget = app.state.monthlyBudget || 2000;
+            const remaining = budget - totalMonth;
+
+            // Update summary cards
+            const updateSummary = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value.toFixed(2) + '€';
+            };
+
+            updateSummary('financeDay', totalDay);
+            updateSummary('financeWeek', totalWeek);
+            updateSummary('financeMonth', totalMonth);
+            updateSummary('financeYear', totalYear);
+            updateSummary('financeBudget', budget);
+            updateSummary('financeRemaining', remaining);
+
+            // Update remaining color
+            const remEl = document.getElementById('financeRemaining');
+            if (remEl) {
+                remEl.style.color = remaining >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
+
+            // Chart Update
             const c = document.getElementById('expenseChart');
             if (c && window.Chart) {
                 if (this.chartInstance) this.chartInstance.destroy();
                 this.chartInstance = new Chart(c, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Ausgaben (Monat)', 'Rest-Budget'],
+                        labels: ['Ausgegeben', 'Übrig'],
                         datasets: [{
-                            data: [totalMonth, Math.max(0, 2000 - totalMonth)],
-                            backgroundColor: ['#ef4444', '#334155'],
+                            data: [totalMonth, Math.max(0, remaining)],
+                            backgroundColor: ['#ef4444', '#10b981'],
                             borderWidth: 0
                         }]
                     },
-                    options: { responsive: true, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                    options: {
+                        responsive: true,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: true }
+                        }
+                    }
                 });
             }
 
-            // List View
+            // List View with Edit/Delete Toolbar
             const l = document.getElementById('expenseHistory');
             if (l) {
-                l.innerHTML = app.state.expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(e => {
-                    const d = new Date(e.date).toLocaleDateString();
-                    return `<div class="${e.urgent ? 'blink-urgent' : ''}" style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:5px;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <button class="btn-toggle-urgent ${e.urgent ? 'is-urgent' : ''}" onclick="app.finance.toggleUrgency(${e.id})"><i data-lucide="flame" size="12"></i></button>
-                            <div>
-                                <div style="font-weight:500;">${e.desc}</div>
-                                <div class="text-sm text-muted">${d}</div>
+                const sorted = app.state.expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (sorted.length === 0) {
+                    l.innerHTML = '<div class="text-muted text-sm">Noch keine Ausgaben erfasst.</div>';
+                } else {
+                    l.innerHTML = sorted.map(e => {
+                        const d = new Date(e.date).toLocaleDateString('de-DE');
+                        return `<div class="expense-entry ${e.urgent ? 'blink-urgent' : ''}">
+                            <div style="flex:1;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <button class="btn-toggle-urgent ${e.urgent ? 'is-urgent' : ''}" onclick="app.finance.toggleUrgency(${e.id})" title="Wichtig"><i data-lucide="flame" size="14"></i></button>
+                                    <div>
+                                        <div style="font-weight:600;">${e.desc}</div>
+                                        <div class="text-sm text-muted">${d}</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <span style="color:var(--danger)">-${e.amount.toFixed(2)} €</span>
-                    </div>`;
-                }).join('');
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="color:var(--danger); font-weight:700; font-size:1.1rem;">-${e.amount.toFixed(2)}€</span>
+                                <div class="event-edit-toolbar" style="display:flex; gap:4px;">
+                                    <button class="btn-small btn-edit" onclick="app.finance.edit(${e.id})" title="Bearbeiten">
+                                        <i data-lucide="pencil" size="14"></i>
+                                    </button>
+                                    <button class="btn-small btn-delete" onclick="app.finance.delete(${e.id})" title="Löschen">
+                                        <i data-lucide="trash" size="14"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
             }
             if (window.lucide) lucide.createIcons();
         }
@@ -1216,13 +1616,7 @@ const app = {
     habits: {
         toggleUrgency(id) { const h = app.state.habits.find(x => x.id === id); if (h) { h.urgent = !h.urgent; app.saveState(); this.render(); } },
         add() {
-            const n = prompt("Gewohnheit Name:");
-            if (n) {
-                const goal = parseInt(prompt("Ziel (Tage):", "30")) || 30;
-                app.state.habits.push({ id: Date.now(), name: n, streak: 0, goal: goal, urgent: false });
-                app.saveState();
-                this.render();
-            }
+            app.modals.open('addHabit');
         },
         increment(id) {
             const h = app.state.habits.find(x => x.id === id);
@@ -1231,7 +1625,33 @@ const app = {
                 app.gamification.addXP(10);
                 app.saveState();
                 this.render();
+                app.renderDashboard();
             }
+        },
+        toggleToday(id) {
+            const h = app.state.habits.find(x => x.id === id);
+            if (!h) return;
+            if (!h.history) h.history = [];
+
+            const today = new Date().toISOString().split('T')[0];
+            const idx = h.history.indexOf(today);
+
+            if (idx === -1) {
+                h.history.push(today);
+                h.streak++;
+                app.gamification.addXP(20);
+                // Trigger confetti if all today's habits done
+                const todayHabits = app.state.habits.filter(hab => !hab.days || hab.days.length === 0 || hab.days.includes(new Date().getDay()));
+                const allDone = todayHabits.every(hab => hab.history && hab.history.includes(today));
+                if (allDone) app.gamification.triggerConfetti();
+            } else {
+                h.history.splice(idx, 1);
+                if (h.streak > 0) h.streak--;
+            }
+
+            app.saveState();
+            this.render();
+            app.renderDashboard();
         },
         decrement(id) {
             const h = app.state.habits.find(x => x.id === id);
@@ -1246,10 +1666,16 @@ const app = {
             if (!g) return;
             g.innerHTML = app.state.habits.map(h => {
                 const progress = h.goal ? Math.min((h.streak / h.goal) * 100, 100) : 0;
+                const daysLabels = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+                const daysString = h.days && h.days.length > 0 ? h.days.map(d => daysLabels[d]).join(', ') : 'Täglich';
+
                 return `
                     <div class="card ${h.urgent ? 'blink-urgent' : ''}">
                         <div class="card-header">
-                            <span class="card-title">${h.name}</span>
+                            <div>
+                                <span class="card-title">${h.name}</span>
+                                <div class="text-xs text-muted">${daysString} ${h.time ? '• ' + h.time : ''}</div>
+                            </div>
                             <button class="btn-toggle-urgent ${h.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.habits.toggleUrgency(${h.id})"><i data-lucide="flame" size="14"></i></button>
                         </div>
                         <div class="card-value">${h.streak} 🔥</div>
@@ -1261,6 +1687,9 @@ const app = {
                             <button class="habit-btn decrement" onclick="event.stopPropagation(); app.habits.decrement(${h.id})">−</button>
                             <button class="habit-btn increment" onclick="event.stopPropagation(); app.habits.increment(${h.id})">+</button>
                         </div>
+                        <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="app.habits.toggleToday(${h.id})">
+                            Heute erledigt?
+                        </button>
                     </div>
                 `;
             }).join('');
@@ -1291,41 +1720,208 @@ const app = {
                 this.addWeight(value, reminder);
             }
         },
-        edit(id) {
-            const entry = app.state.healthData.find(e => e.id === id);
-            if (!entry) return;
+        lastWaterReminder: null,
+        hydrationCheckInterval: null,
 
-            const newValue = parseFloat(prompt(`Neuer Wert (${entry.type}):`, entry.value));
-            if (newValue && !isNaN(newValue)) {
-                entry.value = newValue;
-                entry.timestamp = new Date().toISOString();
+        init() {
+            // Initialize hydration tracking
+            if (!app.state.hydrationGoal) app.state.hydrationGoal = 2.5; // Default 2.5L
+            if (!app.state.hydrationReminderInterval) app.state.hydrationReminderInterval = 120; // Default 2 hours in minutes
+            if (!app.state.hydrationReminderMethod) app.state.hydrationReminderMethod = 'popup'; // popup, sound, blink
+
+            // Start hydration monitoring
+            this.startHydrationMonitoring();
+
+            // Start weekly weight reminder
+            this.startWeightReminder();
+        },
+
+        startWeightReminder() {
+            // Check once per day
+            setInterval(() => {
+                this.checkWeightReminder();
+            }, 24 * 60 * 60 * 1000); // Every 24 hours
+
+            // Check immediately
+            this.checkWeightReminder();
+        },
+
+        checkWeightReminder() {
+            if (!app.state.weightReminderEnabled) return;
+
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const reminderDay = app.state.weightReminderDay || 1; // Default Monday
+
+            // Check if today is the reminder day
+            if (dayOfWeek !== reminderDay) return;
+
+            // Check if already weighed this week
+            const today = now.toISOString().split('T')[0];
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+            weekStart.setHours(0, 0, 0, 0);
+
+            const weightThisWeek = (app.state.healthData || [])
+                .filter(d => d.type === 'weight')
+                .filter(d => new Date(d.timestamp) >= weekStart);
+
+            // If no weight entry this week, remind
+            if (weightThisWeek.length === 0) {
+                // Check if we already reminded today
+                if (app.state.lastWeightReminder === today) return;
+
+                this.triggerWeightReminder();
+                app.state.lastWeightReminder = today;
+                app.saveState();
+            }
+        },
+
+        triggerWeightReminder() {
+            const method = app.state.hydrationReminderMethod || 'popup';
+
+            if (method === 'popup' || method === 'all') {
+                if (Notification.permission === 'granted') {
+                    new Notification('⚖️ Wiegen nicht vergessen!', {
+                        body: 'Zeit für deine wöchentliche Gewichtskontrolle!',
+                        icon: '⚖️'
+                    });
+                } else {
+                    alert('⚖️ Wiegen nicht vergessen! Zeit für deine wöchentliche Gewichtskontrolle!');
+                }
+            }
+
+            if (method === 'blink' || method === 'all') {
+                const healthCard = document.querySelector('#dashboardHealthCard');
+                if (healthCard) {
+                    healthCard.classList.add('blink-urgent');
+                    setTimeout(() => healthCard.classList.remove('blink-urgent'), 10000);
+                }
+            }
+        },
+        startHydrationMonitoring() {
+            // Clear existing interval
+            if (this.hydrationCheckInterval) {
+                clearInterval(this.hydrationCheckInterval);
+            }
+
+            // Check every minute
+            this.hydrationCheckInterval = setInterval(() => {
+                this.checkHydrationReminder();
+            }, 60000); // Every minute
+
+            // Check immediately
+            this.checkHydrationReminder();
+        },
+
+        checkHydrationReminder() {
+            if (!app.state.hydrationReminderEnabled) return;
+
+            const now = Date.now();
+            const intervalMs = (app.state.hydrationReminderInterval || 120) * 60 * 1000;
+
+            // Find last water entry
+            const waterEntries = (app.state.healthData || [])
+                .filter(d => d.type === 'water')
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            const lastEntry = waterEntries[0];
+            const lastTime = lastEntry ? new Date(lastEntry.timestamp).getTime() : 0;
+            const timeSinceLastDrink = now - lastTime;
+
+            // Check if reminder needed
+            if (timeSinceLastDrink >= intervalMs) {
+                // Check if we already reminded recently (don't spam)
+                if (!this.lastWaterReminder || (now - this.lastWaterReminder) >= intervalMs) {
+                    this.triggerHydrationReminder();
+                    this.lastWaterReminder = now;
+                }
+            }
+        },
+
+        triggerHydrationReminder() {
+            const method = app.state.hydrationReminderMethod || 'popup';
+
+            if (method === 'popup' || method === 'all') {
+                if (Notification.permission === 'granted') {
+                    new Notification('💧 Trink Wasser!', {
+                        body: 'Es ist Zeit, etwas zu trinken!',
+                        icon: '💧'
+                    });
+                } else {
+                    alert('💧 Trink Wasser! Es ist Zeit, etwas zu trinken!');
+                }
+            }
+
+            if (method === 'sound' || method === 'all') {
+                // Play notification sound
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi77eafTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUrgs7y2Yk2CBlou+3mn00QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBAC');
+                audio.play().catch(() => { });
+            }
+
+            if (method === 'blink' || method === 'all') {
+                // Add blinking effect to health card
+                const healthCard = document.querySelector('[data-card="health"]');
+                if (healthCard) {
+                    healthCard.classList.add('blink-urgent');
+                    setTimeout(() => healthCard.classList.remove('blink-urgent'), 10000);
+                }
+            }
+        },
+
+        addReminder(data) {
+            if (!app.state.healthReminders) app.state.healthReminders = [];
+
+            app.state.healthReminders.push({
+                id: Date.now(),
+                name: data.name,
+                type: data.type, // medication, vitamin, water
+                time: data.time,
+                repeat: data.repeat, // daily, weekly, custom
+                stock: data.stock || 0,
+                notes: data.notes || '',
+                enabled: true,
+                created: new Date().toISOString()
+            });
+
+            app.saveState();
+            this.render();
+        },
+
+        deleteReminder(id) {
+            if (confirm('Erinnerung wirklich löschen?')) {
+                app.state.healthReminders = (app.state.healthReminders || []).filter(r => r.id !== id);
                 app.saveState();
                 this.render();
             }
         },
-        delete(id) {
-            if (confirm("Eintrag wirklich löschen?")) {
-                app.state.healthData = app.state.healthData.filter(e => e.id !== id);
+
+        toggleReminder(id) {
+            const reminder = (app.state.healthReminders || []).find(r => r.id === id);
+            if (reminder) {
+                reminder.enabled = !reminder.enabled;
                 app.saveState();
                 this.render();
             }
         },
-        setWaterGoal() {
-            const goal = parseFloat(prompt("Tägliches Wasser-Ziel in Litern:", app.state.waterGoal || "2.5"));
-            if (goal && goal > 0) {
-                app.state.waterGoal = goal;
+
+        updateStock(id, amount) {
+            const reminder = (app.state.healthReminders || []).find(r => r.id === id);
+            if (reminder) {
+                reminder.stock = Math.max(0, (reminder.stock || 0) + amount);
                 app.saveState();
                 this.render();
             }
         },
-        addWater(amount = 0.25, reminder = false) {
+
+        addWater(liters, reminder = false) {
             if (!app.state.healthData) app.state.healthData = [];
             const today = new Date().toISOString().split('T')[0];
 
             app.state.healthData.push({
                 id: Date.now(),
                 type: 'water',
-                value: amount,
+                value: liters,
                 date: today,
                 timestamp: new Date().toISOString(),
                 reminder: reminder
@@ -1333,9 +1929,20 @@ const app = {
 
             app.saveState();
             this.render();
+            app.renderDashboard();
 
-            if (reminder) {
-                alert('✅ Erinnerung aktiviert! Du wirst alle 2 Stunden ans Trinken erinnert.');
+            // Reset reminder timer
+            this.lastWaterReminder = Date.now();
+        },
+        quickAddWater() {
+            // Quick add 0.25L (one glass)
+            this.addWater(0.25);
+
+            // Visual feedback
+            const btn = event.target;
+            if (btn) {
+                btn.style.transform = 'scale(1.3)';
+                setTimeout(() => btn.style.transform = 'scale(1)', 200);
             }
         },
         addSteps(steps) {
@@ -1352,6 +1959,7 @@ const app = {
 
             app.saveState();
             this.render();
+            app.renderDashboard();
         },
         addSleep(hours, reminder = false) {
             if (!app.state.healthData) app.state.healthData = [];
@@ -1368,6 +1976,7 @@ const app = {
 
             app.saveState();
             this.render();
+            app.renderDashboard();
 
             if (reminder) {
                 alert('✅ Erinnerung aktiviert! Du wirst täglich um 22:00 Uhr ans Schlafen erinnert.');
@@ -1388,9 +1997,36 @@ const app = {
 
             app.saveState();
             this.render();
+            app.renderDashboard();
 
             if (reminder) {
                 alert('✅ Erinnerung aktiviert! Du wirst wöchentlich ans Wiegen erinnert.');
+            }
+        },
+        toggleUrgency(id) {
+            const item = app.state.healthData.find(x => x.id === id);
+            if (item) {
+                item.urgent = !item.urgent;
+                app.saveState();
+                this.render();
+            }
+        },
+        edit(id) {
+            const item = app.state.healthData.find(x => x.id === id);
+            if (!item) return;
+
+            const newValue = parseFloat(prompt(`Neuer Wert:`, item.value));
+            if (!isNaN(newValue)) {
+                item.value = newValue;
+                app.saveState();
+                this.render();
+            }
+        },
+        delete(id) {
+            if (confirm('Eintrag wirklich löschen?')) {
+                app.state.healthData = app.state.healthData.filter(x => x.id !== id);
+                app.saveState();
+                this.render();
             }
         },
         render() {
@@ -1566,15 +2202,177 @@ const app = {
                 if (el) { el.value = text; el.classList.remove('voice-listening'); }
                 return;
             }
-            // Use smartCommand for voice results too
-            const handled = app.smartCommand(text);
+
+            // Intelligent voice processing
+            const handled = this.intelligentProcess(text);
             if (handled) return;
 
+            // Fallback to simple navigation
             const t = text.toLowerCase();
             if (t.includes('kalender')) app.navigateTo('calendar');
             else if (t.includes('aufgabe')) app.navigateTo('tasks');
             else if (t.includes('fahrt')) app.navigateTo('drive');
             else if (t.includes('dashboard')) app.navigateTo('dashboard');
+            else if (t.includes('kontakt')) app.navigateTo('contacts');
+        },
+
+        intelligentProcess(text) {
+            const lower = text.toLowerCase();
+
+            // Extract information from speech
+            const info = this.extractInfo(text);
+
+            // Determine intent
+            if (this.isEventIntent(lower)) {
+                // Open event form with extracted data
+                app.modals.open('addEvent', info);
+                return true;
+            } else if (this.isExpenseIntent(lower)) {
+                // Open expense form with extracted data
+                app.modals.open('addExpense', info);
+                return true;
+            } else if (this.isTaskIntent(lower)) {
+                // Determine if shopping or todo
+                const category = lower.includes('kaufen') || lower.includes('einkauf') || lower.includes('shop') ? 'shopping' : 'todo';
+                app.modals.open('addTask', { ...info, category });
+                return true;
+            }
+
+            // Try smartCommand as fallback
+            return app.smartCommand(text);
+        },
+
+        extractInfo(text) {
+            const info = {};
+            const lower = text.toLowerCase();
+
+            // Extract phone numbers (various formats)
+            const phoneMatch = text.match(/(\+?\d{1,4}[\s-]?)?(\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}/);
+            if (phoneMatch) {
+                info.phone = phoneMatch[0].trim();
+            }
+
+            // Extract email
+            const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
+            if (emailMatch) {
+                info.email = emailMatch[0];
+            }
+
+            // Extract amounts (Euro, €)
+            const amountMatch = text.match(/(\d+[,.]?\d*)\s*(euro|€)/i);
+            if (amountMatch) {
+                info.amount = parseFloat(amountMatch[1].replace(',', '.'));
+            }
+
+            // Extract time (HH:MM or "um X Uhr")
+            const timeMatch = text.match(/(\d{1,2}):(\d{2})|um\s+(\d{1,2})\s*(uhr)?/i);
+            if (timeMatch) {
+                if (timeMatch[1] && timeMatch[2]) {
+                    info.time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+                } else if (timeMatch[3]) {
+                    info.time = `${timeMatch[3].padStart(2, '0')}:00`;
+                }
+            }
+
+            // Extract date keywords
+            if (lower.includes('heute')) {
+                info.date = new Date().toISOString().split('T')[0];
+            } else if (lower.includes('morgen')) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                info.date = tomorrow.toISOString().split('T')[0];
+            }
+
+            // Extract location/address (words after "in", "bei", "am", or street indicators)
+            const locationMatch = text.match(/(in|bei|am|straße|platz|weg)\s+([A-ZÄÖÜ][a-zäöüß\s]+(?:straße|platz|weg|allee)?)/i);
+            if (locationMatch) {
+                info.location = locationMatch[2].trim();
+            } else {
+                // Try to find capitalized words that might be locations
+                const words = text.split(' ');
+                const capitalizedSequence = [];
+                for (let word of words) {
+                    if (word[0] && word[0] === word[0].toUpperCase() && word.length > 2) {
+                        capitalizedSequence.push(word);
+                    } else if (capitalizedSequence.length > 0) {
+                        break;
+                    }
+                }
+                if (capitalizedSequence.length > 0 && !this.isCommonWord(capitalizedSequence[0])) {
+                    info.location = capitalizedSequence.join(' ');
+                }
+            }
+
+            // Extract title/description (clean text without extracted parts)
+            let title = text;
+            if (info.phone) title = title.replace(info.phone, '').trim();
+            if (info.email) title = title.replace(info.email, '').trim();
+            if (info.amount) title = title.replace(/\d+[,.]?\d*\s*(euro|€)/i, '').trim();
+            if (info.time) title = title.replace(/\d{1,2}:\d{2}|um\s+\d{1,2}\s*uhr/i, '').trim();
+            if (info.location) title = title.replace(info.location, '').trim();
+
+            // Clean up common trigger words
+            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe)\s*/i, '').trim();
+            title = title.replace(/\s+(in|bei|am|um|für)\s*$/, '').trim();
+
+            if (title.length > 0) {
+                info.title = title.charAt(0).toUpperCase() + title.slice(1);
+                info.desc = info.title; // For expenses
+            }
+
+            return info;
+        },
+
+        isEventIntent(text) {
+            const eventKeywords = ['termin', 'meeting', 'treffen', 'verabredung', 'arzt', 'zahnarzt', 'friseur', 'besprechung'];
+            return eventKeywords.some(kw => text.includes(kw)) ||
+                (text.match(/\d{1,2}:\d{2}/) && text.match(/[A-ZÄÖÜ][a-zäöüß]+/)); // Time + capitalized word
+        },
+
+        isExpenseIntent(text) {
+            const expenseKeywords = ['euro', '€', 'ausgabe', 'kosten', 'bezahlt', 'gekauft'];
+            return expenseKeywords.some(kw => text.includes(kw));
+        },
+
+        isTaskIntent(text) {
+            const taskKeywords = ['kaufen', 'einkauf', 'besorgen', 'todo', 'aufgabe', 'erledigen', 'machen'];
+            return taskKeywords.some(kw => text.includes(kw));
+        },
+
+        isCommonWord(word) {
+            const common = ['Termin', 'Meeting', 'Einkauf', 'Ausgabe', 'Euro', 'Heute', 'Morgen'];
+            return common.includes(word);
+        }
+    },
+    comms: {
+        call() {
+            if (app.state.contacts && app.state.contacts.length > 0) {
+                const recent = app.state.contacts[app.state.contacts.length - 1];
+                if (confirm(`${recent.name} anrufen?`)) {
+                    app.contacts.call(recent.phone);
+                }
+            } else {
+                app.navigateTo('contacts');
+                alert("Keine Kontakte vorhanden. Bitte füge einen Kontakt hinzu.");
+            }
+        },
+        whatsapp() {
+            if (app.state.contacts && app.state.contacts.length > 0) {
+                const recent = app.state.contacts[app.state.contacts.length - 1];
+                app.contacts.whatsapp(recent.phone);
+            } else {
+                app.navigateTo('contacts');
+                alert("Keine Kontakte für WhatsApp gefunden.");
+            }
+        },
+        email() {
+            if (app.state.contacts && app.state.contacts.length > 0) {
+                const recent = app.state.contacts[app.state.contacts.length - 1];
+                app.contacts.mail(recent.email);
+            } else {
+                app.navigateTo('contacts');
+                alert("Keine Kontakte für E-Mail gefunden.");
+            }
         }
     },
     nightstand: {
@@ -1605,6 +2403,42 @@ const app = {
                 const y = Math.floor(Math.random() * 20) - 10;
                 if (timeEl) timeEl.parentElement.style.transform = `translate(${x}px, ${y}px)`;
             }
+        }
+    },
+    alarms: {
+        toggle(id) {
+            const a = app.state.alarms.find(x => x.id === id);
+            if (a) {
+                a.active = !a.active;
+                app.saveState();
+                app.modals.open('setAlarm');
+                app.renderDashboard();
+            }
+        },
+        delete(id) {
+            if (confirm("Wecker wirklich löschen?")) {
+                app.state.alarms = app.state.alarms.filter(a => a.id !== id);
+                app.saveState();
+                app.modals.open('setAlarm');
+                app.renderDashboard();
+            }
+        },
+        save(id) {
+            const title = document.getElementById('alarmTitle').value || 'Alarm';
+            const time = document.getElementById('alarmTime').value;
+            const sound = document.getElementById('alarmSound').value;
+            const days = Array.from(document.querySelectorAll('input[name="alarmDays"]:checked')).map(cb => parseInt(cb.value));
+
+            if (id === null) {
+                app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true });
+            } else {
+                const a = app.state.alarms.find(x => x.id === id);
+                if (a) Object.assign(a, { title, time, sound, days });
+            }
+
+            app.saveState();
+            app.modals.open('setAlarm');
+            app.renderDashboard();
         }
     },
     async requestWakeLock() { if ('wakeLock' in navigator) { try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } } },
@@ -1672,6 +2506,8 @@ const app = {
         toggleDriveMode() {
             const d = document.getElementById('view-drive');
             if (d.classList.contains('hidden')) {
+                // Archive old events before showing Drive Mode
+                app.calendar.archiveOldEvents();
                 app.navigateTo('drive');
                 app.drive.init();
             }
@@ -1691,14 +2527,80 @@ const app = {
                         firebase.initializeApp(config);
                     }
                     this.db = firebase.firestore();
-
-                    const status = document.getElementById('syncStatus');
-                    if (status) status.innerHTML = '<span style="color:var(--success)">🟢 Online</span>';
                     console.log("Firebase Initialized");
 
                     this.listen(); // Start Real-Time Listener
-                } catch (e) { console.error("Firebase Init Failed", e); }
+                    this.startPresence(); // Start Heartbeat
+                } catch (e) {
+                    console.error("Firebase Init Failed", e);
+                    this.updateIndicator(false);
+                }
+            } else {
+                this.updateIndicator(false);
             }
+        },
+        activeMembers: [],
+        presenceInterval: null,
+        presenceUnsubscribe: null,
+        startPresence() {
+            if (!this.db || !app.state.user.teamName) {
+                this.updateIndicator(false);
+                return;
+            }
+
+            const team = app.state.user.teamName;
+            const userName = app.state.user.name || 'Unbekannt';
+
+            const writePresence = async () => {
+                try {
+                    await this.db.collection('taskforce_presence')
+                        .doc(`${team}_${userName}`)
+                        .set({
+                            userName,
+                            team,
+                            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                } catch (e) { console.error("Presence Write Failed", e); }
+            };
+
+            writePresence();
+            if (this.presenceInterval) clearInterval(this.presenceInterval);
+            this.presenceInterval = setInterval(writePresence, 30000); // 30s heartbeat
+
+            this.listenPresence();
+        },
+        listenPresence() {
+            if (!this.db || !app.state.user.teamName) return;
+            const team = app.state.user.teamName;
+
+            if (this.presenceUnsubscribe) this.presenceUnsubscribe();
+
+            this.presenceUnsubscribe = this.db.collection('taskforce_presence')
+                .where('team', '==', team)
+                .onSnapshot((snapshot) => {
+                    const now = Date.now();
+                    const members = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.lastSeen && data.userName !== app.state.user.name) {
+                            const lastSeenMs = data.lastSeen.toMillis ? data.lastSeen.toMillis() : 0;
+                            // Active if seen in last 90 seconds
+                            if (now - lastSeenMs < 90000) {
+                                members.push(data.userName);
+                            }
+                        }
+                    });
+                    this.activeMembers = members;
+                    this.updateIndicator(true);
+
+                    // Simple live update in settings if possible
+                    const mList = document.getElementById('settingsPresenceList');
+                    if (mList) {
+                        mList.innerHTML = this.activeMembers.length > 0
+                            ? this.activeMembers.map(m => `<span style="background:rgba(34,197,94,0.15); color:var(--success); padding:2px 8px; border-radius:10px; font-size:0.8rem; border:1px solid var(--success);">🟢 ${m}</span>`).join(' ')
+                            : '<span class="text-muted text-xs">Keine anderen Mitglieder online.</span>';
+                    }
+                });
         },
         listen() {
             if (!this.db || !app.state.user.teamName) return;
@@ -1719,33 +2621,34 @@ const app = {
         },
         mergeIncoming(cloudState) {
             if (!cloudState) return;
-            let changed = false;
 
-            // Helper to merge arrays uniquely by ID
-            const mergeArray = (localArr, cloudArr) => {
-                if (!cloudArr) return false;
-                let mod = false;
-                const localIds = new Set(localArr.map(x => x.id));
-                cloudArr.forEach(item => {
-                    if (!localIds.has(item.id)) { localArr.push(item); mod = true; }
-                });
-                return mod;
-            };
+            // To handle deletions and updates properly, we trust the cloud state
+            // if it's coming from a remote change.
 
-            if (mergeArray(app.state.tasks, cloudState.tasks)) changed = true;
-            if (mergeArray(app.state.events, cloudState.events)) changed = true;
-            if (mergeArray(app.state.expenses, cloudState.expenses)) changed = true;
-            if (mergeArray(app.state.habits, cloudState.habits)) changed = true;
-            // Health Data
-            if (cloudState.healthData) {
-                const localIds = new Set((app.state.healthData || []).map(x => x.id));
-                if (!app.state.healthData) app.state.healthData = [];
-                cloudState.healthData.forEach(h => {
-                    if (!localIds.has(h.id)) { app.state.healthData.push(h); changed = true; }
-                });
-            }
+            // Compare stringified versions for quick dirty check
+            const localVersion = JSON.stringify({
+                tasks: app.state.tasks,
+                events: app.state.events,
+                expenses: app.state.expenses,
+                habits: app.state.habits,
+                healthData: app.state.healthData || []
+            });
 
-            if (changed) {
+            const cloudVersion = JSON.stringify({
+                tasks: cloudState.tasks,
+                events: cloudState.events,
+                expenses: cloudState.expenses,
+                habits: cloudState.habits,
+                healthData: cloudState.healthData || []
+            });
+
+            if (localVersion !== cloudVersion) {
+                app.state.tasks = cloudState.tasks || [];
+                app.state.events = cloudState.events || [];
+                app.state.expenses = cloudState.expenses || [];
+                app.state.habits = cloudState.habits || [];
+                app.state.healthData = cloudState.healthData || [];
+
                 app.saveState(true); // Skip Push to avoid loop
                 app.renderDashboard();
                 if (app.tasks) app.tasks.render();
@@ -1753,11 +2656,39 @@ const app = {
                 if (app.finance) app.finance.render();
                 if (app.habits) app.habits.render();
                 if (app.health) app.health.render();
-                console.log("☁️ Incoming Data Merged");
+                console.log("☁️ Data Synchronized from Cloud");
+
+                this.updateIndicator(true);
+            }
+        },
+        updateIndicator(active) {
+            const el = document.getElementById('headerSyncIndicator');
+            const teamName = app.state.user.teamName;
+            const isActiveTeam = active && teamName;
+
+            if (el) {
+                el.style.opacity = isActiveTeam ? '1' : '0.4';
+                el.title = isActiveTeam ? 'Team Verbindung aktiv: ' + teamName : 'Verbindung getrennt';
+
+                // Dot color
+                const dot = el.querySelector('div');
+                if (dot) dot.style.background = isActiveTeam ? 'var(--success)' : '#666';
+
+                if (isActiveTeam) el.classList.add('pulse-sync');
+                else el.classList.remove('pulse-sync');
+            }
+            const statusLabel = document.getElementById('syncStatusHeader');
+            if (statusLabel) statusLabel.textContent = isActiveTeam ? teamName : 'Offline';
+
+            const syncStatusCard = document.getElementById('syncStatus');
+            if (syncStatusCard) {
+                syncStatusCard.innerHTML = isActiveTeam
+                    ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
+                    : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
             }
         },
         async push() {
-            if (!this.db || !app.state.user.teamName) return;
+            if (!this.db || !app.state.user.teamName) { this.updateIndicator(false); return; }
             const team = app.state.user.teamName;
 
             const payload = {
@@ -1776,7 +2707,8 @@ const app = {
                 await this.db.collection('taskforce_sync').doc(team).set(payload, { merge: true });
                 const status = document.getElementById('syncStatus');
                 if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gesendet (${new Date().toLocaleTimeString()})</span>`;
-            } catch (e) { console.error("Push Error", e); }
+                this.updateIndicator(true);
+            } catch (e) { console.error("Push Error", e); this.updateIndicator(false); }
         },
         async sync(manual = false) {
             if (!this.db) { if (manual) alert("Kein Sync möglich (Config fehlt)."); return; }
@@ -1797,9 +2729,10 @@ const app = {
             document.getElementById('settingsUserName').value = app.state.user.name || '';
             document.getElementById('settingsUserName').value = app.state.user.name || '';
 
-            // Set Layout Dropdown
-            const layoutSelect = document.getElementById('dashboardLayoutSelect');
             if (layoutSelect) layoutSelect.value = app.state.dashboardLayout || 'double';
+
+            const voiceIconSelect = document.getElementById('voiceIconModeSelect');
+            if (voiceIconSelect) voiceIconSelect.value = app.state.voiceIconMode || 'logo';
 
             document.getElementById('settingsUserName').value = app.state.user.name || '';
 
@@ -1834,11 +2767,34 @@ const app = {
                         <input type="password" id="settingsPass2" class="form-input" placeholder="Bestätigen">
                     </div>
                     <button class="btn btn-primary" style="width:100%;" onclick="app.settings.savePassword()">Passwort Update</button>
+                    <div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+                        <label class="text-xs text-muted" style="display:block; margin-bottom:8px; text-transform:uppercase;">Aktive Team Mitglieder</label>
+                        <div id="settingsPresenceList" style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${app.cloud.activeMembers.length > 0
+                        ? app.cloud.activeMembers.map(m => `<span style="background:rgba(34,197,94,0.15); color:var(--success); padding:2px 8px; border-radius:10px; font-size:0.8rem; border:1px solid var(--success);">🟢 ${m}</span>`).join(' ')
+                        : '<span class="text-muted text-xs">Keine anderen Mitglieder online.</span>'}
+                        </div>
+                    </div>
                     <hr style="border-color:var(--border); margin:20px 0;">
                 `;
             }
 
             this.updateAIProvider();
+        },
+        applyVoiceIconPreference() {
+            const mode = app.state.voiceIconMode || 'logo';
+            const micIcon = document.getElementById('voiceMicIcon');
+            const logoIcon = document.getElementById('voiceLogoIcon');
+
+            if (micIcon && logoIcon) {
+                if (mode === 'logo') {
+                    micIcon.classList.add('hidden');
+                    logoIcon.classList.remove('hidden');
+                } else {
+                    micIcon.classList.remove('hidden');
+                    logoIcon.classList.add('hidden');
+                }
+            }
         },
         applyLayoutPreference() {
             const grids = document.querySelectorAll('.dashboard-grid');
@@ -1850,31 +2806,59 @@ const app = {
                 }
             });
         },
+        initPayPal() {
+            if (app.state.user.isPro) return;
+            const container = document.getElementById('paypal-button-container-settings');
+            if (!container) return;
+            container.innerHTML = '';
+
+            setTimeout(() => {
+                if (window.paypal) {
+                    paypal.Buttons({
+                        style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' },
+                        createOrder: (data, actions) => {
+                            return actions.order.create({ purchase_units: [{ amount: { value: '9.99' } }] });
+                        },
+                        onApprove: (data, actions) => {
+                            return actions.order.capture().then(details => {
+                                app.user.upgradeToPro();
+                                alert('Danke für dein Vertrauen, ' + details.payer.name.given_name + '! Du bist jetzt PRO! 👑');
+                            });
+                        }
+                    }).render('#paypal-button-container-settings');
+                }
+            }, 100);
+        },
         saveLayout() {
             const val = document.getElementById('dashboardLayoutSelect').value;
             app.state.dashboardLayout = val;
             app.saveState();
             this.applyLayoutPreference();
         },
+        saveVoiceIconMode() {
+            const val = document.getElementById('voiceIconModeSelect').value;
+            app.state.voiceIconMode = val;
+            app.saveState();
+            this.applyVoiceIconPreference();
+        },
         updateAIProvider() {
             const provider = document.getElementById('aiProviderSelect').value;
             document.querySelectorAll('.ai-config-fields').forEach(el => el.classList.add('hidden'));
             document.getElementById(`${provider}Config`).classList.remove('hidden');
-            this.saveAIConfig();
+            this.saveAIConfig(true); // Silent save
         },
-        saveAIConfig() {
+        saveAIConfig(silent = false) {
             app.state.aiConfig.provider = document.getElementById('aiProviderSelect').value;
             app.state.aiConfig.openaiKey = document.getElementById('openaiKeyInput').value;
             app.state.aiConfig.grokKey = document.getElementById('grokKeyInput').value;
             app.state.aiConfig.geminiKey = document.getElementById('geminiKeyInput').value;
             app.saveState();
-            alert("AI-Einstellungen wurden erfolgreich gespeichert! ✅");
+            if (!silent) alert("AI-Einstellungen wurden erfolgreich gespeichert! ✅");
         },
         saveCloudConfig() {
             if (!app.state.cloud) app.state.cloud = {};
             app.state.cloud.firebaseConfig = document.getElementById('firebaseConfigInput').value.trim();
             app.saveState();
-            // Try to init immediately
             app.cloud.init();
         },
         saveProfile() {
@@ -1894,8 +2878,8 @@ const app = {
             }
         },
         resetApp() {
-            if (confirm("Möchtest du wirklich alle Daten löschen? Dies kann nicht rückgängig gemacht werden.")) {
-                localStorage.removeItem('taskforce_state');
+            if (confirm("Möchtest du wirklich alle Daten löschen? Dies kann nicht rückgängig gemacht werden!")) {
+                localStorage.clear();
                 location.reload();
             }
         }
@@ -1909,14 +2893,40 @@ const app = {
             if (!o || !c) return;
             o.classList.remove('hidden');
 
-            if (type === 'addTask') {
+            if (type === 'addContact') {
+                c.innerHTML = `
+                    <div style="padding:20px;">
+                        <h3>Neuer Kontakt</h3>
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Telefon / Handy</label>
+                            <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">E-Mail</label>
+                            <input id="newContactEmail" class="form-input" type="email" placeholder="beispiel@mail.de">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Adresse / Ort</label>
+                            <input id="newContactAddress" class="form-input" placeholder="Musterstraße 1, 12345 Berlin">
+                        </div>
+                        <div style="display:flex;justify-content:end;gap:10px;margin-top:20px;">
+                            <button class="btn" onclick="app.modals.close()">Abbrechen</button>
+                            <button class="btn btn-primary" onclick="app.contacts.submit()">Speichern</button>
+                        </div>
+                    </div>`;
+            } else if (type === 'addTask') {
                 const cat = data.category || 'todo';
                 const isShopping = cat === 'shopping';
+                const title = data.title || '';
                 c.innerHTML = `
                     <div style="padding:20px;">
                         <h3>${isShopping ? 'Neuer Einkauf' : 'Neue Aufgabe'}</h3>
                         <div class="form-group" style="display:flex;gap:5px;">
-                            <input id="newTaskTitle" class="form-input" placeholder="Titel (z.B. ${isShopping ? 'Milch' : 'Meeting'})">
+                            <input id="newTaskTitle" class="form-input" value="${title}" placeholder="Titel (z.B. ${isShopping ? 'Milch' : 'Meeting'})">
                             <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
                         </div>
                         
@@ -1941,9 +2951,95 @@ const app = {
                         </div>
                     </div>`;
             } else if (type === 'setAlarm') {
-                const current = app.state.alarm ? app.state.alarm.time : '07:00';
-                const isActive = app.state.alarm ? app.state.alarm.active : false;
-                c.innerHTML = `<div style="padding:20px;"><h3>⏰ Wecker stellen</h3><div class="form-group"><input type="time" id="alarmTime" class="form-input" value="${current}" style="font-size:2rem; text-align:center;"></div><div class="form-group"><label class="form-label" style="text-align:center; display:block;"><input type="checkbox" id="alarmActive" ${isActive ? 'checked' : ''}> Wecker Aktiv</label></div><div style="display:flex;justify-content:end;gap:10px;"><button class="btn" onclick="app.modals.close()">Fertig</button><button class="btn btn-primary" onclick="app.modals.saveAlarm()">Speichern</button></div></div>`;
+                const alarms = app.state.alarms || [];
+                const sounds = [
+                    { id: 'melody', name: 'Sanfte Melodie' },
+                    { id: 'digital', name: 'Digitaler Piep' },
+                    { id: 'nature', name: 'Vogelgezwitscher' },
+                    { id: 'classic', name: 'Klassisch' }
+                ];
+
+                let alarmsHtml = alarms.map(a => {
+                    const daysLabels = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+                    const activeDays = a.days || [];
+                    const daysStr = activeDays.length === 7 ? 'Täglich' : activeDays.map(d => daysLabels[d]).join(', ');
+
+                    return `
+                        <div class="card" style="margin-bottom:10px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid ${a.active ? 'var(--primary)' : 'var(--border)'}">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div onclick="app.modals.open('editAlarm', { id: ${a.id} })" style="flex:1; cursor:pointer;">
+                                    <div style="font-weight:bold; font-size:1.1rem; color:${a.active ? 'white' : 'var(--text-muted)'}">${a.time} - ${a.title || 'Alarm'}</div>
+                                    <div class="text-xs text-muted">${daysStr} | 🎵 ${sounds.find(s => s.id === a.sound)?.name || 'Standard'}</div>
+                                </div>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <div class="checkbox-circle ${a.active ? 'checked' : ''}" style="width:20px; height:20px;" onclick="app.alarms.toggle(${a.id})"></div>
+                                    <button class="btn-small" onclick="app.alarms.delete(${a.id})" style="background:rgba(239,68,68,0.1); color:var(--danger); border:none;"><i data-lucide="trash" size="14"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3>⏰ Deine Wecker</h3>
+                        <button class="btn btn-primary btn-small" onclick="app.modals.open('editAlarm', { addNew: true })">
+                            <i data-lucide="plus"></i> Neu
+                        </button>
+                    </div>
+                    <div id="alarmListContainer">
+                        ${alarmsHtml || '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Wecker gestellt.</div>'}
+                    </div>
+                    <button class="btn btn-secondary" onclick="app.modals.close()" style="width:100%; margin-top:10px;">Fertig</button>
+                </div>`;
+            } else if (type === 'editAlarm') {
+                const isNew = data.addNew;
+                const alarm = isNew ? { title: '', time: '07:00', active: true, days: [1, 2, 3, 4, 5], sound: 'melody' } : app.state.alarms.find(a => a.id === data.id);
+                if (!alarm) return app.modals.open('setAlarm');
+
+                const daysLabels = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+                const sounds = [
+                    { id: 'melody', name: 'Sanfte Melodie' },
+                    { id: 'digital', name: 'Digitaler Piep' },
+                    { id: 'nature', name: 'Vogelgezwitscher' },
+                    { id: 'classic', name: 'Klassisch' }
+                ];
+
+                c.innerHTML = `
+                <div style="padding:20px;">
+                    <h3>${isNew ? '⏰ Neuer Wecker' : '⏰ Wecker bearbeiten'}</h3>
+                    <div class="form-group">
+                        <label class="form-label">Titel</label>
+                        <input id="alarmTitle" class="form-input" value="${alarm.title}" placeholder="z.B. Arbeit">
+                    </div>
+                    <div class="form-group">
+                        <input type="time" id="alarmTime" class="form-input" value="${alarm.time}" style="font-size:2.5rem; text-align:center; height:auto;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Wiederholung</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:5px;">
+                            ${daysLabels.map((label, i) => `
+                                <div onclick="this.querySelector('input').click()" 
+                                     style="width:36px; height:36px; border-radius:50%; border: 1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.75rem; transition:all 0.2s; ${alarm.days.includes(i) ? 'background:var(--primary); border-color:var(--primary); color:white;' : 'background:rgba(255,255,255,0.05); color:var(--text-muted)'}"
+                                     class="alarm-day-toggle">
+                                    <input type="checkbox" name="alarmDays" value="${i}" ${alarm.days.includes(i) ? 'checked' : ''} style="display:none;" onchange="event.stopPropagation(); this.parentElement.style.background = this.checked ? 'var(--primary)' : 'rgba(255,255,255,0.05)'; this.parentElement.style.color = this.checked ? 'white' : 'var(--text-muted)'; this.parentElement.style.borderColor = this.checked ? 'var(--primary)' : 'var(--border)';">
+                                    ${label}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Alarmton</label>
+                        <select id="alarmSound" class="form-input">
+                            ${sounds.map(s => `<option value="${s.id}" ${s.id === alarm.sound ? 'selected' : ''}>${s.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="btn" style="flex:1" onclick="app.modals.open('setAlarm')">Zurück</button>
+                        <button class="btn btn-primary" style="flex:1" onclick="app.alarms.save(${alarm.id || 'null'})">Speichern</button>
+                    </div>
+                </div>`;
             } else if (type === 'addEvent') {
                 const d = data.date || new Date().toISOString().slice(0, 10);
                 const t = data.title || '';
@@ -1990,9 +3086,14 @@ const app = {
                         <label><input type="checkbox" id="evtUrgent" ${data.urgent ? 'checked' : ''}> 🔥 Dringend?</label>
                     </div>
 
-                    <div style="display:flex;justify-content:end;gap:10px; margin-top:20px;">
-                        <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                        <button class="btn btn-primary" onclick="app.modals.submitEvent()">Speichern</button>
+                    <div style="display:flex;justify-content:space-between; gap:10px; margin-top:20px;">
+                        <div>
+                            ${app.editingId ? `<button class="btn btn-delete" onclick="app.calendar.deleteEvent(${app.editingId}); app.modals.close();">Löschen</button>` : ''}
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn" onclick="app.modals.close()">Abbrechen</button>
+                            <button class="btn btn-primary" onclick="app.modals.submitEvent()">Speichern</button>
+                        </div>
                     </div>
                 </div>`;
             } else if (type === 'aiChat') {
@@ -2009,17 +3110,19 @@ const app = {
                  </div>`;
             } else if (type === 'addExpense') {
                 const today = new Date().toISOString().split('T')[0];
+                const desc = data.desc || data.title || '';
+                const amount = data.amount || '';
                 c.innerHTML = `
                 <div style="padding:20px;">
                     <h3>Ausgabe erfassen</h3>
                     <div class="form-group">
                         <label class="form-label">Wofür?</label>
-                        <input id="expDesc" class="form-input" placeholder="z.B. Lebensmittel">
+                        <input id="expDesc" class="form-input" value="${desc}" placeholder="z.B. Lebensmittel">
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <div class="form-group">
                             <label class="form-label">Betrag (€)</label>
-                            <input type="number" id="expAmount" class="form-input" placeholder="0.00" step="0.01">
+                            <input type="number" id="expAmount" class="form-input" value="${amount}" placeholder="0.00" step="0.01">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Datum</label>
@@ -2030,6 +3133,95 @@ const app = {
                         <label><input type="checkbox" id="expUrgent"> 🔥 Wichtig / Dringend</label>
                     </div>
                     <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="margin-top:10px;width:100%;">Speichern</button>
+                </div>`;
+            } else if (type === 'addHealthReminder') {
+                c.innerHTML = `
+                <div style="padding:20px;">
+                    <h3>💊 Gesundheits-Erinnerung</h3>
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input id="reminderName" class="form-input" placeholder="z.B. Vitamin D">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Typ</label>
+                        <select id="reminderType" class="form-input">
+                            <option value="medication">Medikament</option>
+                            <option value="vitamin">Vitamin</option>
+                            <option value="water">Wasser</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Uhrzeit</label>
+                        <input type="time" id="reminderTime" class="form-input" value="08:00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Wiederholung</label>
+                        <select id="reminderRepeat" class="form-input">
+                            <option value="daily">Täglich</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="custom">Benutzerdefiniert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Aktueller Vorrat</label>
+                        <input type="number" id="reminderStock" class="form-input" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notizen</label>
+                        <textarea id="reminderNotes" class="form-input" rows="2" placeholder="Zusätzliche Informationen..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="app.modals.submitHealthReminder()" style="margin-top:10px;width:100%;">Speichern</button>
+                </div>`;
+            } else if (type === 'hydrationSettings') {
+                const goal = app.state.hydrationGoal || 2.5;
+                const interval = app.state.hydrationReminderInterval || 120;
+                const method = app.state.hydrationReminderMethod || 'popup';
+                const enabled = app.state.hydrationReminderEnabled || false;
+                const weightEnabled = app.state.weightReminderEnabled || false;
+                const weightDay = app.state.weightReminderDay || 1; // Monday
+
+                const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <h3>💧 Gesundheits-Erinnerungen</h3>
+                    
+                    <h4 style="margin-top:20px; border-bottom:1px solid var(--border); padding-bottom:5px;">Hydration</h4>
+                    <div class="form-group">
+                        <label class="form-label">Tägliches Ziel (Liter)</label>
+                        <input type="number" id="hydrationGoal" class="form-input" value="${goal}" step="0.1" min="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Erinnerungsintervall (Minuten)</label>
+                        <input type="number" id="hydrationInterval" class="form-input" value="${interval}" step="15" min="15">
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="hydrationEnabled" ${enabled ? 'checked' : ''}> Wasser-Erinnerungen aktivieren</label>
+                    </div>
+                    
+                    <h4 style="margin-top:20px; border-bottom:1px solid var(--border); padding-bottom:5px;">Gewicht</h4>
+                    <div class="form-group">
+                        <label class="form-label">Wiegetag</label>
+                        <select id="weightDay" class="form-input">
+                            ${days.map((day, i) => `<option value="${i}" ${i === weightDay ? 'selected' : ''}>${day}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="weightEnabled" ${weightEnabled ? 'checked' : ''}> Wöchentliche Gewichts-Erinnerung aktivieren</label>
+                    </div>
+                    
+                    <h4 style="margin-top:20px; border-bottom:1px solid var(--border); padding-bottom:5px;">Erinnerungsmethode</h4>
+                    <div class="form-group">
+                        <select id="hydrationMethod" class="form-input">
+                            <option value="popup" ${method === 'popup' ? 'selected' : ''}>Popup</option>
+                            <option value="sound" ${method === 'sound' ? 'selected' : ''}>Sound</option>
+                            <option value="blink" ${method === 'blink' ? 'selected' : ''}>Blinken</option>
+                            <option value="all" ${method === 'all' ? 'selected' : ''}>Alle</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="app.modals.submitHydrationSettings()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
             } else if (type === 'addTeamMember') {
                 c.innerHTML = `<div style="padding:20px;"><h3>Mitarbeiter hinzufügen</h3><input id="teamMemberName" class="form-input" placeholder="Name"><button class="btn btn-primary" onclick="app.modals.submitTeamMember()" style="margin-top:10px;width:100%;">Hinzufügen</button></div>`;
@@ -2105,7 +3297,41 @@ const app = {
                         ${doneItems}
                     </div>
 
-                    <button class="btn btn-primary" onclick="app.modals.close()" style="width:100%;">Alles Klar 👍</button>
+                <button class="btn btn-primary" onclick="app.modals.close()" style="width:100%;">Alles Klar 👍</button>
+                </div>`;
+            } else if (type === 'addHabit') {
+                const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+                c.innerHTML = `
+                <div style="padding:20px;">
+                    <h3>Neue Gewohnheit</h3>
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input id="habitName" class="form-input" placeholder="z.B. Hund laufen">
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Uhrzeit (Optional)</label>
+                            <input type="time" id="habitTime" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ziel (Tage)</label>
+                            <input type="number" id="habitGoal" class="form-input" value="30">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tage</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${days.map((d, i) => `
+                                <label style="display:flex; align-items:center; gap:3px; background:rgba(255,255,255,0.05); padding:5px 8px; border-radius:5px; cursor:pointer; font-size:0.8rem;">
+                                    <input type="checkbox" name="habitDays" value="${i}" checked> ${d}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="habitUrgent"> 🔥 Dringend?</label>
+                    </div>
+                    <button class="btn btn-primary" onclick="app.modals.submitHabit()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
             }
             if (window.lucide) lucide.createIcons();
@@ -2115,17 +3341,7 @@ const app = {
             if (o) o.classList.add('hidden');
             app.editingId = null;
         },
-        saveAlarm() {
-            const t = document.getElementById('alarmTime').value;
-            const a = document.getElementById('alarmActive').checked;
-            app.state.alarm = { time: t, active: a };
-            app.saveState();
-            const dis = document.getElementById('activeAlarmDisplay');
-            if (dis) dis.textContent = a ? `An: ${t} Uhr` : 'Aus';
-            const ndis = document.getElementById('nightAlarmDisplay');
-            if (ndis) { ndis.classList.toggle('hidden', !a); ndis.querySelector('span').textContent = t; }
-            this.close();
-        },
+        // Old saveAlarm removed - now handled by app.alarms.save
         submitTask() {
             const t = document.getElementById('newTaskTitle').value;
             if (t) {
@@ -2145,6 +3361,51 @@ const app = {
             }
         },
         submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); } },
+        submitHealthReminder() {
+            const data = {
+                name: document.getElementById('reminderName').value,
+                type: document.getElementById('reminderType').value,
+                time: document.getElementById('reminderTime').value,
+                repeat: document.getElementById('reminderRepeat').value,
+                stock: parseInt(document.getElementById('reminderStock').value) || 0,
+                notes: document.getElementById('reminderNotes').value
+            };
+            if (data.name && data.time) {
+                app.health.addReminder(data);
+                this.close();
+            }
+        },
+        submitHydrationSettings() {
+            app.state.hydrationGoal = parseFloat(document.getElementById('hydrationGoal').value) || 2.5;
+            app.state.hydrationReminderInterval = parseInt(document.getElementById('hydrationInterval').value) || 120;
+            app.state.hydrationReminderMethod = document.getElementById('hydrationMethod').value;
+            app.state.hydrationReminderEnabled = document.getElementById('hydrationEnabled').checked;
+
+            // Weight reminder settings
+            app.state.weightReminderEnabled = document.getElementById('weightEnabled').checked;
+            app.state.weightReminderDay = parseInt(document.getElementById('weightDay').value);
+
+            app.saveState();
+            app.health.startHydrationMonitoring();
+            app.health.startWeightReminder();
+            app.health.render();
+            this.close();
+        },
+        submitHabit() {
+            const name = document.getElementById('habitName').value;
+            if (name) {
+                const goal = parseInt(document.getElementById('habitGoal').value) || 30;
+                const time = document.getElementById('habitTime').value;
+                const urgent = document.getElementById('habitUrgent').checked;
+                const days = Array.from(document.querySelectorAll('input[name="habitDays"]:checked')).map(cb => parseInt(cb.value));
+                if (!app.state.habits) app.state.habits = [];
+                app.state.habits.push({ id: Date.now(), name, streak: 0, goal, time, days, urgent, history: [] });
+                app.saveState();
+                app.habits.render();
+                app.renderDashboard();
+                this.close();
+            }
+        },
         submitEvent() {
             const data = {
                 title: document.getElementById('evtTitle').value,
@@ -2157,6 +3418,95 @@ const app = {
                 urgent: document.getElementById('evtUrgent').checked
             };
             if (data.title && data.date && data.time) { app.calendar.addEvent(data); this.close(); }
+        }
+    },
+    contacts: {
+        add(n, p, e, a) {
+            if (!app.state.contacts) app.state.contacts = [];
+            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a });
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+        },
+        delete(id) {
+            app.state.contacts = app.state.contacts.filter(c => c.id !== id);
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+        },
+        call(num) { if (num) window.location.href = `tel:${num}`; },
+        whatsapp(num) { if (num) window.open(`https://wa.me/${num.replace(/\D/g, '')}`, '_blank'); },
+        mail(email) { if (email) window.location.href = `mailto:${email}`; },
+        async importFromPhone() {
+            if (!('contacts' in navigator && 'ContactsManager' in window)) {
+                alert("Dein Browser unterstützt den Import von Handy-Kontakten leider nicht.");
+                return;
+            }
+
+            const props = ['name', 'tel', 'email'];
+            const opts = { multiple: true };
+
+            try {
+                const contacts = await navigator.contacts.select(props, opts);
+                if (contacts.length > 0) {
+                    contacts.forEach(c => {
+                        const name = c.name ? c.name[0] : 'Unbekannt';
+                        const phone = c.tel ? c.tel[0] : '';
+                        const email = c.email ? c.email[0] : '';
+
+                        // Prevent duplicates based on phone
+                        if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
+
+                        this.add(name, phone, email);
+                    });
+                    alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
+                }
+            } catch (err) {
+                console.error("Contact Import Error:", err);
+                if (err.name !== 'AbortError') {
+                    alert("Fehler beim Importieren der Kontakte.");
+                }
+            }
+        },
+        render() {
+            const list = document.getElementById('contactsList');
+            if (!list) return;
+            list.innerHTML = (app.state.contacts || []).map(c => `
+                <div class="card" style="margin-bottom:15px; padding:20px; display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 16px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:800; font-size:1.1rem; color:#fff; margin-bottom:6px;">${c.name}</div>
+                        <div class="text-sm text-muted" style="display:flex; flex-direction:column; gap:6px;">
+                            ${c.phone ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="phone" size="14"></i> ${c.phone}</span>` : ''}
+                            ${c.email ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="mail" size="14"></i> ${c.email}</span>` : ''}
+                            ${c.address ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="map-pin" size="14"></i> ${c.address} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="color:var(--primary); background:rgba(255,255,255,0.1); padding:4px; border-radius:6px; display:inline-flex; align-items:center;"><i data-lucide="map" size="14"></i></a></span>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; margin-left:15px;">
+                        ${c.phone ? `<button class="btn-small" onclick="app.contacts.call('${c.phone}')" style="border-color: rgba(59, 130, 246, 0.4); width:38px; height:38px;"><i data-lucide="phone" size="18"></i></button>` : ''}
+                        ${c.phone ? `<button class="btn-small" onclick="app.contacts.whatsapp('${c.phone}')" style="border-color: rgba(37, 211, 102, 0.4); width:38px; height:38px;"><i data-lucide="message-circle" size="18"></i></button>` : ''}
+                        ${c.email ? `<button class="btn-small" onclick="app.contacts.mail('${c.email}')" style="border-color: rgba(234, 67, 53, 0.4); width:38px; height:38px;"><i data-lucide="mail" size="18"></i></button>` : ''}
+                        <button class="btn-small btn-delete" onclick="app.contacts.delete(${c.id})" style="width:38px; height:38px;"><i data-lucide="trash" size="18"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+
+            // Check Support for Contact Picker API
+            const importBtn = document.getElementById('importContactsBtn');
+            if (importBtn) {
+                if ('contacts' in navigator && 'ContactsManager' in window) {
+                    importBtn.style.display = 'flex';
+                } else {
+                    importBtn.style.display = 'none';
+                }
+            }
+        },
+        submit() {
+            const n = document.getElementById('newContactName').value;
+            const p = document.getElementById('newContactPhone').value;
+            const e = document.getElementById('newContactEmail').value;
+            const a = document.getElementById('newContactAddress').value;
+            if (n) { this.add(n, p, e, a); app.modals.close(); }
         }
     }
 };

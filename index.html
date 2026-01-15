@@ -20,6 +20,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=test&currency=EUR"></script>
 </head>
 
 <body>
@@ -62,11 +63,18 @@
                         <input type="password" id="authPassRepeat" class="form-input" placeholder="Bestätigen">
                     </div>
 
-                    <div id="authTeamField" class="form-group">
+                    <div id="authTeamField" class="form-group hidden">
                         <label class="form-label">Team Name (Sync-Key)</label>
                         <input type="text" id="authTeam" class="form-input" placeholder="z.B. 'Familie'">
-                        <p class="text-muted text-sm" style="margin-top:5px;">Teile diesen Namen mit deinem Team für
-                            Sync.</p>
+                        <p class="text-muted text-sm" style="margin-top:5px;">Nutze den gleichen Namen wie dein
+                            Team-Partner.</p>
+                    </div>
+
+                    <div id="teamToggleContainer" class="form-group"
+                        style="display:flex; align-items:center; gap:10px; margin-bottom:15px; cursor:pointer;"
+                        onclick="app.auth.toggleTeamField()">
+                        <input type="checkbox" id="useTeamSync" style="width:20px; height:20px; cursor:pointer;">
+                        <label style="cursor:pointer; font-size:0.9rem;">Mit Team verbinden (Sync) 🤝</label>
                     </div>
 
                     <button id="authActionBtn" class="btn btn-primary"
@@ -84,9 +92,15 @@
 
         <!-- Desktop Sidebar -->
         <nav class="sidebar" id="mainSidebar">
-            <div class="logo-area">
-                <i data-lucide="zap" class="logo-icon" size="28"></i>
-                <h2>TaskForce</h2>
+            <!-- Sidebar Clock -->
+            <div class="sidebar-clock">
+                <div id="clockTimeSidebar">--:--</div>
+                <div id="clockDateSidebar">Wird geladen...</div>
+            </div>
+
+            <div class="logo-area" style="margin-bottom: 20px;">
+                <i data-lucide="zap" class="logo-icon" size="24"></i>
+                <h2 style="font-size: 1.2rem;">TaskForce</h2>
                 <button class="icon-btn" style="margin-left:auto; display:none;" onclick="app.toggleSidebar()"
                     id="sidebarCloseBtn"><i data-lucide="x"></i></button>
             </div>
@@ -120,6 +134,21 @@
             <a class="nav-item" data-page="health"><i data-lucide="heart-pulse"></i> Gesundheit</a>
 
             <div style="margin-top: auto;">
+                <div id="proUpgradeBanner" class="card hidden"
+                    style="margin: 10px; background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid var(--accent); padding: 15px; text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 5px; color: var(--accent);">PRO VERSION</div>
+                    <p class="text-xs text-muted" style="margin-bottom: 10px;">Schalte unlimitierte Features & AI frei.
+                    </p>
+                    <button class="btn btn-primary btn-small" style="width: 100%; height: 32px; font-size: 0.8rem;"
+                        onclick="app.modals.open('upgradePro')">Jetzt Upgrade</button>
+                </div>
+                <div id="proBadge" class="hidden"
+                    style="margin: 10px; padding: 10px; background: rgba(139, 92, 246, 0.2); border-radius: 8px; border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent); font-weight: bold;">
+                    <i data-lucide="crown" size="16"></i> PRO ACTIVE
+                </div>
+                <a id="menuSupportItem" class="nav-item" onclick="app.modals.open('upgradePro')">
+                    <i data-lucide="heart" class="text-danger"></i> Support & Pro
+                </a>
                 <a class="nav-item" data-page="settings"><i data-lucide="settings"></i> Einstellungen</a>
                 <a class="nav-item" style="color:var(--danger);" onclick="app.auth.logout()"><i
                         data-lucide="log-out"></i> Abmelden</a>
@@ -130,23 +159,39 @@
         <main class="main-content" id="mainContent">
             <!-- Header -->
             <header class="top-bar">
-                <button class="mobile-menu-toggle" onclick="app.toggleSidebar()">
-                    <i data-lucide="menu"></i>
-                    <span style="font-size: 24px; position:absolute; opacity:0; pointer-events:none;">☰</span>
-                </button>
-                <div class="user-welcome">
-                    <div class="text-muted text-sm" id="currentDateDisplay">Lade Datum...</div>
-                    <h2>Hallo, <span style="color: var(--primary);" id="headerUserName">Creator</span> 👋</h2>
+                <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    <button class="mobile-menu-toggle" onclick="app.toggleSidebar()" style="flex-shrink: 0;">
+                        <i data-lucide="menu"></i>
+                        <span style="font-size: 24px; position:absolute; opacity:0; pointer-events:none;">☰</span>
+                    </button>
+                    <!-- Top Smart Command Bar -->
+                    <div class="top-command-field"
+                        style="flex: 1; max-width: 320px; position: relative; display: flex; align-items: center;">
+                        <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
+                        <input type="text" id="smartInput" placeholder="Was tun?"
+                            onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
+                            style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 40px 8px 35px; color: white; font-size: 0.9rem; outline: none;">
+                        <button onclick="app.voice.startGlobal()" title="Sprachbefehl"
+                            style="position: absolute; right: 8px; background: none; border: none; color: white; opacity: 0.6; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="mic" size="16"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn" title="AI Assistant" onclick="app.modals.open('aiChat')"><i
                             data-lucide="sparkles" class="text-accent"></i></button>
                     <button class="icon-btn" title="Suche"><i data-lucide="search"></i></button>
+                    <div id="headerSyncIndicator" class="sync-badge" title="Offline"
+                        style="opacity: 0.4; display:flex; align-items:center; gap:5px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 20px; margin-right: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="width:8px; height:8px; background: var(--success); border-radius: 50%;"></div>
+                        <span id="syncStatusHeader"
+                            style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Offline</span>
+                    </div>
                     <button class="icon-btn" title="Benachrichtigungen relative"><i data-lucide="bell"></i><span
                             class="badg"
                             style="position: absolute; top:8px; right:8px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
                     <div class="user-avatar" id="headerUserAvatar"
-                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden;">
+                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden; position: relative;">
                         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
                     </div>
                 </div>
@@ -158,84 +203,89 @@
                 <!-- DASHBOARD VIEW -->
                 <div id="view-dashboard" class="view-section">
 
-                    <!-- Smart Command Bar (Premium OLED) -->
-                    <div class="card"
-                        style="margin-bottom: 20px; padding: 12px; border: 1px solid rgba(167, 139, 250, 0.2); background: rgba(0,0,0,0.5);">
-                        <div style="display:flex; gap:12px; align-items:center;">
-                            <div class="tile-icon"
-                                style="width:40px; height:40px; flex-shrink:0; background: rgba(167, 139, 250, 0.1); color: var(--accent);">
-                                <i data-lucide="command"></i>
+                    <!-- HERO SECTION AT THE VERY TOP -->
+                    <div class="hero-clock-card" style="margin: -20px -20px 20px -20px; border-radius: 0 0 30px 30px;">
+                        <div class="hero-clock-container">
+                            <div class="clock-large" id="heroClockTime">--:--</div>
+                            <div class="clock-details">
+                                <div class="day-of-week" id="heroClockDay">LADEN...</div>
+                                <div class="date-row">
+                                    <span class="seconds-turquoise"><span id="heroClockSeconds">00</span> SEK</span>
+                                    <span class="date-main" id="heroClockDate">--.--. ----</span>
+                                </div>
+                                <div class="month-long" id="heroClockMonth">Lade Datum...</div>
                             </div>
-                            <input type="text" id="smartInput" class="form-input" placeholder="Stichwort..."
-                                style="font-size: 1.1rem; border:none; background:transparent; padding-left: 0; color: white;"
-                                onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }">
-                            <button class="icon-btn" onclick="app.voice.startGlobal()" title="Sprachsteuerung"
-                                style="background: transparent; border: none;">
-                                <i data-lucide="mic" class="text-accent"></i>
-                            </button>
+                        </div>
+                        <hr class="hero-divider">
+                        <div class="hero-footer">
+                            <div class="weather-brief" id="heroWeather">
+                                <i data-lucide="cloud-sun" size="18"></i> 22°C
+                            </div>
+                            <div class="status-pill">
+                                <span class="status-dot"></span> System bereit
+                            </div>
                         </div>
                     </div>
 
+
+
                     <div class="dashboard-grid">
 
-                        <!-- 0. Mega Clock (Standard) -->
-                        <div class="card" id="dashboardClockCard" style="grid-column: span 2; cursor:pointer;"
-                            onclick="app.navigateTo('calendar')">
-                            <div class="card-header">
-                                <span class="card-title text-muted"><i data-lucide="clock"></i> Jetzt</span>
+
+
+                        <div class="card card-communication" style="grid-column: span 1;">
+                            <div class="card-header" onclick="app.navigateTo('contacts')"
+                                style="cursor:pointer; margin-bottom: 12px;">
+                                <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
+                                    Kommunikation</span>
+                                <i data-lucide="chevron-right" size="16" class="text-muted"></i>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                                <div>
-                                    <div class="card-value" id="clockTime" style="font-size: 3.5rem; line-height: 1;">
-                                        --:--</div>
-                                    <div class="text-muted" style="font-size: 1.2rem;" id="clockGreeting">Guten Tag
-                                    </div>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="font-size: 1.5rem; color: var(--secondary);" id="weatherDisplay"><i
-                                            data-lucide="cloud-sun"></i> 22°C</div>
-                                    <div class="text-sm text-muted">Berlin</div>
-                                </div>
+                            <div class="comm-grid">
+                                <button class="comm-tile phone" onclick="app.comms.call()">
+                                    <div class="tile-circle"><i data-lucide="phone" size="20"></i></div>
+                                    <span>Telefon</span>
+                                </button>
+                                <button class="comm-tile whatsapp" onclick="app.comms.whatsapp()">
+                                    <div class="tile-circle"><i data-lucide="message-circle" size="20"></i></div>
+                                    <span>WhatsApp</span>
+                                </button>
+                                <button class="comm-tile email" onclick="app.comms.email()">
+                                    <div class="tile-circle"><i data-lucide="mail" size="20"></i></div>
+                                    <span>E-Mail</span>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- 1. CHECK-FENSTER (Prüffenster) -->
                         <div class="card"
-                            style="grid-column: span 2; background: linear-gradient(90deg, rgba(59,130,246,0.1), rgba(16,185,129,0.1)); cursor:pointer;"
+                            style="grid-column: span 1; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer;"
                             onclick="app.modals.open('dailyStatus')">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:12px;">
-                                    <div style="background:var(--bg-surface); padding:10px; border-radius:50%;">
-                                        <i data-lucide="clipboard-check" class="text-primary"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:700; font-size:1.1rem;">Tages-Check Starten</div>
-                                        <div class="text-muted text-sm" id="statusSummaryText">Status: Wird berechnet...
-                                        </div>
-                                    </div>
-                                </div>
-                                <i data-lucide="chevron-right" class="text-muted"></i>
+                            <div
+                                style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="clipboard-check" size="24"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 1.1rem;">Tages-Check</div>
+                                <div class="text-muted text-xs" id="statusSummaryText">Bereit für den Check</div>
                             </div>
                         </div>
 
-                        <!-- 2. Termine (Hero) -->
-                        <div class="card card-hero" id="dashboardEventsCard" onclick="app.navigateTo('calendar')"
-                            style="cursor:pointer; grid-column: span 2;">
-                            <div class="card-header">
-                                <span class="card-title" style="font-size: 1.3rem;"><i data-lucide="calendar"
-                                        class="text-primary"></i> Deine Termine</span>
-                                <button class="btn-small btn-primary"
-                                    onclick="event.stopPropagation(); app.modals.open('addEvent')"><i
-                                        data-lucide="plus"></i> Neu</button>
+                        <!-- 3. HERO: Termine (Consolidated Window) -->
+                        <div class="card" id="dashboardEventsCard" style="grid-column: span 2; padding: 15px;">
+                            <div class="card-header" style="margin-bottom: 12px;">
+                                <span class="card-title"
+                                    style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
+                                    ZEITPLAN</span>
+                                <button class="btn-small"
+                                    style="background: rgba(255,255,255,0.1); border-radius: 50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center;"
+                                    onclick="app.modals.open('addEvent')"><i data-lucide="plus" size="14"></i></button>
                             </div>
-                            <div id="dashboardEventsPreview"
-                                style="display:flex; flex-direction:column; gap:12px; padding-top:10px;">
-                                <div class="text-muted text-sm">Lade Termine...</div>
+                            <div id="dashboardEventsPreview" style="display:flex; flex-direction:column;">
+                                <!-- Filled by JS (Consolidated View) -->
                             </div>
                         </div>
 
-                        <!-- 3. To Do Liste -->
-                        <div class="card" id="dashboardTasksCard" style="grid-column: span 1; cursor:pointer;"
+                        <!-- 4. TASKS & EINKAUF (Parallel) -->
+                        <div class="card" style="grid-column: span 1;"
                             onclick="app.tasks.filter('todo'); app.navigateTo('tasks')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
@@ -244,14 +294,11 @@
                                     onclick="event.stopPropagation(); app.modals.open('addTask')"><i
                                         data-lucide="plus"></i></button>
                             </div>
-                            <div class="task-list-preview" id="dashboardTaskPreview">
-                                <div class="text-muted text-sm">Keine Aufgaben.</div>
-                            </div>
+                            <div id="dashboardTaskPreview"></div>
                         </div>
 
-                        <!-- 4. Einkaufsliste (Shopping) -->
-                        <div class="card" id="dashboardShoppingCard" style="grid-column: span 1; cursor:pointer;"
-                            onclick="app.tasks.filter('shopping'); app.navigateTo('tasks');">
+                        <div class="card" style="grid-column: span 1;"
+                            onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
                                     Einkauf</span>
@@ -259,74 +306,86 @@
                                     onclick="event.stopPropagation(); app.modals.open('addTask', { category: 'shopping' })"><i
                                         data-lucide="plus"></i></button>
                             </div>
-                            <div id="dashboardShoppingPreview" class="text-muted text-sm">
-                                Keine Einkäufe geplant.
-                            </div>
+                            <div id="dashboardShoppingPreview"></div>
                         </div>
 
-                        <!-- 5. Kosten (Finance - New Layout) -->
-                        <div class="card" id="dashboardFinanceCard" style="grid-column: span 1; cursor:pointer;"
-                            onclick="app.navigateTo('finance')">
+                        <!-- 5. GESUNDHEIT & HABITS (Tracking) -->
+                        <div class="card" style="grid-column: span 1;" id="dashboardHealthCard">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="heart"></i> Vitalität</span>
+                                <button onclick="event.stopPropagation(); app.health.quickAddWater();"
+                                    style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); border-radius: 50%; width: 32px; height: 32px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">💧</button>
+                            </div>
+                            <div id="dashboardHealthPreview" onclick="app.navigateTo('health')"></div>
+                        </div>
+
+                        <div class="card" style="grid-column: span 1;" onclick="app.navigateTo('habits')">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="flame"></i> Routinen</span>
+                            </div>
+                            <div id="dashboardHabitsPreview"></div>
+                        </div>
+
+                        <!-- 6. FINANZEN & WECKER (Utilities) -->
+                        <div class="card" style="grid-column: span 1;" onclick="app.navigateTo('finance')">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
                             </div>
-                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                                <div style="width:60px; height:60px;">
-                                    <canvas id="dashboardFinanceChart"></canvas>
+                            <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem;">
+                                    <span class="text-muted">Übrig:</span>
+                                    <span id="dashFinRemaining"
+                                        style="font-weight: bold; color: var(--success);">0€</span>
+                                </div>
+                                <div
+                                    style="width: 100%; background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div id="dashFinBudgetBar"
+                                        style="width: 0%; height: 100%; background: var(--success); transition: width 0.5s;">
+                                    </div>
+                                </div>
+                                <div class="hidden" id="dashFinBudget">2000</div>
+                            </div>
+                        </div>
+
+                        <div class="card" style="grid-column: span 1;" id="dashboardAlarmsCard"
+                            onclick="app.modals.open('setAlarm')">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="alarm-clock" class="text-secondary"></i>
+                                    Wecker</span>
+                                <button class="btn-small"
+                                    onclick="event.stopPropagation(); app.modals.open('editAlarm', { addNew: true })"><i
+                                        data-lucide="plus"></i></button>
+                            </div>
+                            <div id="dashboardAlarmsPreview"></div>
+                        </div>
+
+                        <!-- 7. BOTTOM TOOLS: Drive & Apps Pay -->
+                        <div class="card" style="grid-column: span 1;" onclick="app.actions.toggleDriveMode()">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div
+                                    style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="navigation" size="20"></i>
                                 </div>
                                 <div>
-                                    <div style="font-size:0.8rem;" class="text-muted">Monat</div>
-                                    <div style="font-weight:bold; font-size:1.1rem;" id="dashFinMonth">0€</div>
+                                    <div style="font-weight:700;">Drive Mode</div>
+                                    <div class="text-muted text-xs">Fahr-Assistent</div>
                                 </div>
-                            </div>
-                            <div
-                                style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border); padding-top:8px;">
-                                <span>Woche: <b id="dashFinWeek">0€</b></span>
-                                <span>Jahr: <b id="dashFinYear">0€</b></span>
                             </div>
                         </div>
 
-                        <!-- 6. Fahrten (Drive) -->
-                        <div class="card" style="grid-column: span 1; cursor:pointer;"
-                            onclick="app.actions.toggleDriveMode()">
-                            <div class="card-header">
-                                <span class="card-title"><i data-lucide="car" class="text-primary"></i>
-                                    Fahrt-Modus</span>
-                            </div>
-                            <div style="text-align:center; padding:10px;">
+                        <div class="card" style="grid-column: span 1;" id="dashboardWalletCard"
+                            onclick="app.modals.open('upgradePro')">
+                            <div style="display:flex; align-items:center; gap:12px;">
                                 <div
-                                    style="background:rgba(59, 130, 246, 0.1); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; margin-bottom:8px;">
-                                    <i data-lucide="navigation" class="text-primary"></i>
+                                    style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="wallet" size="20"></i>
                                 </div>
-                                <span class="text-muted text-sm">Starten</span>
-                            </div>
-                        </div>
-
-                        <!-- 7. Gesundheit (Health) -->
-                        <div class="card" id="dashboardHealthCard" onclick="app.navigateTo('health')"
-                            style="cursor:pointer;">
-                            <div class="card-header">
-                                <span class="card-title"><i data-lucide="heart" class="text-danger"></i>
-                                    Gesundheit</span>
-                            </div>
-                            <div style="text-align: center;">
-                                <div class="card-value" style="font-size: 1.5rem;" id="dashboardWaterText">0/2.5L</div>
-                                <div class="text-muted text-sm">Wasser Intake</div>
-                                <div class="habit-progress-container" style="height: 6px; margin-top: 5px;">
-                                    <div id="dashboardWaterBar" class="habit-progress-bar" style="width: 0%"></div>
+                                <div>
+                                    <div style="font-weight:700;">Apps Pay</div>
+                                    <div class="text-muted text-xs">Bargeldlos</div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- 8. Gewohnheiten (Habits) -->
-                        <div class="card" id="dashboardHabitsCard" onclick="app.navigateTo('habits')"
-                            style="cursor:pointer;">
-                            <div class="card-header">
-                                <span class="card-title"><i data-lucide="flame" class="text-accent"></i> Habits</span>
-                            </div>
-                            <div id="dashboardHabitsPreview" style="display:flex; gap:5px; overflow-x:hidden;">
-                                <span class="text-muted text-sm">Keine aktiven Habits.</span>
                             </div>
                         </div>
 
@@ -347,9 +406,9 @@
                             onclick="app.tasks.filter('todo')">Aufgaben</button>
                         <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
                             onclick="app.tasks.filter('shopping')">Einkauf</button>
-                        <button class="btn" style="background:rgba(239,68,68,0.2); color: #EF4444;"
+                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
                             onclick="app.tasks.filter('urgent')">Wichtig</button>
-                        <button class="btn" style="background:rgba(34,197,94,0.2); color: #22C55E;"
+                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
                             onclick="app.tasks.filter('done')">Erledigt</button>
                     </div>
 
@@ -397,57 +456,43 @@
                 </div>
 
                 <!-- CALENDAR VIEW -->
-                <div id="view-calendar" class="view-section hidden" style="height: calc(100vh - 140px);">
-                    <div style="display:flex; height:100%; gap: 20px;">
-                        <!-- Main Calendar -->
-                        <div class="calendar-container" style="flex:1;">
-                            <div class="calendar-header">
-                                <div style="display:flex; gap:10px; align-items:center;">
-                                    <h2 id="calMonthDisplay" style="margin:0;">Januar 2026</h2>
-                                    <div style="display:flex; gap:5px;">
-                                        <button class="btn-primary" onclick="app.calendar.changeMonth(-1)"><i
-                                                data-lucide="chevron-left"></i></button>
-                                        <button class="btn-primary" onclick="app.calendar.changeMonth(1)"><i
-                                                data-lucide="chevron-right"></i></button>
-                                    </div>
-                                </div>
-                                <div style="display:flex; gap:10px;">
-                                    <button class="btn-secondary" onclick="app.voice.startGlobal()"
-                                        title="Sprachbefehl"><i data-lucide="mic"></i></button>
-                                    <button class="btn-primary" onclick="app.modals.open('addEvent')"><i
-                                            data-lucide="plus"></i> Termin</button>
-                                </div>
-                            </div>
+                <div id="view-calendar" class="view-section hidden">
+                    <div class="card-header">
+                        <h1>Kalender</h1>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-secondary" onclick="app.voice.startGlobal()" title="Sprachbefehl"><i
+                                    data-lucide="mic"></i></button>
+                            <button class="btn-primary" onclick="app.modals.open('addEvent')"><i data-lucide="plus"></i>
+                                Termin</button>
+                        </div>
+                    </div>
 
-                            <!-- Day Headers -->
-                            <div
-                                style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; padding-bottom:5px; border-bottom:1px solid var(--border);">
-                                <div>Mo</div>
-                                <div>Di</div>
-                                <div>Mi</div>
-                                <div>Do</div>
-                                <div>Fr</div>
-                                <div>Sa</div>
-                                <div>So</div>
-                            </div>
-
-                            <!-- Calendar Grid -->
-                            <div id="calendarGrid" class="calendar-grid">
-                                <!-- Days injected by JS -->
+                    <div class="card" style="max-width: 1200px; margin: 0 auto;">
+                        <div class="calendar-header" style="margin-bottom: 20px;">
+                            <div style="display:flex; gap:10px; align-items:center; justify-content: space-between;">
+                                <button class="btn-primary" onclick="app.calendar.changeMonth(-1)"><i
+                                        data-lucide="chevron-left"></i></button>
+                                <h2 id="calMonthDisplay" style="margin:0; flex:1; text-align:center;">Januar 2026</h2>
+                                <button class="btn-primary" onclick="app.calendar.changeMonth(1)"><i
+                                        data-lucide="chevron-right"></i></button>
                             </div>
                         </div>
 
-                        <!-- Sidebar (Events List) -->
-                        <div class="appointment-sidebar">
-                            <h3><i data-lucide="list"></i> Deine Termine</h3>
-                            <button id="calcDailyRouteBtn" class="btn-route hidden"
-                                onclick="app.calendar.calculateDailyRoute()">
-                                <i data-lucide="map-pin"></i> Tagesroute berechnen
-                            </button>
-                            <div id="upcomingEventsList"
-                                style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                                <!-- Event Items -->
-                            </div>
+                        <!-- Day Headers -->
+                        <div
+                            style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; padding-bottom:10px; border-bottom:2px solid var(--border); font-weight:600; margin-bottom:10px;">
+                            <div>Mo</div>
+                            <div>Di</div>
+                            <div>Mi</div>
+                            <div>Do</div>
+                            <div>Fr</div>
+                            <div>Sa</div>
+                            <div>So</div>
+                        </div>
+
+                        <!-- Calendar Grid -->
+                        <div id="calendarGrid" class="calendar-grid">
+                            <!-- Days injected by JS -->
                         </div>
                     </div>
                 </div>
@@ -463,6 +508,15 @@
                         <div class="card" onclick="app.modals.open('setAlarm')">
                             <div class="card-header"><span class="card-title">⏰ Wecker</span></div>
                             <div id="activeAlarmDisplay" class="text-muted text-sm">Kein Wecker gestellt.</div>
+                        </div>
+                        <div id="toolsProCard" class="card hidden" onclick="app.modals.open('upgradePro')"
+                            style="background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(59, 130, 246, 0.1)); border: 2px solid var(--accent); cursor:pointer;">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="crown" class="text-accent"></i> TaskForce
+                                    PRO</span>
+                            </div>
+                            <div class="text-muted text-sm">Jetzt mit <b>PayPal</b> bezahlen und alle Features
+                                freischalten.</div>
                         </div>
                         <div class="card" onclick="app.navigateTo('health')">
                             <div class="card-header"><span class="card-title">❤️ Gesundheit</span></div>
@@ -480,19 +534,75 @@
                 <!-- FINANCE VIEW -->
                 <div id="view-finance" class="view-section hidden">
                     <div class="card-header">
-                        <h1>Finanzen & Kosten</h1>
-                        <button class="btn-primary" onclick="app.modals.open('addExpense')"><i data-lucide="plus"></i>
-                            Ausgabe</button>
-                    </div>
-                    <div class="dashboard-grid">
-                        <div class="card">
-                            <h3>Monatsübersicht</h3>
-                            <canvas id="expenseChart"></canvas>
+                        <h1>Finanzen & Budget</h1>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-secondary" onclick="app.finance.setBudget()"><i data-lucide="target"></i>
+                                Budget</button>
+                            <button class="btn-primary" onclick="app.modals.open('addExpense')"><i
+                                    data-lucide="plus"></i> Ausgabe</button>
                         </div>
-                        <div class="card" style="grid-column: span 2;">
-                            <h3>Historie</h3>
-                            <div id="expenseHistory"
-                                style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="dashboard-grid" style="margin-bottom:20px;">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="calendar-days" class="text-primary"></i>
+                                    Heute</span>
+                            </div>
+                            <div class="card-value" id="financeDay" style="color:var(--danger);">0.00€</div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="calendar-range" class="text-secondary"></i>
+                                    Woche</span>
+                            </div>
+                            <div class="card-value" id="financeWeek" style="color:var(--danger);">0.00€</div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="calendar" class="text-accent"></i> Monat</span>
+                            </div>
+                            <div class="card-value" id="financeMonth" style="color:var(--danger);">0.00€</div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="calendar-check" class="text-success"></i>
+                                    Jahr</span>
+                            </div>
+                            <div class="card-value" id="financeYear" style="color:var(--danger);">0.00€</div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Overview -->
+                    <div class="dashboard-grid" style="margin-bottom:20px;">
+                        <div class="card">
+                            <h3><i data-lucide="pie-chart"></i> Budget Übersicht</h3>
+                            <canvas id="expenseChart" style="max-height:200px;"></canvas>
+                        </div>
+
+                        <div class="card">
+                            <h3><i data-lucide="wallet"></i> Monatliches Budget</h3>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+                                <div>
+                                    <div class="text-muted text-sm">Budget</div>
+                                    <div style="font-size:1.5rem; font-weight:700;" id="financeBudget">2000.00€</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted text-sm">Übrig</div>
+                                    <div style="font-size:1.5rem; font-weight:700;" id="financeRemaining">0.00€</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History -->
+                    <div class="card" style="grid-column: span 2;">
+                        <h3><i data-lucide="history"></i> Ausgaben Historie</h3>
+                        <div id="expenseHistory" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
                         </div>
                     </div>
                 </div>
@@ -565,22 +675,27 @@
 
                 <!-- CONTACTS VIEW -->
                 <div id="view-contacts" class="view-section hidden">
-                    <h1>Kontakte & Kommunikation</h1>
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap: 10px; flex-wrap: wrap;">
+                        <h1>Kontakte & Kommunikation</h1>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-secondary" id="importContactsBtn"
+                                onclick="app.contacts.importFromPhone()" style="display:none;">
+                                <i data-lucide="import"></i> Handy-Kontakte
+                            </button>
+                            <button class="btn-primary" onclick="app.modals.open('addContact')">
+                                <i data-lucide="user-plus"></i> Kontakt hinzufügen
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="dashboard-grid">
-                        <div class="card">
-                            <label class="text-muted text-sm">Schnell-Kontakt</label>
-                            <div style="display: flex; gap: 8px; margin-top:5px;">
-                                <input id="contactSearchInput" type="text" placeholder="Name oder Nummer..."
-                                    style="flex:1; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 8px;">
-                                <button class="btn-secondary" onclick="app.voice.listenTo('contactSearchInput')"><i
-                                        data-lucide="mic"></i></button>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:10px;">
-                                <button class="btn-primary" style="flex:1;"><i data-lucide="phone"></i></button>
-                                <button class="btn-primary" style="flex:1; background: #25D366;"><i
-                                        data-lucide="message-circle"></i></button>
-                                <button class="btn-primary" style="flex:1; background: #EA4335;"><i
-                                        data-lucide="mail"></i></button>
+                        <div class="card" style="grid-column: span 2;">
+                            <h3>Meine Kontakte</h3>
+                            <div id="contactsList"
+                                style="margin-top:15px; display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px;">
+                                <!-- Filled by app.contacts.render() -->
+                                <div class="text-muted text-sm">Lade Kontakte...</div>
                             </div>
                         </div>
                     </div>
@@ -597,9 +712,7 @@
                                 id="driveClock">--:--</div>
                             <div class="text-muted" id="driveDate" style="font-size: 1.1rem;">Lade Datum...</div>
                         </div>
-                        <button
-                            style="background:rgba(255,255,255,0.15); border:none; color:white; width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                            onclick="app.actions.toggleDriveMode()">
+                        <button class="nav-drive-close" onclick="app.actions.toggleDriveMode()">
                             <i data-lucide="x" size="32"></i>
                         </button>
                     </div>
@@ -617,8 +730,8 @@
                                 <div id="currentLocationText" style="font-weight:bold; font-size:1.1rem;">Suche GPS...
                                 </div>
                             </div>
-                            <button class="btn-small" style="padding: 8px 12px; background:rgba(0,0,0,0.3);"
-                                onclick="app.drive.askLocation()">Ändern</button>
+                            <button class="btn-small" onclick="app.drive.askLocation()"
+                                style="width: auto; padding: 0 15px;">Ändern</button>
                         </div>
                     </div>
 
@@ -660,6 +773,25 @@
                         <h1>Einstellungen</h1>
                     </div>
                     <div class="dashboard-grid">
+                        <div class="card" style="grid-column: span 2;">
+                            <h3><i data-lucide="crown" class="text-accent"></i> Membership Status</h3>
+                            <div id="settingsProLabel"
+                                style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">STANDARD VERSION</div>
+                            <p class="text-xs text-muted" style="margin-bottom: 15px;">Upgrade für unlimitierte Features
+                                & AI Support.</p>
+
+                            <div id="settingsProUpgradeContainer">
+                                <div
+                                    style="background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--border); text-align:center;">
+                                    <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px;">Einmalige
+                                        Zahlung</div>
+                                    <div style="font-size:2rem; font-weight:bold;">9,99€</div>
+                                    <div style="font-size:0.8rem; color:var(--success); margin-top:5px;">✓ Sparkasse,
+                                        Bankeinzug & PayPal</div>
+                                </div>
+                                <div id="paypal-button-container-settings"></div>
+                            </div>
+                        </div>
                         <div class="card" style="grid-column: span 2;">
                             <h3><i data-lucide="sparkles" class="text-accent"></i> AI Assistent Konfiguration</h3>
                             <p class="text-muted text-sm" style="margin-bottom: 1.5rem;">Wähle deinen bevorzugten AI
@@ -720,6 +852,14 @@
                                     <option value="single">Übersicht (1 Spalte / Einzeilig)</option>
                                 </select>
                             </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label class="form-label">Voice-Button Icon</label>
+                                <select id="voiceIconModeSelect" class="form-input"
+                                    onchange="app.settings.saveVoiceIconMode()">
+                                    <option value="logo">TaskForce Logo (Blitz)</option>
+                                    <option value="mic">Standard Mikrofon</option>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Firebase JS SDKs -->
@@ -777,9 +917,12 @@
         <button class="nav-item-mobile active" data-page="dashboard"><i data-lucide="home"></i></button>
         <button class="nav-item-mobile" data-page="tasks"><i data-lucide="check-square"></i></button>
 
-        <!-- Center Voice Button -->
-        <div class="nav-item-voice" onclick="app.voice.startGlobal()">
-            <i data-lucide="mic" size="28"></i>
+        <!-- Center Voice Module -->
+        <div class="nav-voice-center" onclick="app.voice.startGlobal()" title="Sprachbefehl">
+            <div class="voice-inner" id="voiceButtonInner">
+                <i data-lucide="mic" id="voiceMicIcon" size="24" class="hidden"></i>
+                <i data-lucide="zap" id="voiceLogoIcon" size="24" style="color: #000;"></i>
+            </div>
         </div>
 
         <button class="nav-item-mobile" data-page="calendar"><i data-lucide="calendar"></i></button>
@@ -804,6 +947,8 @@
             <!-- Dynamic Injection -->
         </div>
     </div>
+
+
 
     <script src="app.js"></script>
     <style>
@@ -868,19 +1013,6 @@
             margin-bottom: 5px;
         }
 
-        .checkbox-circle {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--text-muted);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .checkbox-circle.checked {
-            background: var(--success);
-            border-color: var(--success);
-        }
 
         .form-group {
             margin-bottom: 15px;
