@@ -220,6 +220,14 @@
                                 <i data-lucide="layout-grid" size="14" id="layoutToggleIcon"></i>
                                 <span id="layoutToggleText">2 Spalten</span>
                             </button>
+                            <button onclick="app.modals.open('configureWidgets')"
+                                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='rgba(255,255,255,0.4)'"
+                                onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.2)'"
+                                title="Widgets konfigurieren">
+                                <i data-lucide="layers" size="14"></i>
+                                <span>Widgets</span>
+                            </button>
                             <div class="status-pill">
                                 <span class="status-dot"></span> System bereit
                             </div>

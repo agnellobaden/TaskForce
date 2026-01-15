@@ -246,6 +246,13 @@ const app = {
             this.state.voiceIconMode = 'logo';
             this.saveState();
         }
+
+        // Widget Visibility Migration
+        if (!this.state.ui) this.state.ui = {};
+        if (!this.state.ui.hiddenCards) {
+            this.state.ui.hiddenCards = [];
+            this.saveState();
+        }
     },
 
     saveState(skipSync = false) {
@@ -738,6 +745,11 @@ const app = {
 
     // --- DASHBOARD & HELPERS ---
     renderDashboard() {
+        // Apply Card Visibility
+        if (this.dashboard && this.dashboard.applyVisibility) {
+            this.dashboard.applyVisibility();
+        }
+
         // Events (Hero)
         const dp = document.getElementById('dashboardEventsPreview');
         if (dp) {
@@ -2728,6 +2740,7 @@ const app = {
             app.renderDashboard();
             app.modals.close();
             app.navigateTo('dashboard');
+            app.dashboard.scrollToCard('dashboardAlarmsCard');
         }
     },
     async requestWakeLock() { if ('wakeLock' in navigator) { try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } } },
@@ -3796,6 +3809,43 @@ const app = {
                     </div>
                     <button class="btn btn-primary" onclick="app.modals.submitHabit()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
+            } else if (type === 'configureWidgets') {
+                const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
+                const cards = [
+                    { id: 'dashboardCommunicationCard', name: 'Kommunikation', icon: 'message-square' },
+                    { id: 'dashboardStatusCard', name: 'Tages-Check', icon: 'clipboard-check' },
+                    { id: 'dashboardEventsCard', name: 'Zeitplan / Termine', icon: 'calendar' },
+                    { id: 'dashboardTasksCard', name: 'Aufgaben (To-Do)', icon: 'check-square' },
+                    { id: 'dashboardShoppingCard', name: 'Einkaufsliste', icon: 'shopping-cart' },
+                    { id: 'dashboardHealthCard', name: 'Gesundheits-Tracker', icon: 'heart' },
+                    { id: 'dashboardHabitsCard', name: 'Gewohnheiten', icon: 'flame' },
+                    { id: 'dashboardFinanceCard', name: 'Finanzen', icon: 'pie-chart' },
+                    { id: 'dashboardAlarmsCard', name: 'Wecker', icon: 'alarm-clock' },
+                    { id: 'dashboardDriveCard', name: 'Drive / Fahrt-Modus', icon: 'navigation' },
+                    { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' }
+                ];
+
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <h3><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
+                    <p class="text-muted text-sm mb-4">Wähle aus, welche Karten angezeigt werden sollen.</p>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${cards.map(card => {
+                    const isVisible = !hidden.includes(card.id);
+                    return `
+                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:15px; margin:0; cursor:pointer;" onclick="app.dashboard.toggleCardVisibility('${card.id}')">
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <i data-lucide="${card.icon}" class="text-muted"></i>
+                                    <span style="font-weight:600; ${!isVisible ? 'opacity:0.5' : ''}">${card.name}</span>
+                                </div>
+                                <div class="checkbox-circle ${isVisible ? 'checked' : ''}" style="width:24px; height:24px;"></div>
+                            </div>
+                            `;
+                }).join('')}
+                    </div>
+                     <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:20px;width:100%;">Fertig</button>
+                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                </div>`;
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -3817,6 +3867,7 @@ const app = {
                 app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat);
                 this.close();
                 app.navigateTo('dashboard');
+                app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
             }
         },
         submitExpense() {
@@ -3828,6 +3879,7 @@ const app = {
                 app.finance.add(a, d, date, u);
                 this.close();
                 app.navigateTo('dashboard');
+                app.dashboard.scrollToCard('dashboardFinanceCard');
             }
         },
         submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); app.navigateTo('dashboard'); } },
@@ -3843,6 +3895,7 @@ const app = {
             app.health.addReminder(data);
             this.close();
             app.navigateTo('dashboard');
+            app.dashboard.scrollToCard('dashboardHealthCard');
         },
         submitHydrationSettings() {
             // (Setting update stays on page or optionally dashboard... User said "whatever I save")
@@ -3862,6 +3915,7 @@ const app = {
             app.health.render();
             this.close();
             app.navigateTo('dashboard');
+            app.dashboard.scrollToCard('dashboardHealthCard');
         },
         submitShortcut(id) {
             const name = document.getElementById('shortcutName').value;
@@ -3881,6 +3935,7 @@ const app = {
                 app.shortcuts.render();
                 this.close();
                 app.navigateTo('dashboard');
+                app.dashboard.scrollToCard('dashboardShortcutsCard');
             }
         },
         submitHabit() {
@@ -3897,6 +3952,7 @@ const app = {
                 app.renderDashboard();
                 this.close();
                 app.navigateTo('dashboard');
+                app.dashboard.scrollToCard('dashboardHabitsCard');
             }
         },
         submitEvent() {
@@ -3914,27 +3970,7 @@ const app = {
                 app.calendar.addEvent(data);
                 this.close();
                 app.navigateTo('dashboard');
-
-                // Auto-scroll to Events Card to confirm entry
-                setTimeout(() => {
-                    const card = document.getElementById('dashboardEventsCard');
-                    if (card) {
-                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Visual Feedback
-                        const oldTrans = card.style.transition;
-                        const oldBorder = card.style.borderColor;
-
-                        card.style.transition = 'all 0.5s ease';
-                        card.style.borderColor = 'var(--primary)';
-                        card.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.3)';
-
-                        setTimeout(() => {
-                            card.style.borderColor = oldBorder;
-                            card.style.boxShadow = '';
-                            setTimeout(() => card.style.transition = oldTrans, 500);
-                        }, 2000);
-                    }
-                }, 300);
+                app.dashboard.scrollToCard('dashboardEventsCard');
             }
         }
     },
@@ -3954,7 +3990,7 @@ const app = {
             this.render();
             app.renderDashboard();
         },
-        call(num) { if (num) window.location.href = `tel:${num}`; },
+        call(num) { if (num) window.location.href = `tel:${num} `; },
         whatsapp(num) { if (num) window.open(`https://wa.me/${num.replace(/\D/g, '')}`, '_blank'); },
         mail(email) { if (email) window.location.href = `mailto:${email}`; },
         async importFromPhone() {
@@ -4189,6 +4225,59 @@ const app = {
                     if (el) el.style.order = order;
                 }
             }
+        },
+        applyVisibility() {
+            const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
+            const allCards = [
+                'dashboardCommunicationCard', 'dashboardStatusCard', 'dashboardEventsCard',
+                'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
+                'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
+                'dashboardDriveCard', 'dashboardShortcutsCard'
+            ];
+
+            allCards.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (hidden.includes(id)) el.classList.add('hidden');
+                    else el.classList.remove('hidden');
+                }
+            });
+        },
+        toggleCardVisibility(id) {
+            if (!app.state.ui) app.state.ui = {};
+            if (!app.state.ui.hiddenCards) app.state.ui.hiddenCards = [];
+
+            const index = app.state.ui.hiddenCards.indexOf(id);
+            if (index > -1) {
+                app.state.ui.hiddenCards.splice(index, 1); // Remove from hidden (Show it)
+            } else {
+                app.state.ui.hiddenCards.push(id); // Add to hidden
+            }
+            app.saveState();
+            this.applyVisibility();
+            // Re-render modal to update switch state
+            app.modals.open('configureWidgets');
+        },
+        scrollToCard(id) {
+            setTimeout(() => {
+                const card = document.getElementById(id);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const oldTrans = card.style.transition;
+                    const oldBorder = card.style.borderColor;
+                    const oldShadow = card.style.boxShadow;
+
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.borderColor = 'var(--primary)';
+                    card.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.3)';
+
+                    setTimeout(() => {
+                        card.style.borderColor = oldBorder || '';
+                        card.style.boxShadow = oldShadow || '';
+                        setTimeout(() => card.style.transition = oldTrans || '', 500);
+                    }, 2000);
+                }
+            }, 300);
         }
     }
 };
