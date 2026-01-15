@@ -105,6 +105,16 @@ svg {
     }
 }
 
+.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    z-index: 1000;
+}
+
+.dash-card {
+    transition: order 0.3s ease, transform 0.2s ease;
+}
+
 .pulse-sync {
     animation: pulse-sync 2s ease-in-out infinite;
     border-color: var(--success) !important;
@@ -801,7 +811,45 @@ button {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     overflow: hidden;
-    margin-top: 10px;
+}
+
+.habit-progress-bar {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s ease;
+}
+
+/* === COMMUNICATION & SHORTCUT TILES === */
+.comm-tile {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+    padding: 10px;
+}
+
+.comm-tile:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.shortcut-item:hover .comm-tile {
+    border-color: var(--primary);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+}
+
+.shortcut-item a {
+    text-decoration: none;
+    color: inherit;
 }
 
 .habit-progress-bar {

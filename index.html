@@ -243,8 +243,8 @@
 
 
 
-                        <div id="dashboardCommunicationCard" class="card card-communication"
-                            style="grid-column: span 1;">
+                        <div id="dashboardCommunicationCard" class="card dash-card card-communication"
+                            style="grid-column: span 1; order: 10;" draggable="true">
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
@@ -267,9 +267,9 @@
                             </div>
                         </div>
 
-                        <div class="card"
-                            style="grid-column: span 1; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer;"
-                            onclick="app.modals.open('dailyStatus')">
+                        <div id="dashboardStatusCard" class="card dash-card"
+                            style="grid-column: span 1; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer; order: 20;"
+                            onclick="app.modals.open('dailyStatus')" draggable="true">
                             <div
                                 style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                                 <i data-lucide="clipboard-check" size="24"></i>
@@ -281,7 +281,8 @@
                         </div>
 
                         <!-- 3. HERO: Termine (Consolidated Window) -->
-                        <div class="card" id="dashboardEventsCard" style="grid-column: span 2; padding: 15px;">
+                        <div class="card dash-card" id="dashboardEventsCard"
+                            style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
                             <div class="card-header" style="margin-bottom: 12px;">
                                 <span class="card-title"
                                     style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
@@ -296,8 +297,8 @@
                         </div>
 
                         <!-- 4. TASKS & EINKAUF (Parallel) -->
-                        <div id="dashboardTasksCard" class="card" style="grid-column: span 1;"
-                            onclick="app.tasks.filter('todo'); app.navigateTo('tasks')">
+                        <div id="dashboardTasksCard" class="card dash-card" style="grid-column: span 1; order: 40;"
+                            onclick="app.tasks.filter('todo'); app.navigateTo('tasks')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
                                     To-Do</span>
@@ -308,8 +309,8 @@
                             <div id="dashboardTaskPreview"></div>
                         </div>
 
-                        <div id="dashboardShoppingCard" class="card" style="grid-column: span 1;"
-                            onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')">
+                        <div id="dashboardShoppingCard" class="card dash-card" style="grid-column: span 1; order: 50;"
+                            onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
                                     Einkauf</span>
@@ -321,7 +322,8 @@
                         </div>
 
                         <!-- 5. GESUNDHEIT & HABITS (Tracking) -->
-                        <div class="card" style="grid-column: span 1;" id="dashboardHealthCard">
+                        <div class="card dash-card" style="grid-column: span 1; order: 60;" id="dashboardHealthCard"
+                            draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="heart"></i> Vitalität</span>
                                 <button onclick="event.stopPropagation(); app.health.quickAddWater();"
@@ -330,7 +332,8 @@
                             <div id="dashboardHealthPreview" onclick="app.navigateTo('health')"></div>
                         </div>
 
-                        <div class="card" style="grid-column: span 1;" onclick="app.navigateTo('habits')">
+                        <div id="dashboardHabitsCard" class="card dash-card" style="grid-column: span 1; order: 70;"
+                            onclick="app.navigateTo('habits')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="flame"></i> Routinen</span>
                             </div>
@@ -338,8 +341,8 @@
                         </div>
 
                         <!-- 6. FINANZEN & WECKER (Utilities) -->
-                        <div id="dashboardFinanceCard" class="card" style="grid-column: span 1;"
-                            onclick="app.navigateTo('finance')">
+                        <div id="dashboardFinanceCard" class="card dash-card" style="grid-column: span 1; order: 80;"
+                            onclick="app.navigateTo('finance')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
@@ -361,8 +364,8 @@
                             </div>
                         </div>
 
-                        <div class="card" style="grid-column: span 1;" id="dashboardAlarmsCard"
-                            onclick="app.modals.open('setAlarm')">
+                        <div class="card dash-card" style="grid-column: span 1; order: 90;" id="dashboardAlarmsCard"
+                            onclick="app.modals.open('setAlarm')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="alarm-clock" class="text-secondary"></i>
                                     Wecker</span>
@@ -374,7 +377,8 @@
                         </div>
 
                         <!-- 7. BOTTOM TOOLS: Drive & Apps Pay -->
-                        <div class="card" style="grid-column: span 1;" onclick="app.actions.toggleDriveMode()">
+                        <div id="dashboardDriveCard" class="card dash-card" style="grid-column: span 1; order: 100;"
+                            onclick="app.actions.toggleDriveMode()" draggable="true">
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div
                                     style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
@@ -387,20 +391,20 @@
                             </div>
                         </div>
 
-                        <div class="card" style="grid-column: span 1;" id="dashboardWalletCard"
-                            onclick="app.modals.open('upgradePro')">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div
-                                    style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                    <i data-lucide="wallet" size="20"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight:700;">Apps Pay</div>
-                                    <div class="text-muted text-xs">Bargeldlos</div>
-                                </div>
+                        <div id="dashboardShortcutsCard" class="card dash-card" style="grid-column: span 1; order: 110;"
+                            draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="layers" class="text-primary"></i> Apps &
+                                    Links</span>
+                                <button class="btn-small" onclick="app.shortcuts.add()"><i
+                                        data-lucide="plus"></i></button>
+                            </div>
+                            <div id="dashboardShortcutsPreview"
+                                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-top: 10px;">
+                                <!-- Shortcuts will be rendered here -->
                             </div>
                         </div>
-
+                        <div id="dashboardAppCardsContainer" style="display: contents;"></div>
                     </div>
                 </div>
 
@@ -408,7 +412,8 @@
                 <div id="view-tasks" class="view-section hidden">
                     <div class="card-header">
                         <h1>Aufgaben & To-Do</h1>
-                        <button class="btn-primary" onclick="app.modals.open('addTask')"><i data-lucide="plus"></i> Neue
+                        <button class="btn-primary" onclick="app.modals.open('addTask')"><i data-lucide="plus"></i>
+                            Neue
                             Aufgabe</button>
                     </div>
 
@@ -460,7 +465,8 @@
                 <div id="view-habits" class="view-section hidden">
                     <div class="card-header">
                         <h1>Gewohnheiten</h1>
-                        <button class="btn-primary" onclick="app.habits.add()"><i data-lucide="plus"></i> Neu</button>
+                        <button class="btn-primary" onclick="app.habits.add()"><i data-lucide="plus"></i>
+                            Neu</button>
                     </div>
                     <div class="dashboard-grid" id="habitsGrid">
                         <!-- Habits Cards injected here -->
@@ -484,7 +490,8 @@
                             <div style="display:flex; gap:10px; align-items:center; justify-content: space-between;">
                                 <button class="btn-primary" onclick="app.calendar.changeMonth(-1)"><i
                                         data-lucide="chevron-left"></i></button>
-                                <h2 id="calMonthDisplay" style="margin:0; flex:1; text-align:center;">Januar 2026</h2>
+                                <h2 id="calMonthDisplay" style="margin:0; flex:1; text-align:center;">Januar 2026
+                                </h2>
                                 <button class="btn-primary" onclick="app.calendar.changeMonth(1)"><i
                                         data-lucide="chevron-right"></i></button>
                             </div>
@@ -575,7 +582,8 @@
 
                         <div class="card">
                             <div class="card-header">
-                                <span class="card-title"><i data-lucide="calendar" class="text-accent"></i> Monat</span>
+                                <span class="card-title"><i data-lucide="calendar" class="text-accent"></i>
+                                    Monat</span>
                             </div>
                             <div class="card-value" id="financeMonth" style="color:var(--danger);">0.00€</div>
                         </div>
@@ -601,11 +609,13 @@
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
                                 <div>
                                     <div class="text-muted text-sm">Budget</div>
-                                    <div style="font-size:1.5rem; font-weight:700;" id="financeBudget">2000.00€</div>
+                                    <div style="font-size:1.5rem; font-weight:700;" id="financeBudget">2000.00€
+                                    </div>
                                 </div>
                                 <div>
                                     <div class="text-muted text-sm">Übrig</div>
-                                    <div style="font-size:1.5rem; font-weight:700;" id="financeRemaining">0.00€</div>
+                                    <div style="font-size:1.5rem; font-weight:700;" id="financeRemaining">0.00€
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -663,7 +673,8 @@
                         <!-- Sleep -->
                         <div class="card">
                             <div class="card-header">
-                                <span class="card-title"><i data-lucide="moon" class="text-accent"></i> Schlaf</span>
+                                <span class="card-title"><i data-lucide="moon" class="text-accent"></i>
+                                    Schlaf</span>
                             </div>
                             <div class="card-value" id="healthSleepToday">0h</div>
                             <div class="text-muted text-sm">Letzte Nacht</div>
@@ -744,7 +755,8 @@
                             <div style="flex:1;">
                                 <div class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:0.5px;">
                                     Aktueller Standort</div>
-                                <div id="currentLocationText" style="font-weight:bold; font-size:1.1rem;">Suche GPS...
+                                <div id="currentLocationText" style="font-weight:bold; font-size:1.1rem;">Suche
+                                    GPS...
                                 </div>
                             </div>
                             <button class="btn-small" onclick="app.drive.askLocation()"
@@ -793,17 +805,21 @@
                         <div class="card" style="grid-column: span 2;">
                             <h3><i data-lucide="crown" class="text-accent"></i> Membership Status</h3>
                             <div id="settingsProLabel"
-                                style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">STANDARD VERSION</div>
-                            <p class="text-xs text-muted" style="margin-bottom: 15px;">Upgrade für unlimitierte Features
+                                style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">STANDARD VERSION
+                            </div>
+                            <p class="text-xs text-muted" style="margin-bottom: 15px;">Upgrade für unlimitierte
+                                Features
                                 & AI Support.</p>
 
                             <div id="settingsProUpgradeContainer">
                                 <div
                                     style="background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--border); text-align:center;">
-                                    <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px;">Einmalige
+                                    <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px;">
+                                        Einmalige
                                         Zahlung</div>
                                     <div style="font-size:2rem; font-weight:bold;">9,99€</div>
-                                    <div style="font-size:0.8rem; color:var(--success); margin-top:5px;">✓ Sparkasse,
+                                    <div style="font-size:0.8rem; color:var(--success); margin-top:5px;">✓
+                                        Sparkasse,
                                         Bankeinzug & PayPal</div>
                                 </div>
                                 <div id="paypal-button-container-settings"></div>

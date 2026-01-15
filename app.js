@@ -69,6 +69,9 @@ const app = {
             this.calendar.init();
             this.gamification.updateUI();
             this.renderDashboard();
+            if (this.shortcuts) this.shortcuts.render();
+            this.dashboard.initDragAndDrop();
+            this.dashboard.applyOrder();
             this.voice.init();
 
             // Apply User Preferences
@@ -159,7 +162,8 @@ const app = {
         if (!this.state.archives) this.state.archives = [];
         if (!this.state.archives) this.state.archives = [];
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
-        if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double'; // Default to 2 columns
+        if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
+        if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
 
         // Firebase Default Config Migration
         if (!this.state.cloud) this.state.cloud = {};
@@ -400,7 +404,6 @@ const app = {
             const sLabel = document.getElementById('settingsProLabel');
             const sContainer = document.getElementById('settingsProUpgradeContainer');
             const tCard = document.getElementById('toolsProCard');
-            const wCard = document.getElementById('dashboardWalletCard');
             const mSupport = document.getElementById('menuSupportItem');
 
             if (app.state.user.isPro) {
@@ -409,7 +412,6 @@ const app = {
                 if (sLabel) sLabel.innerHTML = '👑 TASKFORCE PRO ACTIVE';
                 if (sContainer) sContainer.classList.add('hidden');
                 if (tCard) tCard.classList.add('hidden');
-                if (wCard) wCard.classList.remove('hidden');
                 if (mSupport) {
                     mSupport.innerHTML = '<i data-lucide="heart" class="text-danger"></i> Support (Pro Aktiv)';
                     mSupport.onclick = () => app.navigateTo('settings');
@@ -420,7 +422,6 @@ const app = {
                 if (sLabel) sLabel.innerHTML = 'STANDARD VERSION';
                 if (sContainer) sContainer.classList.remove('hidden');
                 if (tCard) tCard.classList.add('hidden');
-                if (wCard) wCard.classList.remove('hidden');
                 if (mSupport) {
                     mSupport.innerHTML = '<i data-lucide="heart" class="text-danger"></i> Support & Pro';
                     mSupport.onclick = () => app.navigateTo('settings');
@@ -1085,6 +1086,7 @@ const app = {
             layoutBtnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
         }
 
+        if (this.shortcuts) this.shortcuts.render();
         if (window.lucide) lucide.createIcons();
     },
 
@@ -2383,7 +2385,7 @@ const app = {
         startGlobal() {
             if (this.recognition) {
                 this.targetInput = null;
-                alert("🎤 Ich höre! (Versuch mal: 'W 0.5', 'Milch kaufen', '10 Euro für Pizza'...)");
+                // alert removed for seamless interaction
                 this.recognition.start();
             } else alert("Sprachsteuerung wird von diesem Browser nicht unterstützt.");
         },
@@ -2425,17 +2427,35 @@ const app = {
 
             // Determine intent
             if (this.isEventIntent(lower)) {
-                // Open event form with extracted data
+                // Direct add if possible
+                if (info.title && info.time) {
+                    app.calendar.addEvent({
+                        title: info.title,
+                        date: info.date || new Date().toISOString().split('T')[0],
+                        time: info.time,
+                        location: info.location || '',
+                        urgent: false,
+                        notes: ''
+                    });
+                    app.navigateTo('dashboard');
+                    return true;
+                }
                 app.modals.open('addEvent', info);
                 return true;
             } else if (this.isExpenseIntent(lower)) {
-                // Open expense form with extracted data
+                // Direct add if possible
+                if (info.amount && info.title) {
+                    app.finance.add(info.amount, info.title, info.date || new Date().toISOString().split('T')[0], false);
+                    app.navigateTo('dashboard');
+                    return true;
+                }
                 app.modals.open('addExpense', info);
                 return true;
             } else if (this.isTaskIntent(lower)) {
-                // Determine if shopping or todo
                 const category = lower.includes('kaufen') || lower.includes('einkauf') || lower.includes('shop') ? 'shopping' : 'todo';
-                app.modals.open('addTask', { ...info, category });
+                // Tasks are safe to add directly usually
+                app.tasks.add(info.title || text, false, category);
+                app.navigateTo('dashboard');
                 return true;
             }
 
@@ -2751,7 +2771,7 @@ const app = {
             if (text.includes('ml')) val = val / 1000;
             if (val > 0) {
                 app.health.addWater(val);
-                alert(`💧 ${val}L Wasser hinzugefügt!`);
+                app.navigateTo('dashboard');
                 return true;
             }
         }
@@ -2761,8 +2781,8 @@ const app = {
             const amount = parseFloat(text.replace(/[^0-9.]/g, ''));
             const desc = raw.replace(/[0-9.]/g, '').replace(/euro|ausgabe|e /gi, '').trim();
             if (amount > 0) {
-                app.finance.add(amount, desc || "Unbekannt");
-                alert(`💰 ${amount}€ für "${desc}" erfasst!`);
+                app.finance.add(amount, desc || "Unbekannt", new Date().toISOString().split('T')[0], false);
+                app.navigateTo('dashboard');
                 return true;
             }
         }
@@ -2775,7 +2795,7 @@ const app = {
                 // If keywords suggest shopping, add to shopping category
                 const isShop = text.includes('kaufen') || text.includes('liste');
                 app.tasks.add(title, false, isShop ? 'shopping' : 'todo');
-                alert(`✅ ${isShop ? 'Einkauf' : 'Aufgabe'} "${title}" erstellt!`);
+                app.navigateTo('dashboard');
                 return true;
             }
         }
@@ -2790,10 +2810,9 @@ const app = {
         }
 
         // Default: Add as Task if not recognized
-        // Default: Add as Task if not recognized
         if (raw.length > 2) {
             app.tasks.add(raw, false, 'todo'); // Default to todo
-            alert(`✅ Als Aufgabe gespeichert: "${raw}"`);
+            app.navigateTo('dashboard');
             return true;
         }
         return false;
@@ -3045,14 +3064,12 @@ const app = {
             document.getElementById('grokKeyInput').value = config.grokKey || '';
             document.getElementById('geminiKeyInput').value = config.geminiKey || '';
             document.getElementById('settingsUserName').value = app.state.user.name || '';
-            document.getElementById('settingsUserName').value = app.state.user.name || '';
 
+            const layoutSelect = document.getElementById('dashboardLayoutSelect');
             if (layoutSelect) layoutSelect.value = app.state.dashboardLayout || 'double';
 
             const voiceIconSelect = document.getElementById('voiceIconModeSelect');
             if (voiceIconSelect) voiceIconSelect.value = app.state.voiceIconMode || 'logo';
-
-            document.getElementById('settingsUserName').value = app.state.user.name || '';
 
             // Render Cloud Config
             if (app.state.cloud) {
@@ -3684,6 +3701,54 @@ const app = {
                     </button>
                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
                 </div>`;
+            } else if (type === 'addShortcut') {
+                const s = data.id ? app.state.shortcuts.find(x => x.id === data.id) : { name: '', url: '', icon: 'external-link' };
+                c.innerHTML = `
+                <div style="padding:20px;">
+                    <h3>🚀 App / Link hinzufügen</h3>
+                    <div class="form-group">
+                        <label class="form-label">Name der App</label>
+                        <input id="shortcutName" class="form-input" value="${s.name}" placeholder="z.B. Facebook">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">URL / Link</label>
+                        <input id="shortcutUrl" class="form-input" value="${s.url}" placeholder="https://facebook.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Icon (Emoji, Lucide oder Bild)</label>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <div id="shortcutIconPreview" style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:8px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border);">
+                                ${s.icon && s.icon.startsWith('data:image') ? `<img src="${s.icon}" style="width:24px; height:24px; object-fit:contain;">` : `<i data-lucide="${s.icon || 'external-link'}"></i>`}
+                            </div>
+                            <input id="shortcutIcon" class="form-input" value="${s.icon}" placeholder="Icon Name oder Emoji" style="flex:1;">
+                            <button class="btn btn-secondary" onclick="app.ai.openQuery('Welches Lucide Icon passt zu '+document.getElementById('shortcutName').value + '? Antworte nur mit dem Namen.')" title="KI Vorschlag"><i data-lucide="sparkles"></i></button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('shortcutImageInput').click()" title="Bild hochladen"><i data-lucide="image"></i></button>
+                            <input type="file" id="shortcutImageInput" accept="image/*" style="display:none" onchange="app.shortcuts.handleImageUpload(this)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Position auf Dashboard</label>
+                        <select id="shortcutOrder" class="form-input">
+                            <option value="5" ${s.order == 5 ? 'selected' : ''}>Ganz oben</option>
+                            <option value="15" ${s.order == 15 ? 'selected' : ''}>Nach Kommunikation</option>
+                            <option value="35" ${s.order == 35 ? 'selected' : ''}>Nach Zeitplan</option>
+                            <option value="55" ${s.order == 55 ? 'selected' : ''}>Nach Aufgaben</option>
+                            <option value="75" ${s.order == 75 ? 'selected' : ''}>Nach Gesundheit</option>
+                            <option value="95" ${s.order == 95 ? 'selected' : ''}>Nach Finanzen</option>
+                            <option value="115" ${s.order == 115 || !s.order ? 'selected' : ''}>Ganz unten</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="shortcutIsCard" ${s.isCard ? 'checked' : ''}>
+                            Als eigene Kachel auf Dashboard anzeigen
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="btn" style="flex:1" onclick="app.modals.close()">Abbrechen</button>
+                        <button class="btn btn-primary" style="flex:1" onclick="app.modals.submitShortcut(${data.id || 'null'})">Speichern</button>
+                    </div>
+                </div>`;
             } else if (type === 'addHabit') {
                 const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
                 c.innerHTML = `
@@ -3784,6 +3849,25 @@ const app = {
             app.health.render();
             this.close();
             app.navigateTo('dashboard');
+        },
+        submitShortcut(id) {
+            const name = document.getElementById('shortcutName').value;
+            const url = document.getElementById('shortcutUrl').value;
+            let icon = document.getElementById('shortcutIcon').value || 'external-link';
+            const isCard = document.getElementById('shortcutIsCard').checked;
+            const order = parseInt(document.getElementById('shortcutOrder').value) || 115;
+            if (name && url) {
+                if (!app.state.shortcuts) app.state.shortcuts = [];
+                if (id) {
+                    const idx = app.state.shortcuts.findIndex(s => s.id === id);
+                    if (idx !== -1) app.state.shortcuts[idx] = { ...app.state.shortcuts[idx], name, url, icon, isCard, order };
+                } else {
+                    app.state.shortcuts.push({ id: Date.now(), name, url, icon, isCard, order });
+                }
+                app.saveState();
+                app.shortcuts.render();
+                this.close();
+            }
         },
         submitHabit() {
             const name = document.getElementById('habitName').value;
@@ -3908,6 +3992,168 @@ const app = {
             const e = document.getElementById('newContactEmail').value;
             const a = document.getElementById('newContactAddress').value;
             if (n) { this.add(n, p, e, a); app.modals.close(); }
+        }
+    },
+    shortcuts: {
+        add() {
+            app.modals.open('addShortcut');
+        },
+        delete(id) {
+            if (confirm("Link wirklich löschen?")) {
+                app.state.shortcuts = app.state.shortcuts.filter(s => s.id !== id);
+                app.saveState();
+                this.render();
+            }
+        },
+        handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result;
+                    document.getElementById('shortcutIcon').value = base64;
+                    const preview = document.getElementById('shortcutIconPreview');
+                    if (preview) preview.innerHTML = `<img src="${base64}" style="width:24px; height:24px; object-fit:contain;">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        },
+        render() {
+            const preview = document.getElementById('dashboardShortcutsPreview');
+            const cardContainer = document.getElementById('dashboardAppCardsContainer');
+            if (!preview) return;
+
+            const shortcuts = app.state.shortcuts || [];
+
+            // Filter into tiles and standalone cards
+            const tiles = shortcuts.filter(s => !s.isCard);
+            const cards = shortcuts.filter(s => s.isCard);
+
+            // Render Tiles
+            if (tiles.length === 0) {
+                preview.innerHTML = '<div class="text-muted text-xs" style="grid-column: span 3; text-align:center; padding:10px;">Noch keine Apps hinzugefügt.</div>';
+            } else {
+                preview.innerHTML = tiles.map(s => {
+                    const isEmoji = /\p{Emoji}/u.test(s.icon);
+                    const isImage = s.icon && s.icon.startsWith('data:image');
+                    let iconHtml = '';
+
+                    if (isImage) {
+                        iconHtml = `<img src="${s.icon}" style="width:24px; height:24px; object-fit:contain;">`;
+                    } else if (isEmoji) {
+                        iconHtml = `<span style="font-size: 1.5rem;">${s.icon}</span>`;
+                    } else {
+                        iconHtml = `<i data-lucide="${s.icon}" size="24"></i>`;
+                    }
+
+                    return `
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:5px; position:relative;" class="shortcut-item">
+                            <a href="${s.url}" target="_blank" class="comm-tile" style="width:50px; height:50px; background:rgba(255,255,255,0.05); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); transition: all 0.2s; position:relative;">
+                                ${iconHtml}
+                            </a>
+                            <span class="text-xs text-muted" style="max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.name}</span>
+                            <div style="position:absolute; top:-5px; right:-5px; display:flex; gap:2px;">
+                                <button onclick="app.modals.open('addShortcut', {id: ${s.id}})" style="background:rgba(59,130,246,0.8); border:none; color:white; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Bearbeiten">✎</button>
+                                <button onclick="app.shortcuts.delete(${s.id})" style="background:rgba(239,68,68,0.8); border:none; color:white; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Löschen">×</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Render Cards
+            if (cardContainer) {
+                cardContainer.innerHTML = cards.map(s => {
+                    const isEmoji = /\p{Emoji}/u.test(s.icon);
+                    const isImage = s.icon && s.icon.startsWith('data:image');
+                    let iconHtml = '';
+
+                    if (isImage) {
+                        iconHtml = `<img src="${s.icon}" style="width:32px; height:32px; object-fit:contain;">`;
+                    } else if (isEmoji) {
+                        iconHtml = `<span style="font-size: 2rem;">${s.icon}</span>`;
+                    } else {
+                        iconHtml = `<i data-lucide="${s.icon}" size="32" class="text-primary"></i>`;
+                    }
+
+                    return `
+                        <div id="shortcut-card-${s.id}" class="card dash-card" style="grid-column: span 1; cursor:pointer; position:relative; min-height: 120px; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: all 0.2s; order: ${s.order || 115};" onclick="window.open('${s.url}', '_blank')" draggable="true">
+                            <div style="position:absolute; top:10px; right:10px; display:flex; gap:5px; z-index:10;">
+                                <button class="btn-small" style="background:rgba(255,255,255,0.05); width:24px; height:24px; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); app.modals.open('addShortcut', {id: ${s.id}})"><i data-lucide="edit-2" size="12"></i></button>
+                                <button class="btn-small" style="background:rgba(255,255,255,0.05); width:24px; height:24px; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); app.shortcuts.delete(${s.id})"><i data-lucide="trash" size="12"></i></button>
+                            </div>
+                            <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:16px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); margin-bottom:12px;">
+                                ${iconHtml}
+                            </div>
+                            <div style="font-weight:700; font-size:1.1rem; text-align:center;">${s.name}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (window.lucide) lucide.createIcons();
+            if (app.dashboard) app.dashboard.applyOrder();
+        }
+    },
+    dashboard: {
+        initDragAndDrop() {
+            const grid = document.querySelector('.dashboard-grid');
+            if (!grid) return;
+
+            grid.addEventListener('dragstart', (e) => {
+                const card = e.target.closest('.dash-card');
+                if (card) {
+                    e.dataTransfer.setData('text/plain', card.id);
+                    card.classList.add('dragging');
+                }
+            });
+
+            grid.addEventListener('dragend', (e) => {
+                const card = e.target.closest('.dash-card');
+                if (card) card.classList.remove('dragging');
+            });
+
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const card = e.target.closest('.dash-card');
+                if (card) {
+                    const dragging = document.querySelector('.dragging');
+                    if (dragging && dragging !== card) {
+                        const dragOrder = dragging.style.order;
+                        const targetOrder = card.style.order;
+                        if (dragOrder !== targetOrder) {
+                            dragging.style.order = targetOrder;
+                            card.style.order = dragOrder;
+                        }
+                    }
+                }
+            });
+
+            grid.addEventListener('drop', (e) => {
+                e.preventDefault();
+                this.saveOrder();
+            });
+        },
+        saveOrder() {
+            const orders = {};
+            document.querySelectorAll('.dash-card').forEach(c => {
+                orders[c.id] = c.style.order;
+                if (c.id.startsWith('shortcut-card-')) {
+                    const id = parseInt(c.id.replace('shortcut-card-', ''));
+                    const s = app.state.shortcuts.find(x => x.id === id);
+                    if (s) s.order = parseInt(c.style.order);
+                }
+            });
+            app.state.ui = app.state.ui || {};
+            app.state.ui.dashboardOrders = orders;
+            app.saveState();
+        },
+        applyOrder() {
+            if (app.state.ui && app.state.ui.dashboardOrders) {
+                for (const [id, order] of Object.entries(app.state.ui.dashboardOrders)) {
+                    const el = document.getElementById(id);
+                    if (el) el.style.order = order;
+                }
+            }
         }
     }
 };
