@@ -1128,30 +1128,51 @@ const app = {
 
             app.nightstand.update();
 
-            // --- MULTI-ALARM CHECK ---
-            if (this.state.alarms && now.getSeconds() < 2) {
+            // --- ALARM & EVENT CHECK ---
+            const sec = now.getSeconds();
+
+            // Only toggle once per minute (at 00-01 sec) to prevent multi-trigger
+            if (sec < 2 && !app.activeAlarm) {
                 const currentDay = now.getDay();
-                this.state.alarms.forEach(alarm => {
-                    if (alarm.active && alarm.time === t) {
-                        const alarmDays = alarm.days || [];
-                        if (alarmDays.includes(currentDay)) {
-                            // Sound Selection
-                            const sounds = {
-                                'melody': 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-                                'digital': 'https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3',
-                                'nature': 'https://assets.mixkit.co/active_storage/sfx/2434/2434-preview.mp3',
-                                'classic': 'https://assets.mixkit.co/active_storage/sfx/2192/2192-preview.mp3'
-                            };
-                            const soundUrl = sounds[alarm.sound] || sounds['melody'];
 
-                            const audio = new Audio(soundUrl);
-                            audio.play().catch(() => { });
-
-                            // Visual Alert removed as per user request (no popup)
-                            console.log(`⏰ WECKER: ${alarm.title || 'Alarm'} - ${t} Uhr`);
+                // 1. Regular Alarms (Wecker)
+                if (app.state.alarms) {
+                    app.state.alarms.forEach(alarm => {
+                        if (alarm.active && alarm.time === t) {
+                            const alarmDays = alarm.days || [];
+                            // If no days selected, assume one-time? Or daily? Assume one-time or daily logic if needed. 
+                            // Current logic implies days must be set. Adaptation: empty = daily or today? Let's check includes.
+                            // If alarm has days, check match. If empty (0 len) maybe it's daily? 
+                            // Existing UI enforces days selection usually (Täglich check).
+                            // Let's stick to existing logic: must start with days.
+                            if (alarmDays.length === 0 || alarmDays.includes(currentDay)) {
+                                console.log(`⏰ WECKER: ${alarm.title}`);
+                                app.alarms.trigger(alarm.title || 'Wecker', alarm.sound);
+                            }
                         }
-                    }
-                });
+                    });
+                }
+
+                // 2. Calendar Events (Proactive Alert)
+                // "Und das bei allen termine die fällig werden"
+                if (app.state.events) {
+                    const todayStr = now.toISOString().split('T')[0];
+                    app.state.events.forEach(e => {
+                        // Check if event is today
+                        if (e.start.startsWith(todayStr)) {
+                            // Extract time HH:MM
+                            // e.start format is usually ISO, but let's parse safely
+                            const evtDate = new Date(e.start);
+                            const evtTime = evtDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                            if (evtTime === t) {
+                                console.log(`📅 TERMIN: ${e.title}`);
+                                // Use a default gentle sound for calendar events unless specified
+                                app.alarms.trigger(`Termin: ${e.title}`, 'melody');
+                            }
+                        }
+                    });
+                }
             }
 
             // --- SYSTEM NOTIFICATION CHECKS ---
@@ -2482,7 +2503,99 @@ const app = {
             }
         }
     },
+    // --- ALARM & EVENT RINGING STATE ---
+    activeAlarm: null,
+
     alarms: {
+        trigger(title, soundId = 'melody') {
+            if (app.activeAlarm) return; // Already ringing
+
+            // 1. Sounds
+            const sounds = {
+                'melody': 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+                'digital': 'https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3',
+                'nature': 'https://assets.mixkit.co/active_storage/sfx/2434/2434-preview.mp3',
+                'classic': 'https://assets.mixkit.co/active_storage/sfx/2192/2192-preview.mp3'
+            };
+            const soundUrl = sounds[soundId] || sounds['melody'];
+
+            const audio = new Audio(soundUrl);
+            audio.loop = true; // Loop until stopped
+
+            // "Smooth eingeschaltet" (Volume Fade In)
+            audio.volume = 0;
+            audio.play().catch(e => console.warn("Audio play failed (user interaction needed?)", e));
+
+            // Fade in over 3 seconds
+            let vol = 0;
+            const fadeIn = setInterval(() => {
+                if (!audio || audio.paused) { clearInterval(fadeIn); return; }
+                vol = Math.min(1, vol + 0.1);
+                audio.volume = vol;
+                if (vol >= 1) clearInterval(fadeIn);
+            }, 300);
+
+            // 2. Vibration (Pattern: 500ms vibe, 300ms pause)
+            let vibInterval = null;
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 300, 500]);
+                vibInterval = setInterval(() => {
+                    navigator.vibrate([500, 300, 500]);
+                }, 1500);
+            }
+
+            // Save state
+            app.activeAlarm = {
+                audio: audio,
+                vibrationInterval: vibInterval
+            };
+
+            // 3. Show Fullscreen Overlay (Modal)
+            const overlay = document.createElement('div');
+            overlay.id = 'alarmOverlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(0,0,0,0.9)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.backdropFilter = 'blur(10px)';
+
+            overlay.innerHTML = `
+                <div style="font-size: 4rem; margin-bottom: 20px;">⏰</div>
+                <h1 style="color:white; margin-bottom: 10px; font-size: 2rem; text-align:center;">${title}</h1>
+                <p style="color:var(--text-muted); margin-bottom: 40px;">Es ist Zeit!</p>
+                
+                <div class="blink-danger" style="border-radius:50%; width:150px; height:150px; display:flex; align-items:center; justify-content:center; border: 4px solid var(--danger);">
+                    <button onclick="app.alarms.stop()" style="background:var(--danger); border:none; color:white; font-size:1.5rem; font-weight:bold; padding:20px; border-radius:50%; width:120px; height:120px; cursor:pointer; box-shadow: 0 0 30px var(--danger);">
+                        STOP
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        },
+
+        stop() {
+            if (app.activeAlarm) {
+                if (app.activeAlarm.audio) {
+                    app.activeAlarm.audio.pause();
+                    app.activeAlarm.audio.currentTime = 0;
+                }
+                if (app.activeAlarm.vibrationInterval) {
+                    clearInterval(app.activeAlarm.vibrationInterval);
+                }
+                if (navigator.vibrate) navigator.vibrate(0);
+                app.activeAlarm = null;
+            }
+            const overlay = document.getElementById('alarmOverlay');
+            if (overlay) overlay.remove();
+        },
+
         toggle(id) {
             const a = app.state.alarms.find(x => x.id === id);
             if (a) {
@@ -2506,7 +2619,11 @@ const app = {
             const sound = document.getElementById('alarmSound').value;
             const days = Array.from(document.querySelectorAll('input[name="alarmDays"]:checked')).map(cb => parseInt(cb.value));
 
-            if (id === null) {
+            // Fix for string 'null' from template literal:
+            const isNew = (id === null || id === 'null' || typeof id === 'undefined');
+
+            if (isNew) {
+                if (!app.state.alarms) app.state.alarms = [];
                 app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true });
             } else {
                 const a = app.state.alarms.find(x => x.id === id);
@@ -2708,7 +2825,8 @@ const app = {
                 events: app.state.events,
                 expenses: app.state.expenses,
                 habits: app.state.habits,
-                healthData: app.state.healthData || []
+                healthData: app.state.healthData || [],
+                alarms: app.state.alarms || []
             });
 
             const cloudVersion = JSON.stringify({
@@ -2716,7 +2834,8 @@ const app = {
                 events: cloudState.events,
                 expenses: cloudState.expenses,
                 habits: cloudState.habits,
-                healthData: cloudState.healthData || []
+                healthData: cloudState.healthData || [],
+                alarms: cloudState.alarms || []
             });
 
             if (localVersion !== cloudVersion) {
@@ -2725,6 +2844,7 @@ const app = {
                 app.state.expenses = cloudState.expenses || [];
                 app.state.habits = cloudState.habits || [];
                 app.state.healthData = cloudState.healthData || [];
+                app.state.alarms = cloudState.alarms || [];
 
                 app.saveState(true); // Skip Push to avoid loop
                 app.renderDashboard();
