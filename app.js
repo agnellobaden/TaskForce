@@ -2728,19 +2728,7 @@ const app = {
             if (this.isContactAction(lower)) {
                 return this.processContactAction(text, lower, info);
             } else if (this.isEventIntent(lower)) {
-                // Direct add if possible
-                if (info.title && info.time) {
-                    app.calendar.addEvent({
-                        title: info.title,
-                        date: info.date || new Date().toISOString().split('T')[0],
-                        time: info.time,
-                        location: info.location || '',
-                        urgent: false,
-                        notes: ''
-                    });
-                    app.navigateTo('dashboard');
-                    return true;
-                }
+                // Open modal to allow review of all extracted details and see the transcript
                 app.modals.open('addEvent', info);
                 return true;
             } else if (this.isExpenseIntent(lower)) {
@@ -2767,79 +2755,58 @@ const app = {
         extractInfo(text) {
             const info = {};
             const lower = text.toLowerCase();
+            info.rawTranscript = text;
 
-            // Extract phone numbers (various formats)
+            // Extract phone numbers
             const phoneMatch = text.match(/(\+?\d{1,4}[\s-]?)?(\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}/);
-            if (phoneMatch) {
-                info.phone = phoneMatch[0].trim();
-            }
+            if (phoneMatch) info.phone = phoneMatch[0].trim();
 
             // Extract email
             const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-            if (emailMatch) {
-                info.email = emailMatch[0];
-            }
+            if (emailMatch) info.email = emailMatch[0];
 
-            // Extract amounts (Euro, €)
+            // Extract amounts
             const amountMatch = text.match(/(\d+[,.]?\d*)\s*(euro|€)/i);
-            if (amountMatch) {
-                info.amount = parseFloat(amountMatch[1].replace(',', '.'));
-            }
+            if (amountMatch) info.amount = parseFloat(amountMatch[1].replace(',', '.'));
 
-            // Extract time (HH:MM or "um X Uhr")
+            // Extract time
             const timeMatch = text.match(/(\d{1,2}):(\d{2})|um\s+(\d{1,2})\s*(uhr)?/i);
             if (timeMatch) {
-                if (timeMatch[1] && timeMatch[2]) {
-                    info.time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
-                } else if (timeMatch[3]) {
-                    info.time = `${timeMatch[3].padStart(2, '0')}:00`;
-                }
+                if (timeMatch[1] && timeMatch[2]) info.time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+                else if (timeMatch[3]) info.time = `${timeMatch[3].padStart(2, '0')}:00`;
             }
 
-            // Extract date keywords
-            if (lower.includes('heute')) {
-                info.date = new Date().toISOString().split('T')[0];
-            } else if (lower.includes('morgen')) {
+            // Extract date
+            if (lower.includes('heute')) info.date = new Date().toISOString().split('T')[0];
+            else if (lower.includes('morgen')) {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 info.date = tomorrow.toISOString().split('T')[0];
             }
 
-            // Extract location/address (words after "in", "bei", "am", or street indicators)
-            const locationMatch = text.match(/(in|bei|am|straße|platz|weg)\s+([A-ZÄÖÜ][a-zäöüß\s]+(?:straße|platz|weg|allee)?)/i);
-            if (locationMatch) {
-                info.location = locationMatch[2].trim();
-            } else {
-                // Try to find capitalized words that might be locations
-                const words = text.split(' ');
-                const capitalizedSequence = [];
-                for (let word of words) {
-                    if (word[0] && word[0] === word[0].toUpperCase() && word.length > 2) {
-                        capitalizedSequence.push(word);
-                    } else if (capitalizedSequence.length > 0) {
-                        break;
-                    }
-                }
-                if (capitalizedSequence.length > 0 && !this.isCommonWord(capitalizedSequence[0])) {
-                    info.location = capitalizedSequence.join(' ');
-                }
-            }
+            // Extract location
+            const locationMatch = text.match(/(in|bei|am|straße|platz|weg)\s+([A-ZÄÖÜ][a-zäöüß\s]+(?:straße|platz|weg|allee|dorf|stadt)?)/i);
+            if (locationMatch) info.location = locationMatch[2].trim();
 
-            // Extract title/description (clean text without extracted parts)
+            // Extract title/description
             let title = text;
-            if (info.phone) title = title.replace(info.phone, '').trim();
-            if (info.email) title = title.replace(info.email, '').trim();
-            if (info.amount) title = title.replace(/\d+[,.]?\d*\s*(euro|€)/i, '').trim();
-            if (info.time) title = title.replace(/\d{1,2}:\d{2}|um\s+\d{1,2}\s*uhr/i, '').trim();
-            if (info.location) title = title.replace(info.location, '').trim();
+            if (info.phone) title = title.replace(info.phone, '');
+            if (info.email) title = title.replace(info.email, '');
+            if (info.amount) title = title.replace(/(\d+[,.]?\d*)\s*(euro|€)/i, '');
+            if (info.time) title = title.replace(/(\d{1,2}):(\d{2})|um\s+(\d{1,2})\s*(uhr)?/i, '');
+            if (info.location) title = title.replace(new RegExp(`(in|bei|am|straße|platz|weg)\\s+${info.location}`, 'i'), '');
 
-            // Clean up common trigger words
-            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe)\s*/i, '').trim();
-            title = title.replace(/\s+(in|bei|am|um|für)\s*$/, '').trim();
+            // Specific Cleanup for Task/Shopping phrasing
+            title = title.replace(/(auf|in)(\s+die|\s+meine)?\s+(einkaufsliste|liste|artikelliste|todo-liste|todo|aufgabenliste|tasks)/gi, '');
+            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal)\s*/i, '');
+            title = title.replace(/\s+(in|bei|am|um|für|auf|liste|melden)\s*$/i, '');
+
+            // Final trim & cleanup
+            title = title.trim();
 
             if (title.length > 0) {
                 info.title = title.charAt(0).toUpperCase() + title.slice(1);
-                info.desc = info.title; // For expenses
+                info.desc = info.title;
             }
 
             return info;
@@ -3720,6 +3687,12 @@ const app = {
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
                             <button class="btn btn-primary" onclick="app.modals.submitTask()">Speichern</button>
                         </div>
+
+                        ${data.rawTranscript ? `
+                        <div style="margin-top:20px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
+                            <div class="text-xs text-muted" style="text-transform:uppercase; margin-bottom:5px;">Erkannt:</div>
+                            <div style="font-style:italic; font-size:0.9rem; color:var(--text-muted);">"${data.rawTranscript}"</div>
+                        </div>` : ''}
                     </div>`;
             } else if (type === 'setAlarm') {
                 const alarms = app.state.alarms || [];
@@ -3866,6 +3839,12 @@ const app = {
                             <button class="btn btn-primary" onclick="app.modals.submitEvent()">Speichern</button>
                         </div>
                     </div>
+                    
+                    ${data.rawTranscript ? `
+                    <div style="margin-top:20px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
+                        <div class="text-xs text-muted" style="text-transform:uppercase; margin-bottom:5px;">Gesprochen:</div>
+                        <div style="font-style:italic; font-size:0.9rem; color:var(--text-muted);">"${data.rawTranscript}"</div>
+                    </div>` : ''}
                 </div>`;
             } else if (type === 'aiChat') {
                 c.innerHTML = `
@@ -3925,6 +3904,12 @@ const app = {
                     <div style="position: sticky; bottom: -20px; background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px; margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px;">
                          <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="width:100%;">Speichern</button>
                     </div>
+
+                    ${data.rawTranscript ? `
+                    <div style="margin-top:20px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
+                        <div class="text-xs text-muted" style="text-transform:uppercase; margin-bottom:5px;">Gesprochen:</div>
+                        <div style="font-style:italic; font-size:0.9rem; color:var(--text-muted);">"${data.rawTranscript}"</div>
+                    </div>` : ''}
                 </div>`;
             } else if (type === 'addHealthReminder') {
                 c.innerHTML = `
