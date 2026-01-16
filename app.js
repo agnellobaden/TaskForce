@@ -97,6 +97,10 @@ const app = {
             // Browser Back Button Support
             this.setupBackButton();
 
+            // Background & Alert Setup
+            this.notifications.requestPermission();
+            this.requestWakeLock();
+
             // Apply Pro status to UI
             this.user.applyProStatus();
 
@@ -770,19 +774,49 @@ const app = {
                 dp.innerHTML = up.map((e, index) => {
                     const start = new Date(e.start);
                     const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const diffMins = (start - now) / 1000 / 60;
+                    const diffMins = Math.floor((start - now) / 1000 / 60);
+
+                    // Date Label
+                    const isToday = start.toDateString() === now.toDateString();
+                    const tom = new Date(now); tom.setDate(now.getDate() + 1);
+                    const isTomorrow = start.toDateString() === tom.toDateString();
+                    const dateLabel = isToday ? 'Heute' : (isTomorrow ? 'Morgen' : start.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }));
+
+                    // Countdown Label
+                    let countdown = "";
+                    if (diffMins === 0) countdown = "jetzt";
+                    else if (diffMins > 0) {
+                        if (diffMins < 60) countdown = `in ${diffMins} Min.`;
+                        else if (diffMins < 1440) { // Less than 24 hours
+                            const h = Math.floor(diffMins / 60);
+                            const m = diffMins % 60;
+                            countdown = `in ${h} Std.${m > 0 ? ` ${m}m` : ""}`;
+                        } else { // More than 24 hours
+                            const days = Math.floor(diffMins / 1440);
+                            const h = Math.floor((diffMins % 1440) / 60);
+                            countdown = `in ${days} Tg.${h > 0 ? ` ${h}h` : ""}`;
+                        }
+                    } else {
+                        const absM = Math.abs(diffMins);
+                        if (absM < 60) countdown = `vor ${absM} Min.`;
+                        else if (absM < 1440) countdown = `vor ${Math.floor(absM / 60)} Std.`;
+                        else countdown = `vor ${Math.floor(absM / 1440)} Tg.`;
+                    }
+
                     return `
                         <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}';">
-                            <div style="width: 75px; font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px;">${timeStr}</div>
+                            <div style="width: 75px; display:flex; flex-direction:column; align-items:flex-start;">
+                                <div style="font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px; line-height:1;">${timeStr}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform:uppercase; margin-top:4px; font-weight:700;">${dateLabel}</div>
+                            </div>
                             <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
-                                <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                    <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
+                                    <div style="font-size: 0.75rem; color: ${diffMins > -15 && diffMins < 30 ? '#06b6d4' : 'var(--text-muted)'}; font-weight: 600;">${countdown}</div>
+                                </div>
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
                                     ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
-                                </div>
-                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
-                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="color: #ffffff; text-decoration: none; font-size: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.12)'; this.style.borderColor='rgba(255, 255, 255, 0.4)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.15)'"><i data-lucide="phone" size="12"></i> ${e.phone}</a>` : ''}
-                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="color: #ffffff; text-decoration: none; font-size: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.12)'; this.style.borderColor='rgba(255, 255, 255, 0.4)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.15)'"><i data-lucide="mail" size="12"></i> E-Mail</a>` : ''}
                                 </div>
                             </div>
                             <div style="display:flex; align-items:center; margin-left:10px;">
@@ -1270,55 +1304,66 @@ const app = {
     notifications: {
         lastCheck: 0,
         permissionAsked: false,
-        requestPermission() {
-            if (!("Notification" in window)) {
-                alert("Dieser Browser unterstützt keine System-Benachrichtigungen.");
-                return;
+        async requestPermission() {
+            if (!("Notification" in window)) return;
+            const p = await Notification.requestPermission();
+            this.permissionAsked = true;
+            if (p === 'granted') {
+                this.send("✅ System bereit", "Benachrichtigungen sind jetzt aktiv.");
             }
-            Notification.requestPermission().then(p => {
-                this.permissionAsked = true;
-                if (p === 'granted') {
-                    new Notification("Benachrichtigungen aktiviert ✅", {
-                        body: "TaskForce erinnert dich jetzt an Wichtiges!",
-                        icon: "https://api.dicebear.com/7.x/identicon/svg?seed=TaskForce"
-                    });
-                }
-            });
         },
-        send(title, body) {
+        async send(title, body, isUrgent = false) {
             if (Notification.permission === 'granted') {
-                new Notification(title, { body: body, icon: "https://api.dicebear.com/7.x/identicon/svg?seed=Urgent" });
+                // Background capable notification via Service Worker
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const reg = await navigator.serviceWorker.ready;
+                        if (reg) {
+                            reg.showNotification(title, {
+                                body: body,
+                                icon: "./icon-192.png",
+                                badge: "./icon-192.png",
+                                vibrate: isUrgent ? [500, 200, 500, 200, 500] : [200, 100, 200],
+                                requireInteraction: isUrgent,
+                                tag: isUrgent ? 'tf-urgent' : 'tf-info',
+                                renotify: true
+                            });
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("SW Notification failed", e);
+                    }
+                }
+                // Fallback
+                new Notification(title, { body: body, icon: "./icon-192.png" });
             }
         },
         check() {
             const now = new Date();
 
             // 1. Check for Imminent Urgent Events (15 mins before)
-            // stored in app.state.events
             app.state.events.forEach(e => {
                 const start = new Date(e.start);
                 const diffMins = (start - now) / 1000 / 60;
 
-                // Exact trigger at 15 mins (allow wiggle room of 1 min loop)
                 if (e.urgent && diffMins >= 14 && diffMins <= 15) {
-                    this.send("🔥 Wichtiger Termin in 15 Min!", `${e.title} um ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+                    this.send("🔥 Wichtiger Termin in 15 Min!", `${e.title} um ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, true);
                 }
-                // Also trigger at start time
                 if (diffMins >= -1 && diffMins <= 0) {
-                    this.send("🔔 Termin Jetzt!", `${e.title} beginnt jetzt.`);
+                    this.send("🔔 Termin Jetzt!", `${e.title} beginnt jetzt.`, true);
                 }
             });
 
-            // 2. Urgent Tasks Nudge (Every hour on the hour: 9:00, 10:00...)
+            // 2. Urgent Tasks Nudge
             if (now.getMinutes() === 0) {
                 const urgentTasks = app.state.tasks.filter(t => !t.done && t.urgent);
                 const urgentShop = app.state.tasks.filter(t => !t.done && t.category === 'shopping' && t.urgent);
 
                 if (urgentTasks.length > 0) {
-                    this.send("🔥 Aufgaben warten!", `Du hast ${urgentTasks.length} dringende Aufgaben offen.`);
+                    this.send("🔥 Aufgaben warten!", `Du hast ${urgentTasks.length} dringende Aufgaben offen.`, true);
                 }
                 if (urgentShop.length > 0) {
-                    this.send("🛒 Wichtiger Einkauf!", `${urgentShop.length} dringende Artikel auf der Liste.`);
+                    this.send("🛒 Wichtiger Einkauf!", `${urgentShop.length} dringende Artikel auf der Liste.`, true);
                 }
             }
         }
@@ -2896,13 +2941,13 @@ const app = {
             title = title.replace(/(auf|in|zu|für|von|mit)(\s+(die|der|meine|meiner|den|dem|das|einer|einer))?\s+(einkaufsliste|liste|artikelliste|todo-liste|todo|aufgabenliste|tasks|finanzliste|ausgaben|kalender|terminen|shoppingliste)/gi, '');
 
             // 2. Remove common action triggers at the start
-            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal|notier\s+mal|füge\s+hinzu|bitte|mach|mache|neuer|neues)\s*/i, '');
+            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz(e)?(\s+mal)?|pack(en)?(\s+mal)?|schreib(en)?(\s+mal)?|notier(en)?(\s+mal)?|füge(\s+mal)?\s+hinzu|bitte|mach(e)?(\s+mal)?|neuer|neues|erstell(e)?|ich\s+möchte|kannst\s+du|sollte\s+ich)\s*/i, '');
 
             // 3. Remove subject-prepositions if they are now at the start
-            title = title.replace(/^(beim|beim\s+|am|am\s+|im|im\s+|beim\s+|beim\s+|zu|zum|zur|an)\s+/i, '');
+            title = title.replace(/^(beim|am|im|zu|zum|zur|an|für|mit|ein(en)?)\s+/i, '');
 
             // 4. Remove trailing filler words
-            title = title.replace(/\s+(bitte|notieren|aufschreiben|setzen|packen|schreiben|erinnern|hinzufügen|dazu|drauf|liste|melden|erstellen|machen|am|um)\s*$/i, '');
+            title = title.replace(/\s+(bitte|notieren|aufschreiben|setzen|packen|schreiben|erinnern|hinzufügen|dazu|drauf|liste|melden|erstellen|machen|am|um|gerne|noch|eintragen|aufnehmen)\s*$/i, '');
 
             // Final cleaning
             title = title.replace(/\s+/g, ' ').trim();
@@ -3068,6 +3113,9 @@ const app = {
         trigger(title, soundId = 'melody') {
             if (app.activeAlarm) return; // Already ringing
 
+            // --- SYSTEM NOTIFICATION (For background/closed app) ---
+            app.notifications.send(`⏰ ${title}`, "Es ist Zeit! Tippe hier zum Stoppen.", true);
+
             // 1. Sounds
             const sounds = {
                 'melody': 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
@@ -3201,8 +3249,10 @@ const app = {
     smartCommand(raw) {
         if (!raw) return;
         const text = raw.trim().toLowerCase();
+        const info = app.voice.extractInfo(raw);
+        const finalTitle = info.title || raw;
 
-        // 1. Water Tracking ("W", "Trinken", "Wasser", "0.5L")
+        // 1. Water Tracking
         if (text.startsWith('w ') || text.startsWith('wasser ') || text.startsWith('trinken ') || (/^\d+(\.\d+)?(l|ml)/i.test(text))) {
             let val = parseFloat(text.replace(/[^0-9.]/g, ''));
             if (text.includes('ml')) val = val / 1000;
@@ -3213,46 +3263,33 @@ const app = {
             }
         }
 
-        // 2. Expenses ("E ", "Euro", "Ausgabe", "10 Pizza")
-        if (text.startsWith('e ') || text.includes('euro') || text.startsWith('ausgabe ')) {
-            const amount = parseFloat(text.replace(/[^0-9.]/g, ''));
-            const desc = raw.replace(/[0-9.]/g, '').replace(/euro|ausgabe|e /gi, '').trim();
+        // 2. Expenses
+        if (text.startsWith('e ') || text.includes('euro') || text.startsWith('ausgabe ') || info.amount) {
+            const amount = info.amount || parseFloat(text.replace(/[^0-9.]/g, ''));
             if (amount > 0) {
-                app.finance.add(amount, desc || "Unbekannt", new Date().toISOString().split('T')[0], false);
+                app.finance.add(amount, finalTitle || "Unbekannt", info.date || new Date().toISOString().split('T')[0], false);
                 app.navigateTo('dashboard');
                 return true;
             }
         }
 
-        // 3. Tasks / Shopping / List ("K ", "Kaufen", "A ", "Task", "Aufgabe", "Liste")
-        if (text.startsWith('k ') || text.startsWith('kaufen ') || text.startsWith('a ') ||
-            text.startsWith('aufgabe ') || text.startsWith('liste ')) {
-            const title = raw.replace(/kaufen|aufgabe|liste|k |a /gi, '').trim();
-            if (title) {
-                // If keywords suggest shopping, add to shopping category
-                const isShop = text.includes('kaufen') || text.includes('liste');
-                app.tasks.add(title, false, isShop ? 'shopping' : 'todo');
-                app.navigateTo('dashboard');
-                return true;
-            }
+        // 3. Tasks / Shopping / List
+        if (app.voice.isTaskIntent(text) || text.startsWith('k ') || text.startsWith('a ')) {
+            const isShop = text.includes('kaufen') || text.includes('einkauf') || text.includes('liste') || text.includes('shop');
+            app.tasks.add(finalTitle, false, isShop ? 'shopping' : 'todo');
+            app.navigateTo('dashboard');
+            return true;
         }
 
-        // 4. Events ("Termin", "Meeting")
-        if (text.startsWith('t ') || text.startsWith('termin ') || text.startsWith('meeting ')) {
-            const info = app.voice.extractInfo(raw);
-            if (info.title) {
-                app.modals.open('addEvent', info);
-                return true;
-            }
+        // 4. Events
+        if (app.voice.isEventIntent(text)) {
+            app.modals.open('addEvent', info);
+            return true;
         }
 
-        // Use Voice Cleaner for direct entries too
-        const cleanInfo = app.voice.extractInfo(raw);
-        const finalTitle = cleanInfo.title || raw;
-
-        // Default: Add as Task if not recognized
+        // Default Case: Add as Task
         if (raw.length > 2) {
-            app.tasks.add(finalTitle, false, 'todo'); // Default to todo
+            app.tasks.add(finalTitle, false, 'todo');
             app.navigateTo('dashboard');
             return true;
         }
@@ -3916,8 +3953,8 @@ const app = {
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                         <div class="form-group"><input type="date" id="evtDate" class="form-input" value="${d}"></div>
-                         <div class="form-group"><input type="time" id="evtTime" class="form-input" value="${ti}"></div>
+                         <div class="form-group"><input type="date" id="evtDate" class="form-input" value="${d}" onclick="this.showPicker()" style="cursor:pointer;"></div>
+                         <div class="form-group"><input type="time" id="evtTime" class="form-input" value="${ti}" onclick="this.showPicker()" style="cursor:pointer;"></div>
                     </div>
 
                     <div class="form-group" style="display:flex;gap:5px;">
