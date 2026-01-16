@@ -532,6 +532,32 @@ h4 {
         filter: none !important;
     }
 
+    /* Voice Listening Active Glow */
+    .voice-listening-active .voice-inner {
+        background: #3b82f6 !important;
+        /* Blue background */
+        color: #fff !important;
+        box-shadow: 0 0 25px #3b82f6, 0 0 50px rgba(59, 130, 246, 0.4);
+        animation: pulse-blue-glow 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse-blue-glow {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 20px #3b82f6;
+        }
+
+        50% {
+            transform: scale(1.1);
+            box-shadow: 0 0 35px #3b82f6, 0 0 60px rgba(59, 130, 246, 0.6);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 20px #3b82f6;
+        }
+    }
+
     /* Form inputs mobile optimization */
     .form-input {
         font-size: 16px !important;
