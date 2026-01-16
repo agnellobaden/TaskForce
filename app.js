@@ -1190,22 +1190,18 @@ const app = {
                 }
 
                 // 2. Calendar Events (Proactive Alert)
-                // "Und das bei allen termine die fällig werden"
                 if (app.state.events) {
-                    const todayStr = now.toISOString().split('T')[0];
                     app.state.events.forEach(e => {
-                        // Check if event is today
-                        if (e.start.startsWith(todayStr)) {
-                            // Extract time HH:MM
-                            // e.start format is usually ISO, but let's parse safely
-                            const evtDate = new Date(e.start);
-                            const evtTime = evtDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const evtDate = new Date(e.start);
+                        const evtTimeStr = evtDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const evtDateStr = evtDate.toLocaleDateString('de-DE');
+                        const nowDayStr = now.toLocaleDateString('de-DE');
 
-                            if (evtTime === t) {
-                                console.log(`📅 TERMIN: ${e.title}`);
-                                // Use a default gentle sound for calendar events unless specified
-                                app.alarms.trigger(`Termin: ${e.title}`, 'melody');
-                            }
+                        if (evtTimeStr === t && evtDateStr === nowDayStr) {
+                            console.log(`📅 TERMIN ALARM: ${e.title}`);
+                            // Digital sound is louder/more distinct
+                            const sound = e.urgent ? 'digital' : 'melody';
+                            app.alarms.trigger(`${e.urgent ? '🔥 DRINGEND: ' : '📅 '}${e.title}`, sound);
                         }
                     });
                 }
