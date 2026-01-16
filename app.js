@@ -1677,9 +1677,21 @@ const app = {
             }
 
             // Section 3: Finance
+            const monthlyBudget = app.state.monthlyBudget || 2000;
+            const currentMonth = now.toISOString().slice(0, 7);
+            const totalMonthSpent = expenses
+                .filter(e => e.date && e.date.startsWith(currentMonth))
+                .reduce((sum, e) => sum + e.amount, 0);
+            const remaining = monthlyBudget - totalMonthSpent;
+
+            html += `<li><strong>Finanzen:</strong> ${totalMonthSpent.toFixed(2)}€ / ${monthlyBudget}€ (${remaining.toFixed(2)}€ übrig)</li>`;
+
             if (spent > 0) {
-                speech += `Heute hast du bereits ${spent} Euro ausgegeben. `;
+                speech += `Heute hast du bereits ${spent.toFixed(2)} Euro ausgegeben. `;
             }
+            speech += `Diesen Monat stehst du bei ${totalMonthSpent.toFixed(0)} Euro von ${monthlyBudget} Euro Budget. `;
+            if (remaining < 0) speech += `Dein Budget ist überschritten! `;
+            else speech += `Du hast noch ${remaining.toFixed(0)} Euro übrig. `;
 
             html += `</ul>`;
 
@@ -1706,21 +1718,44 @@ const app = {
             if (window.lucide) lucide.createIcons();
         },
         speak(text) {
-            if (!('speechSynthesis' in window)) return;
+            if (!('speechSynthesis' in window)) {
+                console.error("SpeechSynthesis not supported");
+                return;
+            }
+
+            // Clean text from any possible HTML residues
+            const cleanText = text.replace(/<[^>]*>/g, "").trim();
+            if (!cleanText) return;
+
+            console.log("AI Speaking:", cleanText);
+
             window.speechSynthesis.cancel(); // Stop current speech
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'de-DE';
+            // Small delay to allow cancel to settle
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'de-DE';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
 
-            // Try to find a female German voice
-            const voices = window.speechSynthesis.getVoices();
-            const femaleVoice = voices.find(v => v.lang.includes('de') && (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Vicki') || v.name.includes('Amelie') || v.name.includes('Marlene') || v.name.includes('Elke')));
-            if (femaleVoice) utterance.voice = femaleVoice;
+                // Find a good German voice
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    const femaleVoice = voices.find(v => v.lang.includes('de') &&
+                        (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Vicki') ||
+                            v.name.includes('Amelie') || v.name.includes('Marlene') || v.name.includes('Katja')));
 
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
+                    if (femaleVoice) {
+                        utterance.voice = femaleVoice;
+                    } else {
+                        const anyGerman = voices.find(v => v.lang.includes('de'));
+                        if (anyGerman) utterance.voice = anyGerman;
+                    }
+                }
 
-            window.speechSynthesis.speak(utterance);
+                utterance.onerror = (e) => console.error("Speech Error:", e);
+                window.speechSynthesis.speak(utterance);
+            }, 100);
         },
 
         presentBriefing() {
@@ -1880,12 +1915,48 @@ const app = {
                 }
                 html += `</div></div>`;
 
-                speech += `Das war's. Viel Erfolg!`;
+                // --- FINANCE ---
+                const expenses = state.expenses || [];
+                const currentMonth = now.toISOString().slice(0, 7);
+                const totalMonthSpent = expenses
+                    .filter(e => e.date && e.date.startsWith(currentMonth))
+                    .reduce((sum, e) => sum + e.amount, 0);
+                const monthlyBudget = state.monthlyBudget || 2000;
+                const remaining = monthlyBudget - totalMonthSpent;
+                const budgetPercent = Math.min(100, (totalMonthSpent / monthlyBudget) * 100);
+
+                html += `<div style="margin-top:20px;">
+                    <h5 style="color:var(--danger); display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px;"><i data-lucide="wallet" size="16"></i> Finanzen & Kontrolle</h5>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:15px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span class="text-sm">Budgetauslastung</span>
+                            <span class="text-sm font-bold" style="color: ${budgetPercent > 90 ? 'var(--danger)' : 'white'}">${totalMonthSpent.toFixed(2)}€ / ${monthlyBudget}€</span>
+                        </div>
+                        <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin-bottom:10px;">
+                            <div style="width:${budgetPercent}%; height:100%; background:${budgetPercent > 90 ? 'var(--danger)' : budgetPercent > 75 ? 'var(--accent)' : 'var(--success)'}; transition:width 0.5s;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="text-xs text-muted">Noch verfügbar:</div>
+                            <div style="font-weight:bold; font-size:1.1rem; color:${remaining >= 0 ? 'var(--success)' : 'var(--danger)'};">${remaining.toFixed(2)}€</div>
+                        </div>
+                    </div>
+                </div>`;
+
+                speech += `Finanz-Check: Du hast diesen Monat ${totalMonthSpent.toFixed(0)} Euro ausgegeben. `;
+                if (remaining < 0) {
+                    speech += `Dein Budget ist bereits um ${Math.abs(remaining).toFixed(0)} Euro überschritten. `;
+                } else if (remaining < monthlyBudget * 0.1) {
+                    speech += `Vorsicht, dein restliches Budget beträgt nur noch ${remaining.toFixed(0)} Euro. `;
+                } else {
+                    speech += `Dir bleiben noch ${remaining.toFixed(0)} Euro für den Rest des Monats. `;
+                }
+
+                speech += `Das war's für heute. Viel Erfolg!`;
 
                 // Open Modal
                 if (app.modals && app.modals.open) {
                     console.log("Opening Modal with content");
-                    app.modals.open('aiBriefing', { html: html });
+                    app.modals.open('aiBriefing', { html: html, speech: speech });
                 } else {
                     console.error("app.modals.open not available");
                     alert("Modal System Error");
@@ -1896,8 +1967,8 @@ const app = {
 
                 // Speak
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    setTimeout(() => this.speak(speech), 500);
+                    // Start speaking after modal is visible
+                    setTimeout(() => app.ai.speak(speech), 800);
                 }
 
             } catch (e) {
@@ -2796,15 +2867,21 @@ const app = {
             if (info.time) title = title.replace(/(\d{1,2}):(\d{2})|um\s+(\d{1,2})\s*(uhr)?/i, '');
             if (info.location) title = title.replace(new RegExp(`(in|bei|am|straße|platz|weg)\\s+${info.location}`, 'i'), '');
 
-            // Specific Cleanup for Task/Shopping phrasing
-            title = title.replace(/(auf|in)(\s+die|\s+meine)?\s+(einkaufsliste|liste|artikelliste|todo-liste|todo|aufgabenliste|tasks)/gi, '');
-            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal)\s*/i, '');
-            title = title.replace(/\s+(in|bei|am|um|für|auf|liste|melden)\s*$/i, '');
+            // Specific Cleanup for Task/Shopping/Event phrasing (German)
+            // 1. Remove list destinations like "auf die einkaufsliste", "in der todo-liste"
+            title = title.replace(/(auf|in|zu|für|von|mit)(\s+(die|der|meine|meiner|den|dem|das|einer|einer))?\s+(einkaufsliste|liste|artikelliste|todo-liste|todo|aufgabenliste|tasks|finanzliste|ausgaben|kalender|terminen|shoppingliste)/gi, '');
+
+            // 2. Remove common action triggers at the start
+            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal|notier\s+mal|füge\s+hinzu|bitte|mach|mache)\s*/i, '');
+
+            // 3. Remove trailing filler words
+            title = title.replace(/\s+(bitte|notieren|aufschreiben|setzen|packen|schreiben|erinnern|hinzufügen|dazu|drauf|liste|melden|erstellen)\s*$/i, '');
 
             // Final trim & cleanup
             title = title.trim();
 
             if (title.length > 0) {
+                // Ensure first letter is capitalized
                 info.title = title.charAt(0).toUpperCase() + title.slice(1);
                 info.desc = info.title;
             }
@@ -3135,16 +3212,20 @@ const app = {
 
         // 4. Events ("Termin", "Meeting")
         if (text.startsWith('t ') || text.startsWith('termin ') || text.startsWith('meeting ')) {
-            const title = raw.replace(/termin|meeting|t /gi, '').trim();
-            if (title) {
-                app.modals.open('addEvent', { title: title });
+            const info = app.voice.extractInfo(raw);
+            if (info.title) {
+                app.modals.open('addEvent', info);
                 return true;
             }
         }
 
+        // Use Voice Cleaner for direct entries too
+        const cleanInfo = app.voice.extractInfo(raw);
+        const finalTitle = cleanInfo.title || raw;
+
         // Default: Add as Task if not recognized
         if (raw.length > 2) {
-            app.tasks.add(raw, false, 'todo'); // Default to todo
+            app.tasks.add(finalTitle, false, 'todo'); // Default to todo
             app.navigateTo('dashboard');
             return true;
         }
@@ -3861,12 +3942,20 @@ const app = {
             } else if (type === 'aiBriefing') {
                 c.innerHTML = `
                 <div style="padding:20px 20px 80px 20px; max-height:85vh; overflow-y:auto; position:relative;">
-                    <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); cursor:pointer;" 
-                            onclick="app.modals.close(); if(window.speechSynthesis) window.speechSynthesis.cancel();">
-                        <i data-lucide="x" size="24"></i>
-                    </button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                        <h3 style="display:flex; align-items:center; gap:8px; margin:0;"><i data-lucide="sparkles" class="text-accent" size="20"></i> Dein Tagesbericht</h3>
+                            <button class="btn-small" style="background:rgba(255,255,255,0.1);" onclick="app.ai.speak('${(data.speech || "").replace(/'/g, "\\'").replace(/\n/g, " ").replace(/\r/g, "")}')">
+                                <i data-lucide="volume-2" size="18"></i>
+                            </button>
+                            <button style="background:none; border:none; color:var(--text-muted); cursor:pointer;" 
+                                    onclick="app.modals.close(); if(window.speechSynthesis) window.speechSynthesis.cancel();">
+                                <i data-lucide="x" size="24"></i>
+                            </button>
+                        </div>
+                    </div>
                     ${data.html}
-                    <div style="margin-top:20px; text-align:center;">
+                    <div style="margin-top:30px; text-align:center; display:flex; gap:10px; justify-content:center;">
+                         <button class="btn" style="background:rgba(255,255,255,0.1);" onclick="app.ai.speak('${(data.speech || "").replace(/'/g, "\\'").replace(/\n/g, " ").replace(/\r/g, "")}')"><i data-lucide="volume-2"></i> Nochmals vorlesen</button>
                          <button class="btn btn-primary" onclick="app.modals.close(); if(window.speechSynthesis) window.speechSynthesis.cancel();">Danke, verstanden</button>
                     </div>
                 </div>
