@@ -6,7 +6,15 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>TaskForce Pro</title>
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="modern-theme.css">
+    <link rel="stylesheet" href="professional-forms.css">
     <link rel="stylesheet" href="calendar-voice.css">
     <link rel="stylesheet" href="calibration.css">
     <link rel="stylesheet" href="mobile-night.css">
@@ -18,6 +26,7 @@
     <link rel="stylesheet" href="mobile-optimize.css">
     <link rel="stylesheet" href="mobile-optimizations.css">
     <link rel="stylesheet" href="button-toolbar.css">
+    <link rel="stylesheet" href="styles/tasks-table.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -121,6 +130,7 @@
             <div class="nav-category">Planen</div>
             <a class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
             <a class="nav-item" data-page="tasks"><i data-lucide="check-square"></i> Aufgaben & To-Do</a>
+            <a class="nav-item" data-page="shopping"><i data-lucide="shopping-cart"></i> Einkauf</a>
             <a class="nav-item" data-page="calendar"><i data-lucide="calendar"></i> Kalender</a>
             <a class="nav-item" data-page="habits"><i data-lucide="flame"></i> Gewohnheiten</a>
 
@@ -201,10 +211,8 @@
                             <div class="clock-details">
                                 <div class="day-of-week" id="heroClockDay">LADEN...</div>
                                 <div class="date-row">
-                                    <span class="seconds-turquoise"><span id="heroClockSeconds">00</span> SEK</span>
                                     <span class="date-main" id="heroClockDate">--.--. ----</span>
                                 </div>
-                                <div class="month-long" id="heroClockMonth">Lade Datum...</div>
                             </div>
                         </div>
                         <hr class="hero-divider">
@@ -260,6 +268,40 @@
                                 <button class="comm-tile email" onclick="app.comms.email()">
                                     <div class="tile-circle"><i data-lucide="mail" size="20"></i></div>
                                     <span>E-Mail</span>
+                                </button>
+                                <button class="comm-tile" onclick="app.navigateTo('contacts')"
+                                    style="background:rgba(59, 130, 246, 0.05);">
+                                    <div class="tile-circle"><i data-lucide="book-user" size="20"
+                                            class="text-primary"></i></div>
+                                    <span>Adressbuch</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="dashboardSearchCard" class="card dash-card"
+                            style="grid-column: span 1; order: 15; background: linear-gradient(135deg, rgba(30,30,30,0.8), rgba(10,10,10,0.95));"
+                            draggable="true">
+                            <div class="card-header" style="margin-bottom: 15px;">
+                                <span class="card-title"><i data-lucide="scan-search" class="text-primary"></i> Business
+                                    Search</span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <div style="position:relative;">
+                                    <input type="text" id="googleSearchInput"
+                                        placeholder="Was suchst du? (z.B. IT Service)"
+                                        onkeypress="if(event.key==='Enter') app.businessSearch.perform(this.value)"
+                                        style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:white; outline:none;">
+                                    <i data-lucide="search" size="14"
+                                        style="position:absolute; right:12px; top:14px; opacity:0.4;"></i>
+                                </div>
+                                <button class="btn btn-primary"
+                                    onclick="app.businessSearch.perform(document.getElementById('googleSearchInput').value)"
+                                    style="width:100%; height:44px; border-radius:12px;">
+                                    <i data-lucide="globe"></i> Google Suche
+                                </button>
+                                <button class="btn-small" onclick="app.modals.open('importBusiness')"
+                                    style="width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; height:36px; padding:0;">
+                                    <i data-lucide="sparkles" size="14"></i> Website Import
                                 </button>
                             </div>
                         </div>
@@ -422,33 +464,238 @@
                                 <!-- Shortcuts will be rendered here -->
                             </div>
                         </div>
+
+                        <!-- NEW BUSINESS PRODUCTIVITY CARDS -->
+
+                        <!-- Time Tracker Card -->
+                        <div id="dashboardTimeTrackerCard" class="card dash-card"
+                            style="grid-column: span 1; order: 120; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02));"
+                            draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="clock" class="text-success"></i>
+                                    Zeit-Tracker</span>
+                                <button class="btn-small" id="timeTrackerToggle" onclick="app.timeTracker.toggle()"
+                                    style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <i data-lucide="play" size="14"></i>
+                                </button>
+                            </div>
+                            <div id="timeTrackerDisplay" style="text-align: center; padding: 10px 0;">
+                                <div
+                                    style="font-size: 2rem; font-weight: 700; color: #10b981; font-family: 'Courier New', monospace;">
+                                    00:00:00</div>
+                                <div class="text-muted text-sm" id="timeTrackerTask">Bereit zum Starten</div>
+                                <div class="text-muted text-xs" id="timeTrackerToday" style="margin-top: 8px;">Heute: 0h
+                                    0m</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Notes Card -->
+                        <div id="dashboardNotesCard" class="card dash-card"
+                            style="grid-column: span 1; order: 130; background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));"
+                            draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="sticky-note" class="text-accent"></i>
+                                    Notizen</span>
+                                <button class="btn-small" onclick="app.quickNotes.add()">
+                                    <i data-lucide="plus" size="14"></i>
+                                </button>
+                            </div>
+                            <div id="quickNotesPreview" style="max-height: 120px; overflow-y: auto;">
+                                <div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine Notizen
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Projects Card - PROFESSIONAL UPGRADE -->
+                        <div id="dashboardProjectsCard" class="card dash-card"
+                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.03)); border-left: 3px solid #8b5cf6;"
+                            draggable="true">
+                            <div class="card-header" style="margin-bottom: 15px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div
+                                        style="background: rgba(139, 92, 246, 0.15); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                        <i data-lucide="briefcase" style="color: #8b5cf6;" size="20"></i>
+                                    </div>
+                                    <div>
+                                        <span class="card-title"
+                                            style="font-size: 1.1rem; font-weight: 700;">Projekt-Management</span>
+                                        <div class="text-muted text-xs" id="projectsStats">0 Aktiv • 0 Abgeschlossen
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn-small" onclick="app.projects.showAll()"
+                                        style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                                        <i data-lucide="list" size="14"></i>
+                                    </button>
+                                    <button class="btn-small" onclick="app.projects.add()"
+                                        style="background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4);">
+                                        <i data-lucide="plus" size="14"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="projectsPreview" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div class="text-muted text-sm" style="padding: 20px; text-align: center;">
+                                    <i data-lucide="folder-open" size="32"
+                                        style="opacity: 0.3; margin-bottom: 10px;"></i>
+                                    <div>Keine aktiven Projekte</div>
+                                    <div class="text-xs" style="opacity: 0.6; margin-top: 5px;">Starte dein erstes
+                                        Projekt!</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Meeting Notes Card - PROFESSIONAL UPGRADE -->
+                        <div id="dashboardMeetingsCard" class="card dash-card"
+                            style="grid-column: span 2; order: 150; background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(219, 39, 119, 0.03)); border-left: 3px solid #ec4899;"
+                            draggable="true">
+                            <div class="card-header" style="margin-bottom: 15px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div
+                                        style="background: rgba(236, 72, 153, 0.15); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                        <i data-lucide="users-2" style="color: #ec4899;" size="20"></i>
+                                    </div>
+                                    <div>
+                                        <span class="card-title"
+                                            style="font-size: 1.1rem; font-weight: 700;">Meeting-Protokolle</span>
+                                        <div class="text-muted text-xs" id="meetingsStats">0 Meetings • 0 Action Items
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn-small" onclick="app.meetings.showAll()"
+                                        style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                                        <i data-lucide="calendar-days" size="14"></i>
+                                    </button>
+                                    <button class="btn-small" onclick="app.meetings.add()"
+                                        style="background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.4);">
+                                        <i data-lucide="plus" size="14"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="meetingsPreview" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div class="text-muted text-sm" style="padding: 20px; text-align: center;">
+                                    <i data-lucide="calendar-x" size="32"
+                                        style="opacity: 0.3; margin-bottom: 10px;"></i>
+                                    <div>Keine Meeting-Protokolle</div>
+                                    <div class="text-xs" style="opacity: 0.6; margin-top: 5px;">Dokumentiere dein
+                                        nächstes Meeting!</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="dashboardAppCardsContainer" style="display: contents;"></div>
                     </div>
                 </div>
 
-                <!-- TASKS VIEW -->
+                <!-- TASKS VIEW - PROFESSIONAL UPGRADE -->
                 <div id="view-tasks" class="view-section hidden">
-                    <div class="card-header">
-                        <h1>Aufgaben & To-Do</h1>
-                        <button class="btn-primary" onclick="app.modals.open('addTask')"><i data-lucide="plus"></i>
-                            Neue
-                            Aufgabe</button>
+                    <div class="card-header" style="margin-bottom: 20px;">
+                        <div>
+                            <h1 style="margin-bottom: 5px;">Aufgaben & To-Do</h1>
+                            <p class="text-muted text-sm" style="margin: 0;">Organisiere deine Aufgaben professionell
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn" onclick="app.modals.open('viewArchive')"
+                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                <i data-lucide="archive"></i> Archiv
+                            </button>
+                            <button class="btn-primary" onclick="app.modals.open('addTask')">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
                     </div>
 
+                    <!-- Inline Add Task Form -->
+                    <div
+                        style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:25px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
+                        <input type="text" id="inlineTaskInput" class="form-input"
+                            placeholder="✨ Neue Aufgabe hinzufügen..."
+                            style="background:transparent; border:none; padding:0; height:auto; font-size:1.1rem;"
+                            onkeypress="if(event.key === 'Enter') app.tasks.addInline()">
+                        <button class="btn-primary" onclick="app.tasks.addInline()"
+                            style="border-radius:12px; width:48px; flex-shrink:0;"><i
+                                data-lucide="arrow-up"></i></button>
+                    </div>
+
+                    <!-- Statistics Bar -->
+                    <div class="tasks-stats-bar">
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(59, 130, 246, 0.15);">
+                                <i data-lucide="list-todo" size="18" style="color: #3b82f6;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Offen</span>
+                                <span class="tasks-stat-value" id="tasksStatOpen">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(239, 68, 68, 0.15);">
+                                <i data-lucide="flame" size="18" style="color: #ef4444;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Dringend</span>
+                                <span class="tasks-stat-value" id="tasksStatUrgent" style="color: #ef4444;">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
+                                <i data-lucide="shopping-cart" size="18" style="color: #22c55e;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Einkauf</span>
+                                <span class="tasks-stat-value" id="tasksStatShopping" style="color: #22c55e;">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
+                                <i data-lucide="check-circle" size="18" style="color: #22c55e;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Erledigt</span>
+                                <span class="tasks-stat-value" id="tasksStatDone" style="color: #22c55e;">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <!-- Filter Tabs -->
                     <div class="tabs"
                         style="display:flex; gap:10px; margin-bottom: 20px; overflow-x:auto; padding-bottom:5px;">
-                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
-                            onclick="app.tasks.filter('todo')">Aufgaben</button>
-                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
-                            onclick="app.tasks.filter('shopping')">Einkauf</button>
-                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
-                            onclick="app.tasks.filter('urgent')">Wichtig</button>
-                        <button class="btn" style="background:rgba(255,255,255,0.1); white-space:nowrap;"
-                            onclick="app.tasks.filter('done')">Erledigt</button>
+                        <button class="btn task-filter-btn active" data-filter="todo"
+                            style="background:rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); white-space:nowrap;"
+                            onclick="app.tasks.filter('todo')">
+                            <i data-lucide="check-square" size="14"></i> Offen
+                        </button>
+                        <button class="btn task-filter-btn" data-filter="urgent"
+                            style="background:rgba(255,255,255,0.05); white-space:nowrap;"
+                            onclick="app.tasks.filter('urgent')">
+                            <i data-lucide="flame" size="14"></i> Wichtig
+                        </button>
+                        <button class="btn task-filter-btn" data-filter="done"
+                            style="background:rgba(255,255,255,0.05); white-space:nowrap;"
+                            onclick="app.tasks.filter('done')">
+                            <i data-lucide="check-circle" size="14"></i> Erledigt
+                        </button>
                     </div>
 
-                    <div id="taskListContainer" style="display: flex; flex-direction: column; gap: 10px;">
-                        <!-- Tasks go here -->
+                    <!-- Tasks Table -->
+                    <div class="tasks-table-container">
+                        <!-- Table Header -->
+                        <div class="tasks-table-header">
+                            <div>✓</div>
+                            <div>Aufgabe</div>
+                            <div class="task-category">Kategorie</div>
+                            <div class="task-priority">Priorität</div>
+                            <div class="task-date">Erstellt</div>
+                            <div style="text-align: right;">Aktionen</div>
+                        </div>
+
+                        <!-- Table Body -->
+                        <div id="taskListContainer">
+                            <!-- Tasks will be rendered here -->
+                        </div>
                     </div>
                 </div>
 
@@ -475,6 +722,42 @@
                         <h3><i data-lucide="share-2"></i> Geteilte Aufgaben</h3>
                         <div id="teamTasksList" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
                             <!-- Mock tasks -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SHOPPING VIEW (New Separate View) -->
+                <div id="view-shopping" class="view-section hidden">
+                    <div class="card-header" style="margin-bottom: 20px;">
+                        <div>
+                            <h1 style="margin-bottom: 5px; color: var(--success);">Einkauf & Besorgungen</h1>
+                            <p class="text-muted text-sm" style="margin: 0;">Alles für deinen Einkauf</p>
+                        </div>
+                        <button class="btn-primary" onclick="app.modals.open('addTask', { category: 'shopping' })"
+                            style="background: var(--success);">
+                            <i data-lucide="plus"></i> Einkauf hinzufügen
+                        </button>
+                    </div>
+
+                    <!-- Filter Tabs (Shopping Only) -->
+                    <div class="tabs"
+                        style="display:flex; gap:10px; margin-bottom: 20px; overflow-x:auto; padding-bottom:5px;">
+                        <button class="btn shopping-filter-btn active" data-filter="shopping"
+                            style="background:rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); white-space:nowrap;"
+                            onclick="app.shopping.filter('shopping')">
+                            <i data-lucide="shopping-cart" size="14"></i> Offen
+                        </button>
+                        <button class="btn shopping-filter-btn" data-filter="urgent"
+                            style="background:rgba(255,255,255,0.05); white-space:nowrap;"
+                            onclick="app.shopping.filter('urgent')">
+                            <i data-lucide="flame" size="14"></i> Dringend
+                        </button>
+                    </div>
+
+                    <!-- Shopping List Table -->
+                    <div class="card">
+                        <div id="shoppingListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Shopping Items will be rendered here -->
                         </div>
                     </div>
                 </div>
@@ -712,28 +995,68 @@
                 </div>
 
                 <!-- CONTACTS VIEW -->
-                <div id="view-contacts" class="view-section hidden">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap: 10px; flex-wrap: wrap;">
-                        <h1>Kontakte & Kommunikation</h1>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn-secondary" id="importContactsBtn"
-                                onclick="app.contacts.importFromPhone()" style="display:none;">
-                                <i data-lucide="import"></i> Handy-Kontakte
-                            </button>
-                            <button class="btn-primary" onclick="app.modals.open('addContact')">
-                                <i data-lucide="user-plus"></i> Kontakt hinzufügen
-                            </button>
+                <div id="view-contacts" class="view-section hidden" style="max-width: 800px; margin: 0 auto;">
+                    <div class="card" style="padding:0; overflow:hidden;">
+                        <!-- Header Section -->
+                        <div
+                            style="padding:30px; background:linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; gap: 20px; flex-wrap: wrap;">
+                                <div>
+                                    <h1
+                                        style="margin:0; font-size:2rem; background: linear-gradient(to right, #fff, var(--text-muted)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                                        Business Kontakte</h1>
+                                    <p class="text-muted" style="margin:5px 0 0 0;">Dein zentrales Adressbuch für
+                                        Partner & Firmen.</p>
+                                </div>
+                                <div style="display:flex; gap:10px;">
+                                    <button id="importContactsBtn" class="btn btn-secondary"
+                                        onclick="app.contacts.importBrowser()" style="display:none;"><i
+                                            data-lucide="download"></i> Handy Import</button>
+                                    <button class="btn btn-secondary" onclick="app.modals.open('importBusiness')"><i
+                                            data-lucide="sparkles"></i> KI Import</button>
+                                    <button class="btn btn-primary" onclick="app.modals.open('addContact')"><i
+                                            data-lucide="plus"></i> Neu</button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="dashboard-grid">
-                        <div class="card" style="grid-column: span 2;">
-                            <h3>Meine Kontakte</h3>
-                            <div id="contactsList"
-                                style="margin-top:15px; display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px;">
-                                <!-- Filled by app.contacts.render() -->
-                                <div class="text-muted text-sm">Lade Kontakte...</div>
+                        <!-- Search & Content -->
+                        <div style="padding:25px;">
+                            <div style="display:grid; grid-template-columns: 1fr; gap:20px;">
+                                <!-- Local Search -->
+                                <div style="position:relative;">
+                                    <input type="text" placeholder="Kontakte filtern (Name, Telefon, Email...)"
+                                        oninput="app.contacts.search(this.value)"
+                                        style="width:100%; padding:15px 15px 15px 45px; border-radius:18px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.02); color:white; font-size:1rem; outline:none; transition: all 0.3s;"
+                                        onfocus="this.style.borderColor='var(--primary)'; this.style.background='rgba(59, 130, 246, 0.05)'"
+                                        onblur="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='rgba(255,255,255,0.02)'">
+                                    <i data-lucide="search" size="20"
+                                        style="position:absolute; left:15px; top:15px; opacity:0.3;"></i>
+                                </div>
+
+                                <!-- Contact List -->
+                                <div id="contactsList" style="min-height: 200px;">
+                                    <!-- Contacts rendered as a compact list -->
+                                </div>
+
+                                <!-- Global Google Search -->
+                                <div
+                                    style="margin-top:20px; padding:20px; background:rgba(0,0,0,0.2); border-radius:20px; border:1px solid rgba(59, 130, 246, 0.1);">
+                                    <div
+                                        style="font-size:0.7rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin-bottom:15px; letter-spacing:1px;">
+                                        <i data-lucide="globe" size="12"></i> Google Business Suche
+                                    </div>
+                                    <div style="display:flex; gap:10px;">
+                                        <input type="text" id="contactViewSearch"
+                                            placeholder="Google Suche: 'Zahnarzt Berlin'..."
+                                            onkeypress="if(event.key==='Enter') app.businessSearch.perform(this.value)"
+                                            style="flex:1; padding:12px 15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:white;">
+                                        <button class="btn btn-primary"
+                                            onclick="app.businessSearch.perform(document.getElementById('contactViewSearch').value)"><i
+                                                data-lucide="search"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

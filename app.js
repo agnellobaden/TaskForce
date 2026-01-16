@@ -74,6 +74,9 @@ const app = {
             this.dashboard.applyOrder();
             this.voice.init();
 
+            // Zeit-Tracker initialisieren (mit Persistenz)
+            if (this.timeTracker) this.timeTracker.init();
+
             // Apply User Preferences
             this.settings.applyLayoutPreference();
             this.settings.applyVoiceIconPreference();
@@ -530,9 +533,73 @@ const app = {
         if (page === 'team') app.team.render();
         if (page === 'health') app.health.render();
         if (page === 'contacts') app.contacts.render();
+        if (page === 'shopping') app.shopping.render();
         if (page === 'settings') {
             app.settings.render();
             app.settings.initPayPal();
+        }
+    },
+
+    // --- SHOPPING MODULE (NEW) ---
+    shopping: {
+        currentFilter: 'shopping',
+        toggleUrgency(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.urgent = !t.urgent; app.saveState(); this.render(); app.renderDashboard(); } },
+        toggle(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.done = !t.done; app.saveState(); this.render(); app.renderDashboard(); if (t.done) app.gamification.addXP(50); } },
+        delete(id) {
+            if (confirm("Artikel löschen?")) {
+                const t = app.state.tasks.find(x => x.id === id);
+                if (t) {
+                    if (!app.state.archives) app.state.archives = [];
+                    app.state.archives.push({ ...t, archivedAt: new Date().toISOString(), type: 'shopping' });
+                }
+                app.state.tasks = app.state.tasks.filter(x => x.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
+        filter(t) { this.currentFilter = t; this.render(); },
+        render() {
+            const l = document.getElementById('shoppingListContainer'); if (!l) return;
+            let f = app.state.tasks.filter(t => t.category === 'shopping' && !t.done);
+
+            // Additional Filter
+            if (this.currentFilter === 'urgent') {
+                f = f.filter(t => t.urgent);
+            }
+
+            f.sort((a, b) => (a.urgent === b.urgent) ? 0 : a.urgent ? -1 : 1);
+
+            if (f.length === 0) {
+                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Einträge.</div>';
+            } else {
+                l.innerHTML = f.map(t => `
+                <div class="task-item ${t.urgent ? 'blink-urgent' : ''}" style="border-left: 3px solid var(--success);">
+                    <div style="display:flex;align-items:center;gap:10px; width:100%;">
+                        <div class="checkbox-circle" onclick="app.shopping.toggle(${t.id})"></div>
+                        
+                        <button class="btn-toggle-urgent ${t.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.shopping.toggleUrgency(${t.id})">
+                            <i data-lucide="flame" size="14"></i>
+                        </button>
+                        
+                        <div style="display:flex; flex-direction:column; flex:1;">
+                            <span style="font-weight:600; font-size:1.1rem;">${t.title}</span>
+                        </div>
+
+                        <button class="btn" onclick="app.shopping.delete(${t.id})" style="color:var(--text-muted); opacity:0.7;">
+                            <i data-lucide="trash-2" size="16"></i>
+                        </button>
+                    </div>
+                </div>`).join('');
+            }
+
+            // Render active class on tabs
+            document.querySelectorAll('.shopping-filter-btn').forEach(b => {
+                if (b.getAttribute('data-filter') === this.currentFilter) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+
+            if (window.lucide) lucide.createIcons();
         }
     },
 
@@ -562,8 +629,28 @@ const app = {
         addEvent(data) {
             try {
                 const start = new Date(`${data.date}T${data.time}`);
-                // Simple validation
-                if (isNaN(start.getTime())) { alert("Ungültiges Datum/Zeit"); return; }
+                const now = new Date();
+
+                // Validierung: Ungültiges Datum/Zeit
+                if (isNaN(start.getTime())) {
+                    alert("❌ Ungültiges Datum/Zeit\n\nBitte gib ein gültiges Datum und eine gültige Uhrzeit ein.");
+                    return;
+                }
+
+                // Validierung: Termin in der Vergangenheit (nur für neue Termine)
+                if (!app.editingId && start < now) {
+                    const diffMinutes = Math.floor((now - start) / 1000 / 60);
+                    const timeStr = start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = start.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                    alert(
+                        `⏰ Termin liegt in der Vergangenheit!\n\n` +
+                        `Gewählte Zeit: ${dateStr} um ${timeStr}\n` +
+                        `Das war vor ${diffMinutes} Minuten.\n\n` +
+                        `Bitte wähle eine Zeit in der Zukunft.`
+                    );
+                    return;
+                }
 
                 if (app.editingId) {
                     const idx = app.state.events.findIndex(e => e.id === app.editingId);
@@ -653,26 +740,31 @@ const app = {
         },
         archiveOldEvents() {
             const now = new Date();
-            // Less aggressive archival: Only move events from PREVIOUS days to archives
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            // Archive events older than 2 hours
+            const twoHoursAgo = new Date(now.getTime() - (2 * 60 * 60 * 1000));
 
-            const toArchive = app.state.events.filter(e => new Date(e.start) < startOfToday);
+            const toArchive = app.state.events.filter(e => new Date(e.start) < twoHoursAgo);
 
             if (toArchive.length > 0) {
                 if (!app.state.archives) app.state.archives = [];
-                app.state.archives.push(...toArchive);
+                app.state.archives.push(...toArchive.map(e => ({ ...e, archivedAt: now.toISOString(), type: 'event' })));
 
-                // Keep only events from today or the future in the main state
-                app.state.events = app.state.events.filter(e => new Date(e.start) >= startOfToday);
+                // Keep recent and future events
+                app.state.events = app.state.events.filter(e => new Date(e.start) >= twoHoursAgo);
 
                 app.saveState();
                 console.log(`Archived ${toArchive.length} old events`);
-                this.render(); // Re-render calendar
+                this.render();
                 app.renderDashboard();
             }
         },
         deleteEvent(id) {
             if (confirm("Termin wirklich löschen?")) {
+                const e = app.state.events.find(x => x.id === id);
+                if (e) {
+                    if (!app.state.archives) app.state.archives = [];
+                    app.state.archives.push({ ...e, archivedAt: new Date().toISOString(), type: 'event_deleted' });
+                }
                 app.state.events = app.state.events.filter(e => e.id !== id);
                 app.saveState();
                 this.render();
@@ -1010,9 +1102,19 @@ const app = {
         const hasUrgentTasks = app.state.tasks.some(t => !t.done && t.category !== 'shopping' && t.urgent);
         toggleCardBlink('dashboardTasksCard', hasUrgentTasks);
 
+        const tasksCard = document.getElementById('dashboardTasksCard');
+        if (tasksCard) {
+            tasksCard.onclick = () => { app.tasks.filter('todo'); app.navigateTo('tasks'); };
+        }
+
         // 2. Shopping
         const hasUrgentShopping = app.state.tasks.some(t => !t.done && t.category === 'shopping' && t.urgent);
         toggleCardBlink('dashboardShoppingCard', hasUrgentShopping);
+
+        const shopCard = document.getElementById('dashboardShoppingCard');
+        if (shopCard) {
+            shopCard.onclick = () => { app.navigateTo('shopping'); };
+        }
 
         // 3. Communications (Check Calendar for keywords: Anruf, Call, Telefon)
         const todayEvents = app.state.events.filter(e => e.start.startsWith(todayStr));
@@ -1120,6 +1222,10 @@ const app = {
         }
 
         if (this.shortcuts) this.shortcuts.render();
+        if (this.contacts) this.contacts.renderQuick();
+        if (this.quickNotes) this.quickNotes.render();
+        if (this.projects) this.projects.render();
+        if (this.meetings) this.meetings.render();
         if (this.dashboard) this.dashboard.applyOrder();
         if (window.lucide) lucide.createIcons();
     },
@@ -1135,8 +1241,7 @@ const app = {
             const ht = document.getElementById('heroClockTime');
             if (ht) ht.textContent = t;
 
-            const hs = document.getElementById('heroClockSeconds');
-            if (hs) hs.textContent = s;
+
 
             const hd = document.getElementById('heroClockDay');
             if (hd) hd.textContent = now.toLocaleDateString('de-DE', { weekday: 'long' }).toUpperCase();
@@ -1144,8 +1249,7 @@ const app = {
             const hDate = document.getElementById('heroClockDate');
             if (hDate) hDate.textContent = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-            const hm = document.getElementById('heroClockMonth');
-            if (hm) hm.textContent = now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
 
             const clockSidebar = document.getElementById('clockTimeSidebar');
             if (clockSidebar) clockSidebar.textContent = t;
@@ -2021,28 +2125,88 @@ const app = {
 
     // --- GENERIC MODULES (Compact) ---
     tasks: {
+        addInline() {
+            const input = document.getElementById('inlineTaskInput');
+            if (input && input.value.trim()) {
+                this.add(input.value.trim(), false, 'todo');
+                input.value = '';
+            }
+        },
         toggleUrgency(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.urgent = !t.urgent; app.saveState(); this.render(); app.renderDashboard(); } },
-        add(t, u, category = 'todo') { app.state.tasks.push({ id: Date.now(), title: t, urgent: u, category: category, done: false }); app.saveState(); this.render(); app.renderDashboard(); },
+        add(t, u, category = 'todo') {
+            app.state.tasks.push({ id: Date.now(), title: t, urgent: u, category: category, done: false });
+            app.saveState();
+            this.render(); // Renders Tasks
+            if (category === 'shopping' && app.shopping) app.shopping.render(); // Renders Shopping if needed
+            app.renderDashboard();
+        },
         toggle(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.done = !t.done; app.saveState(); this.render(); app.renderDashboard(); if (t.done) app.gamification.addXP(50); } },
-        delete(id) { app.state.tasks = app.state.tasks.filter(x => x.id !== id); app.saveState(); this.render(); app.renderDashboard(); },
+        delete(id) {
+            const t = app.state.tasks.find(x => x.id === id);
+            if (t) {
+                if (!app.state.archives) app.state.archives = [];
+                app.state.archives.push({ ...t, archivedAt: new Date().toISOString(), type: 'task' });
+            }
+            app.state.tasks = app.state.tasks.filter(x => x.id !== id);
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+        },
         filter(t) { this.currentFilter = t; this.render(); }, currentFilter: 'todo',
         render() {
             const l = document.getElementById('taskListContainer'); if (!l) return;
+
             let f = app.state.tasks;
 
-            // Explicit Category Filtering
-            if (this.currentFilter === 'shopping') {
-                f = f.filter(t => t.category === 'shopping' && !t.done);
-            } else if (this.currentFilter === 'urgent') {
+            // Strict Tasks Logic (No Shopping)
+            if (this.currentFilter === 'urgent') {
                 f = f.filter(t => t.urgent && !t.done);
             } else if (this.currentFilter === 'done') {
-                f = f.filter(t => t.done);
+                f = f.filter(t => t.done && t.category !== 'shopping');
             } else {
-                // Default 'todo' or 'all' - exclude shopping from main todo list
-                f = f.filter(t => t.category !== 'shopping' && !t.done);
+                // Default 'todo' - Show ALL (Pending & Done) except shopping
+                f = f.filter(t => t.category !== 'shopping');
             }
-            f.sort((a, b) => (a.done === b.done) ? 0 : a.done ? 1 : -1);
-            l.innerHTML = f.map(t => `<div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}"><div style="display:flex;align-items:center;gap:10px;"><div class="checkbox-circle ${t.done ? 'checked' : ''}" onclick="app.tasks.toggle(${t.id})"></div><button class="btn-toggle-urgent ${t.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.tasks.toggleUrgency(${t.id})"><i data-lucide="flame" size="14"></i></button><span style="${t.done ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${t.title}</span></div><button class="btn" onclick="app.tasks.delete(${t.id})"><i data-lucide="trash-2" size="16"></i></button></div>`).join('');
+
+            // Sort: Urgent > Pending > Done
+            f.sort((a, b) => {
+                if (a.done !== b.done) return a.done ? 1 : -1;
+                if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+                return 0;
+            });
+
+            if (f.length === 0) {
+                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben.</div>';
+            } else {
+                l.innerHTML = f.map(t => `
+                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}">
+                    <div style="display:flex;align-items:center;gap:10px; width:100%;">
+                        <div class="checkbox-circle ${t.done ? 'checked' : ''}" onclick="app.tasks.toggle(${t.id})"></div>
+                        
+                        <button class="btn-toggle-urgent ${t.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.tasks.toggleUrgency(${t.id})">
+                            <i data-lucide="flame" size="14"></i>
+                        </button>
+                        
+                        <div style="display:flex; flex-direction:column; flex:1;">
+                            <span style="${t.done ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">
+                                ${t.title}
+                            </span>
+                             ${t.category && t.category !== 'todo' && t.category !== 'shopping' ? `<span class="text-xs text-muted">${t.category}</span>` : ''}
+                        </div>
+
+                        <button class="btn" onclick="app.tasks.delete(${t.id})" title="Archivieren" style="color:var(--text-muted); opacity:0.7;">
+                            <i data-lucide="archive" size="16"></i>
+                        </button>
+                    </div>
+                </div>`).join('');
+            }
+
+            // Highlight active tab
+            document.querySelectorAll('.task-filter-btn').forEach(b => {
+                if (b.getAttribute('data-filter') === this.currentFilter) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+
             if (window.lucide) lucide.createIcons();
         }
     },
@@ -3774,67 +3938,100 @@ const app = {
 
             if (type === 'addContact') {
                 c.innerHTML = `
-                    <div style="padding:20px;">
-                        <h3>Neuer Kontakt</h3>
+                    <div style="padding:24px;">
+                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> Business Kontakt</h3>
                         <div class="form-group">
-                            <label class="form-label">Name</label>
-                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname">
+                            <label class="form-label">Name / Firma</label>
+                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label class="form-label">Telefon</label>
+                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">E-Mail</label>
+                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Telefon / Handy</label>
-                            <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
+                            <label class="form-label">Adresse / Standort</label>
+                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">E-Mail</label>
-                            <input id="newContactEmail" class="form-input" type="email" placeholder="beispiel@mail.de">
+                            <label class="form-label">Homepage (URL)</label>
+                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Adresse / Ort</label>
-                            <input id="newContactAddress" class="form-input" placeholder="Musterstraße 1, 12345 Berlin">
-                        </div>
-                        <div style="display:flex;justify-content:end;gap:10px;margin-top:20px;">
+                        <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" onclick="app.contacts.submit()">Speichern</button>
+                            <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> Speichern</button>
                         </div>
                     </div>`;
-            } else if (type === 'addTask') {
+            }
+            else if (type === 'addTask') {
                 const cat = data.category || 'todo';
                 const isShopping = cat === 'shopping';
                 const title = data.title || '';
-                c.innerHTML = `
-                    <div style="padding:20px;">
-                        <h3>${isShopping ? 'Neuer Einkauf' : 'Neue Aufgabe'}</h3>
-                        <div class="form-group" style="display:flex;gap:5px;">
-                            <input id="newTaskTitle" class="form-input" value="${title}" placeholder="Titel (z.B. ${isShopping ? 'Milch' : 'Meeting'})">
-                            <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Liste</label>
-                            <div style="display:flex; gap:10px;">
-                                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                    <input type="radio" name="taskCategory" value="todo" ${!isShopping ? 'checked' : ''}> To-Do
-                                </label>
-                                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                    <input type="radio" name="taskCategory" value="shopping" ${isShopping ? 'checked' : ''}> Einkauf
-                                </label>
+
+                let formContent = '';
+
+                if (isShopping) {
+                    // Shopping "Special Form"
+                    formContent = `
+                        <div style="padding:20px;">
+                            <h3 style="color:var(--success);"><i data-lucide="shopping-cart"></i> Neuer Einkauf</h3>
+                            <div class="form-group" style="display:flex;gap:5px;">
+                                <input id="newTaskTitle" class="form-input" value="${title}" placeholder="Was einkaufen? (z.B. Milch)">
+                                <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
                             </div>
-                        </div>
+                            <!-- Hidden Category Input -->
+                            <input type="hidden" name="taskCategory" value="shopping">
 
-                        <div class="form-group">
-                            <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
-                        </div>
-                        <div style="display:flex;justify-content:end;gap:10px;">
-                            <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" onclick="app.modals.submitTask()">Speichern</button>
-                        </div>
+                            <div class="form-group">
+                                <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
+                            </div>
+                            <div style="display:flex;justify-content:end;gap:10px;">
+                                <button class="btn" onclick="app.modals.close()">Abbrechen</button>
+                                <button class="btn btn-primary" style="background:var(--success);" onclick="app.modals.submitTask()">Artikel hinzufügen</button>
+                            </div>
+                        </div>`;
+                } else {
+                    // Task "Special Form"
+                    formContent = `
+                        <div style="padding:20px;">
+                            <h3><i data-lucide="check-square"></i> Neue Aufgabe</h3>
+                            <div class="form-group" style="display:flex;gap:5px;">
+                                <input id="newTaskTitle" class="form-input" value="${title}" placeholder="Titel (z.B. Meeting)">
+                                <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Liste</label>
+                                <div style="display:flex; gap:10px;">
+                                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                        <input type="radio" name="taskCategory" value="todo" checked> To-Do
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                        <input type="radio" name="taskCategory" value="shopping"> Einkauf
+                                    </label>
+                                </div>
+                            </div>
 
-                        ${data.rawTranscript ? `
+                            <div class="form-group">
+                                <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
+                            </div>
+                            <div style="display:flex;justify-content:end;gap:10px;">
+                                <button class="btn" onclick="app.modals.close()">Abbrechen</button>
+                                <button class="btn btn-primary" onclick="app.modals.submitTask()">Speichern</button>
+                            </div>
+                        </div>`;
+                }
+
+                c.innerHTML = formContent + (data.rawTranscript ? `
                         <div style="margin-top:20px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
                             <div class="text-xs text-muted" style="text-transform:uppercase; margin-bottom:5px;">Erkannt:</div>
                             <div style="font-style:italic; font-size:0.9rem; color:var(--text-muted);">"${data.rawTranscript}"</div>
-                        </div>` : ''}
-                    </div>`;
+                        </div>` : '');
             } else if (type === 'setAlarm') {
                 const alarms = app.state.alarms || [];
                 const sounds = [
@@ -4149,6 +4346,32 @@ const app = {
                     
                     <button class="btn btn-primary" onclick="app.modals.submitHydrationSettings()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
+            } else if (type === 'viewArchive') {
+                const archives = (app.state.archives || []).filter(a => a.type === 'task').sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <h3><i data-lucide="archive" class="text-muted"></i> Aufgaben Archiv</h3>
+                    <p class="text-sm text-muted mb-4">Hier landen erledigte Aufgaben.</p>
+                    
+                    ${archives.length === 0 ? '<div class="text-center text-muted p-4">Das Archiv ist leer.</div>' : ''}
+                    
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${archives.map(t => `
+                            <div class="card" style="padding:12px; margin:0; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-weight:600; text-decoration:line-through; opacity:0.7;">${t.title}</div>
+                                    <div class="text-xs text-muted">Archiviert: ${new Date(t.archivedAt).toLocaleDateString()}</div>
+                                </div>
+                                <button class="btn-small" onclick="app.tasks.add('${t.title}', ${t.urgent}, 'todo'); app.modals.close();">
+                                    <i data-lucide="rotate-ccw"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <button class="btn" style="width:100%; margin-top:20px;" onclick="app.modals.close()">Schließen</button>
+                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                </div>`;
             } else if (type === 'addTeamMember') {
                 c.innerHTML = `<div style="padding:20px;"><h3>Mitarbeiter hinzufügen</h3><input id="teamMemberName" class="form-input" placeholder="Name"><button class="btn btn-primary" onclick="app.modals.submitTeamMember()" style="margin-top:10px;width:100%;">Hinzufügen</button></div>`;
             } else if (type === 'dailyStatus') {
@@ -4337,6 +4560,61 @@ const app = {
                     </div>
                     <button class="btn btn-primary" onclick="app.modals.submitHabit()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
+            } else if (type === 'viewContactCard') {
+                const con = data;
+                c.innerHTML = `
+                <div style="width:100%; max-width:380px; background: #0c0c0c; border-radius: 28px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
+                    <div style="padding: 24px; background: linear-gradient(135deg, var(--primary), var(--accent)); text-align:center; position:relative;">
+                        <button onclick="app.modals.close()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.2); border:none; color:white; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="x" size="16"></i></button>
+                        <div style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; font-size:2rem; font-weight:bold; color:white; backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.3);">${con.name.charAt(0).toUpperCase()}</div>
+                        <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">${con.name}</h2>
+                        <div style="font-size:0.7rem; opacity:0.8; text-transform:uppercase; margin-top:4px; font-weight:700; letter-spacing:1px;">Business Partner</div>
+                    </div>
+
+                    <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                            ${con.phone ? `
+                            <button onclick="app.contacts.call('${con.phone}')" style="background:rgba(59, 130, 246, 0.1); border:1px solid rgba(59, 130, 246, 0.2); padding:12px; border-radius:16px; color:white; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer;">
+                                <i data-lucide="phone" size="18" class="text-primary"></i>
+                                <span style="font-size:0.75rem; font-weight:600;">Anruf</span>
+                            </button>
+                            <button onclick="app.contacts.whatsapp('${con.phone}')" style="background:rgba(37, 211, 102, 0.1); border:1px solid rgba(37, 211, 102, 0.2); padding:12px; border-radius:16px; color:white; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer;">
+                                <i data-lucide="message-circle" size="18" style="color:#25D366;"></i>
+                                <span style="font-size:0.75rem; font-weight:600;">WhatsApp</span>
+                            </button>` : ''}
+                        </div>
+
+                        ${con.email ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <i data-lucide="mail" size="16" class="text-accent"></i>
+                                <span style="font-size:0.85rem; font-weight:500;">${con.email}</span>
+                            </div>
+                            <button onclick="app.contacts.mail('${con.email}')" style="background:none; border:none; color:var(--accent); cursor:pointer;"><i data-lucide="send" size="16"></i></button>
+                        </div>` : ''}
+
+                        ${con.address ? `
+                        <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:10px;">
+                                <i data-lucide="map-pin" size="16" style="opacity:0.6;"></i>
+                                <span style="font-size:0.8rem; line-height:1.4;">${con.address}</span>
+                            </div>
+                            <button class="btn btn-primary" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(con.address)}', '_blank')" style="width:100%; height:36px; border-radius:10px; font-size:0.85rem;">
+                                <i data-lucide="navigation" size="14"></i> Navigation starten
+                            </button>
+                        </div>` : ''}
+
+                        ${con.homepage ? `
+                        <button class="btn" style="width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; height:36px; font-size:0.85rem;" onclick="window.open('${con.homepage.startsWith('http') ? con.homepage : 'https://' + con.homepage}', '_blank')">
+                            <i data-lucide="globe"></i> Website öffnen
+                        </button>` : ''}
+
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button class="btn" style="flex:1; background:rgba(255,255,255,0.02); height:32px; font-size:0.7rem;" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(con.name)}', '_blank')"><i data-lucide="search" size="12"></i> Google</button>
+                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.05); height:32px; font-size:0.7rem; color:var(--danger);" onclick="if(confirm('Entfernen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="12"></i> Löschen</button>
+                        </div>
+                    </div>
+                </div>`;
             } else if (type === 'configureWidgets') {
                 const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
                 const cards = [
@@ -4351,7 +4629,8 @@ const app = {
                     { id: 'dashboardFinanceCard', name: 'Finanzen', icon: 'pie-chart' },
                     { id: 'dashboardAlarmsCard', name: 'Wecker', icon: 'alarm-clock' },
                     { id: 'dashboardDriveCard', name: 'Drive / Fahrt-Modus', icon: 'navigation' },
-                    { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' }
+                    { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' },
+                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' }
                 ];
 
                 c.innerHTML = `
@@ -4382,6 +4661,79 @@ const app = {
                     ${data.html}
                     <button class="btn btn-primary" style="width:100%; margin-top:15px; padding:12px;" onclick="app.modals.close(); window.speechSynthesis.cancel();">Danke, Verstanden</button>
                 </div>`;
+            } else if (type === 'importBusiness') {
+                c.innerHTML = `
+                <div style="padding:28px; max-width: 550px; background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(0, 0, 0, 0.98)); border-radius: 28px;">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+                        <div style="width:52px; height:52px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 20px rgba(255,255,255,0.1);">
+                            <i data-lucide="sparkles" color="white" size="24"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Smart Business Import</h2>
+                            <p class="text-muted text-sm">Präzise Datenextraktion mit AI</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 1: Website Link</label>
+                            <input id="importUrl" class="form-input" placeholder="https://www.firma.de" style="border-radius:12px; background:rgba(0,0,0,0.5);">
+                        </div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 2: Deep Analysis (Empfohlen)</label>
+                            <p class="text-xs text-muted" style="margin-bottom:8px;">Kopiere den Text aus dem <strong>Impressum</strong> oder <strong>Footer</strong> hier hinein für 100% Genauigkeit:</p>
+                            <textarea id="importManualText" class="form-input" rows="4" placeholder="Kopierte Daten hier einfügen..." style="background:rgba(0,0,0,0.5); border-radius:12px; font-size:0.85rem;"></textarea>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="app.businessSearch.importFromUrl()" style="width:100%; margin-top:20px; height:48px; border-radius:12px; border-width:2px; font-weight:bold;">
+                            <i data-lucide="scan-search"></i> Daten jetzt analysieren
+                        </button>
+                    </div>
+                    
+                    <div id="importResults" class="hidden" style="animation: fadeIn 0.4s ease-out;">
+                        <div style="display:flex; flex-direction:column; gap:14px; background: rgba(59, 130, 246, 0.05); padding: 20px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Name / Firma</label>
+                                <input id="impName" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Telefon</label>
+                                    <input id="impPhone" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Email</label>
+                                    <input id="impEmail" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Adresse / Standort</label>
+                                <input id="impAddress" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Website</label>
+                                <input id="impUrl" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
+                            </div>
+                            <button class="btn btn-primary" style="width:100%; margin-top:8px; height:52px; font-size:1.1rem; border-radius:14px;" onclick="app.businessSearch.saveImported()">
+                                <i data-lucide="check-circle"></i> In Adressbuch speichern
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="importLoading" class="hidden" style="text-align:center; padding:40px;">
+                        <div style="display:inline-block; margin-bottom:20px; position:relative;">
+                             <div class="spinner" style="width:60px; height:60px; border-width:4px;"></div>
+                             <i data-lucide="bot" size="24" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.8;" class="text-primary"></i>
+                        </div>
+                        <h4 style="margin-bottom:8px;">Extrahiere Business-Daten...</h4>
+                        <p class="text-muted text-sm">Die AI analysiert den Text auf Firmennamen, Nummern und Adressen.</p>
+                    </div>
+
+                    <div style="margin-top:24px; text-align:center; padding-top:20px; border-top: 1px solid rgba(255,255,255,0.05);">
+                         <button class="btn" style="background:transparent; border:none; color:var(--text-muted);" onclick="app.modals.close()">Abbrechen</button>
+                    </div>
+                </div>`;
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -4399,11 +4751,28 @@ const app = {
         submitTask() {
             const t = document.getElementById('newTaskTitle').value;
             if (t) {
-                const cat = document.querySelector('input[name="taskCategory"]:checked').value;
+                let cat = 'todo';
+                const radio = document.querySelector('input[name="taskCategory"]:checked');
+                if (radio) {
+                    cat = radio.value;
+                } else {
+                    const hidden = document.querySelector('input[name="taskCategory"][type="hidden"]');
+                    if (hidden) cat = hidden.value;
+                }
+
                 app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat);
                 this.close();
-                app.navigateTo('dashboard');
-                app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
+
+                // Smart Navigation
+                // If we are already on the correct page, stay there and just re-render
+                if (cat === 'shopping' && app.state.currentPage === 'shopping') {
+                    app.shopping.render();
+                } else if (cat !== 'shopping' && app.state.currentPage === 'tasks') {
+                    app.tasks.render();
+                } else {
+                    app.navigateTo('dashboard');
+                    app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
+                }
             }
         },
         submitExpense() {
@@ -4511,9 +4880,9 @@ const app = {
         }
     },
     contacts: {
-        add(n, p, e, a) {
+        add(n, p, e, a, h = '') {
             if (!app.state.contacts) app.state.contacts = [];
-            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a });
+            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h });
             app.saveState();
             this.render();
             app.renderDashboard();
@@ -4526,81 +4895,274 @@ const app = {
             this.render();
             app.renderDashboard();
         },
-        call(num) { if (num) window.location.href = `tel:${num} `; },
+        call(num) { if (num) window.location.href = `tel:${num}`; },
         whatsapp(num) { if (num) window.open(`https://wa.me/${num.replace(/\D/g, '')}`, '_blank'); },
         mail(email) { if (email) window.location.href = `mailto:${email}`; },
-        async importFromPhone() {
-            if (!('contacts' in navigator && 'ContactsManager' in window)) {
-                alert("Dein Browser unterstützt den Import von Handy-Kontakten leider nicht.");
-                return;
-            }
-
-            const props = ['name', 'tel', 'email'];
-            const opts = { multiple: true };
-
+        async importBrowser() {
             try {
-                const contacts = await navigator.contacts.select(props, opts);
-                if (contacts.length > 0) {
-                    contacts.forEach(c => {
-                        const name = c.name ? c.name[0] : 'Unbekannt';
-                        const phone = c.tel ? c.tel[0] : '';
-                        const email = c.email ? c.email[0] : '';
-
-                        // Prevent duplicates based on phone
-                        if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
-
-                        this.add(name, phone, email);
-                    });
-                    alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
+                if ('contacts' in navigator && 'ContactsManager' in window) {
+                    const props = ['name', 'email', 'tel', 'address'];
+                    const contacts = await navigator.contacts.select(props, { multiple: true });
+                    if (contacts.length > 0) {
+                        contacts.forEach(c => {
+                            const name = c.name ? c.name[0] : 'Unbekannt';
+                            const phone = c.tel ? c.tel[0] : '';
+                            const email = c.email ? c.email[0] : '';
+                            if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
+                            this.add(name, phone, email, '', '');
+                        });
+                        alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
+                    }
                 }
             } catch (err) {
                 console.error("Contact Import Error:", err);
-                if (err.name !== 'AbortError') {
-                    alert("Fehler beim Importieren der Kontakte.");
-                }
             }
+        },
+        search(q) {
+            const list = document.getElementById('contactsList');
+            if (!list) return;
+            const contacts = (app.state.contacts || []).filter(c =>
+                c.name.toLowerCase().includes(q.toLowerCase()) ||
+                (c.phone && c.phone.includes(q)) ||
+                (c.email && c.email.toLowerCase().includes(q.toLowerCase()))
+            );
+            this.renderFiltered(contacts);
+        },
+        renderFiltered(contacts) {
+            const list = document.getElementById('contactsList');
+            if (!list) return;
+            if (contacts.length === 0) {
+                list.innerHTML = `<div class="text-muted" style="text-align:center; padding:20px;">Keine Kontakte gefunden.</div>`;
+            } else {
+                list.innerHTML = contacts.map(c => `
+                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; cursor:pointer; transition:all 0.2s ease; border:1px solid transparent;">
+                        <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                            ${c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${c.phone || c.email || 'Business Kontakt'}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                             ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
+                             ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
+                             <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            if (window.lucide) lucide.createIcons();
         },
         render() {
             const list = document.getElementById('contactsList');
             if (!list) return;
-            list.innerHTML = (app.state.contacts || []).map(c => `
-                <div class="card" style="margin-bottom:15px; padding:20px; display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 16px;">
-                    <div style="flex:1;">
-                        <div style="font-weight:800; font-size:1.1rem; color:#fff; margin-bottom:6px;">${c.name}</div>
-                        <div class="text-sm text-muted" style="display:flex; flex-direction:column; gap:6px;">
-                            ${c.phone ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="phone" size="14"></i> ${c.phone}</span>` : ''}
-                            ${c.email ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="mail" size="14"></i> ${c.email}</span>` : ''}
-                            ${c.address ? `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="map-pin" size="14"></i> ${c.address} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="color:var(--primary); background:rgba(255,255,255,0.1); padding:4px; border-radius:6px; display:inline-flex; align-items:center;"><i data-lucide="map" size="14"></i></a></span>` : ''}
+
+            const contacts = app.state.contacts || [];
+
+            if (contacts.length === 0) {
+                list.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align:center; padding: 60px 20px; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed var(--border);">
+                        <div style="width: 80px; height: 80px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                            <i data-lucide="contact-2" size="40" class="text-primary"></i>
+                        </div>
+                        <h3 style="margin-bottom: 10px;">Adressbuch noch leer</h3>
+                        <p class="text-muted">Füge deinen ersten Business-Partner hinzu.</p>
+                        <button class="btn btn-primary" style="margin-top: 20px;" onclick="app.modals.open('addContact')">
+                            <i data-lucide="plus"></i> Kontakt hinzufügen
+                        </button>
+                    </div>
+                `;
+            } else {
+                list.style.display = 'flex';
+                list.style.flexDirection = 'column';
+                list.style.gap = '8px';
+                list.style.background = 'rgba(0,0,0,0.2)';
+                list.style.padding = '10px';
+                list.style.borderRadius = '20px';
+                list.style.border = '1px solid rgba(255,255,255,0.05)';
+
+                list.innerHTML = contacts.map(c => `
+                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; cursor:pointer; transition:all 0.2s ease; border:1px solid transparent;">
+                        <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                            ${c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${c.phone || c.email || 'Business Kontakt'}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                             ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
+                             ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
+                             <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center; margin-left:15px;">
-                        ${c.phone ? `<button class="btn-small" onclick="app.contacts.call('${c.phone}')" style="border-color: rgba(59, 130, 246, 0.4); width:38px; height:38px;"><i data-lucide="phone" size="18"></i></button>` : ''}
-                        ${c.phone ? `<button class="btn-small" onclick="app.contacts.whatsapp('${c.phone}')" style="border-color: rgba(37, 211, 102, 0.4); width:38px; height:38px;"><i data-lucide="message-circle" size="18"></i></button>` : ''}
-                        ${c.email ? `<button class="btn-small" onclick="app.contacts.mail('${c.email}')" style="border-color: rgba(234, 67, 53, 0.4); width:38px; height:38px;"><i data-lucide="mail" size="18"></i></button>` : ''}
-                        <button class="btn-small btn-delete" onclick="app.contacts.delete(${c.id})" style="width:38px; height:38px;"><i data-lucide="trash" size="18"></i></button>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
             if (window.lucide) lucide.createIcons();
 
-            // Check Support for Contact Picker API
+            if (!document.getElementById('contactListStyles')) {
+                const style = document.createElement('style');
+                style.id = 'contactListStyles';
+                style.innerHTML = `.contact-list-item:hover { background: rgba(255,255,255,0.08) !important; transform: translateX(5px); border-color: rgba(59, 130, 246, 0.3) !important; }`;
+                document.head.appendChild(style);
+            }
+
             const importBtn = document.getElementById('importContactsBtn');
             if (importBtn) {
-                if ('contacts' in navigator && 'ContactsManager' in window) {
-                    importBtn.style.display = 'flex';
-                } else {
-                    importBtn.style.display = 'none';
-                }
+                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
             }
+        },
+        renderQuick() {
+            const container = document.getElementById('dashboardQuickContacts');
+            if (!container) return;
+            const contacts = (app.state.contacts || []).slice(0, 3);
+            if (contacts.length === 0) {
+                container.innerHTML = `<div class="text-xs text-muted" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.05);">Keine Favoriten für Schnellzugriff.</div>`;
+                return;
+            }
+            container.innerHTML = `
+                <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="star" size="10" class="text-primary"></i> Business Favoriten
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${contacts.map(c => `
+                        <div onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:12px; cursor:pointer; transition:all 0.2s; border:1px solid transparent;" onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='transparent'">
+                            <div style="width:32px; height:32px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:bold; color:white; flex-shrink:0;">${c.name.charAt(0).toUpperCase()}</div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || 'Business Partner'}</div>
+                            </div>
+                            <i data-lucide="chevron-right" size="14" style="opacity:0.3;"></i>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        },
+        openCard(id) {
+            const contact = app.state.contacts.find(c => c.id === id);
+            if (!contact) return;
+            app.modals.open('viewContactCard', contact);
         },
         submit() {
             const n = document.getElementById('newContactName').value;
             const p = document.getElementById('newContactPhone').value;
             const e = document.getElementById('newContactEmail').value;
             const a = document.getElementById('newContactAddress').value;
-            if (n) { this.add(n, p, e, a); app.modals.close(); }
+            const h = document.getElementById('newContactHomepage')?.value || '';
+            if (n) { this.add(n, p, e, a, h); app.modals.close(); }
         }
     },
+    businessSearch: {
+        perform(q) {
+            if (!q) return;
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank');
+            if (app.notifications) app.notifications.send("🔍 Business Suche", "Suche die Firma und kopiere die URL für den Import.");
+        },
+        async importFromUrl() {
+            let urlLink = document.getElementById('importUrl').value;
+            const manualText = document.getElementById('importManualText').value;
+
+            if (!urlLink && !manualText) {
+                alert("Bitte gib einen Link oder Website-Inhalt ein.");
+                return;
+            }
+
+            const loading = document.getElementById('importLoading');
+            const results = document.getElementById('importResults');
+            if (loading) loading.classList.remove('hidden');
+            if (results) results.classList.add('hidden');
+
+            try {
+                let data = { name: "Neues Business", phone: "", email: "", address: "", url: urlLink };
+
+                // 1. If we have manual text, we use the AI to extract everything perfectly
+                if (manualText) {
+                    const config = app.state.aiConfig;
+                    let apiKey = config.openaiKey || config.grokKey || config.geminiKey;
+
+                    if (apiKey) {
+                        try {
+                            const prompt = `Extrahiere Business-Informationen aus folgendem Text. Antworte NUR mit einem validen JSON Objekt: {"name": "...", "phone": "...", "email": "...", "address": "...", "url": "..."}. Wenn Informationen fehlen, lass das Feld leer. Text: "${manualText}"`;
+
+                            let res;
+                            if (config.provider === 'openai') {
+                                res = await fetch('https://api.openai.com/v1/chat/completions', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                                    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }] })
+                                });
+                            } else if (config.provider === 'gemini') {
+                                res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                                });
+                            }
+
+                            if (res && res.ok) {
+                                const result = await res.json();
+                                let content = "";
+                                if (config.provider === 'openai') content = result.choices[0].message.content;
+                                else if (config.provider === 'gemini') content = result.candidates[0].content.parts[0].text;
+
+                                // Clean JSON from markdown if exists
+                                const jsonStr = content.replace(/```json|```/g, '').trim();
+                                const aiData = JSON.parse(jsonStr);
+                                if (aiData) {
+                                    data = { ...data, ...aiData };
+                                    if (urlLink) data.url = urlLink; // Prefer actual URL
+                                }
+                            }
+                        } catch (e) { console.error("Extraction error:", e); }
+                    }
+                } else if (urlLink) {
+                    // Fallback to heuristic if no text provided
+                    if (!urlLink.startsWith('http')) urlLink = 'https://' + urlLink;
+                    await new Promise(r => setTimeout(r, 1000));
+                    try {
+                        const parsed = new URL(urlLink);
+                        let domainName = parsed.hostname.replace('www.', '').split('.')[0];
+                        data.name = domainName.charAt(0).toUpperCase() + domainName.slice(1);
+                        data.email = "info@" + parsed.hostname.replace('www.', '');
+                        data.url = urlLink;
+                    } catch (e) { }
+                }
+
+                if (loading) loading.classList.add('hidden');
+                if (results) {
+                    results.classList.remove('hidden');
+                    document.getElementById('impName').value = data.name || "";
+                    document.getElementById('impPhone').value = data.phone || "";
+                    document.getElementById('impEmail').value = data.email || "";
+                    document.getElementById('impAddress').value = data.address || "";
+                    document.getElementById('impUrl').value = data.url || "";
+                }
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                if (loading) loading.classList.add('hidden');
+            }
+        },
+        saveImported() {
+            const n = document.getElementById('impName').value;
+            const p = document.getElementById('impPhone').value;
+            const e = document.getElementById('impEmail').value;
+            const a = document.getElementById('impAddress').value;
+            const h = document.getElementById('impUrl').value;
+
+            if (n) {
+                app.contacts.add(n, p, e, a, h);
+                app.modals.close();
+                app.navigateTo('contacts');
+                if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+    },
+
     shortcuts: {
         add() {
             app.modals.open('addShortcut');
@@ -4768,7 +5330,8 @@ const app = {
                 'dashboardAiCard', 'dashboardCommunicationCard', 'dashboardStatusCard', 'dashboardEventsCard',
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
-                'dashboardDriveCard', 'dashboardShortcutsCard'
+                'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
+                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard'
             ];
 
             allCards.forEach(id => {
@@ -4814,6 +5377,349 @@ const app = {
                     }, 2000);
                 }
             }, 300);
+        }
+    },
+
+    // --- TIME TRACKER MODULE - MIT PERSISTENZ ---
+    timeTracker: {
+        isRunning: false,
+        startTime: null,
+        currentTask: '',
+        totalToday: 0,
+        intervalId: null,
+
+        init() {
+            // Lade gespeicherten Timer-Status
+            const saved = localStorage.getItem('timeTracker_state');
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    if (state.isRunning && state.startTime) {
+                        this.currentTask = state.currentTask || 'Fortgesetzte Arbeit';
+                        this.startTime = state.startTime;
+                        this.totalToday = state.totalToday || 0;
+                        this.isRunning = true;
+
+                        // UI aktualisieren
+                        const btn = document.getElementById('timeTrackerToggle');
+                        if (btn) {
+                            btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
+                            btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                            btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                        }
+
+                        const taskEl = document.getElementById('timeTrackerTask');
+                        if (taskEl) taskEl.textContent = this.currentTask;
+
+                        // Timer neu starten
+                        this.intervalId = setInterval(() => this.updateDisplay(), 1000);
+                        this.updateDisplay();
+
+                        console.log('⏱️ Zeit-Tracker wiederhergestellt!');
+                    }
+                } catch (e) {
+                    console.error('Fehler beim Laden des Timer-Status:', e);
+                }
+            }
+        },
+
+        saveState() {
+            const state = {
+                isRunning: this.isRunning,
+                startTime: this.startTime,
+                currentTask: this.currentTask,
+                totalToday: this.totalToday
+            };
+            localStorage.setItem('timeTracker_state', JSON.stringify(state));
+        },
+
+        toggle() {
+            if (this.isRunning) {
+                this.stop();
+            } else {
+                const task = prompt('Woran arbeitest du?', this.currentTask || 'Allgemeine Arbeit');
+                if (task) {
+                    this.start(task);
+                }
+            }
+        },
+
+        start(task) {
+            this.currentTask = task;
+            this.startTime = Date.now();
+            this.isRunning = true;
+
+            const btn = document.getElementById('timeTrackerToggle');
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
+
+            const taskEl = document.getElementById('timeTrackerTask');
+            if (taskEl) taskEl.textContent = task;
+
+            this.intervalId = setInterval(() => this.updateDisplay(), 1000);
+            this.saveState(); // Speichern!
+            if (window.lucide) lucide.createIcons();
+        },
+
+        stop() {
+            if (!this.isRunning) return;
+
+            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+            this.totalToday += elapsed;
+
+            // Save to state
+            if (!app.state.timeTracking) app.state.timeTracking = [];
+            app.state.timeTracking.push({
+                id: Date.now(),
+                task: this.currentTask,
+                duration: elapsed,
+                date: new Date().toISOString()
+            });
+            app.saveState();
+
+            this.isRunning = false;
+            clearInterval(this.intervalId);
+
+            const btn = document.getElementById('timeTrackerToggle');
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="play" size="14"></i>';
+                btn.style.background = 'rgba(16, 185, 129, 0.1)';
+                btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            }
+
+            const taskEl = document.getElementById('timeTrackerTask');
+            if (taskEl) taskEl.textContent = `${this.currentTask} (${this.formatTime(elapsed)})`;
+
+            this.updateTodayDisplay();
+            this.saveState(); // Speichern!
+            if (window.lucide) lucide.createIcons();
+        },
+
+        updateDisplay() {
+            if (!this.isRunning) return;
+            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+            const display = document.getElementById('timeTrackerDisplay');
+            if (display) {
+                const timeStr = this.formatTime(elapsed);
+                display.querySelector('div').textContent = timeStr;
+            }
+        },
+
+        updateTodayDisplay() {
+            const el = document.getElementById('timeTrackerToday');
+            if (el) {
+                const hours = Math.floor(this.totalToday / 3600);
+                const mins = Math.floor((this.totalToday % 3600) / 60);
+                el.textContent = `Heute: ${hours}h ${mins}m`;
+            }
+        },
+
+        formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+    },
+
+    // --- QUICK NOTES MODULE ---
+    quickNotes: {
+        add() {
+            const content = prompt('Neue Notiz:');
+            if (!content || !content.trim()) return;
+
+            if (!app.state.quickNotes) app.state.quickNotes = [];
+            app.state.quickNotes.unshift({
+                id: Date.now(),
+                content: content.trim(),
+                date: new Date().toISOString()
+            });
+            app.saveState();
+            this.render();
+            app.gamification.addXP(5);
+        },
+
+        delete(id) {
+            if (confirm('Notiz löschen?')) {
+                app.state.quickNotes = app.state.quickNotes.filter(n => n.id !== id);
+                app.saveState();
+                this.render();
+            }
+        },
+
+        render() {
+            const container = document.getElementById('quickNotesPreview');
+            if (!container) return;
+
+            if (!app.state.quickNotes || app.state.quickNotes.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine Notizen</div>';
+                return;
+            }
+
+            container.innerHTML = app.state.quickNotes.slice(0, 3).map(note => `
+                <div style="padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 6px; cursor: pointer;"
+                    onclick="app.quickNotes.delete(${note.id})">
+                    <div style="font-size: 0.85rem; line-height: 1.4;">${note.content}</div>
+                    <div class="text-muted text-xs" style="margin-top: 4px;">${new Date(note.date).toLocaleDateString('de-DE')}</div>
+                </div>
+            `).join('');
+        }
+    },
+
+    // --- PROJECTS MODULE ---
+    projects: {
+        add() {
+            const name = prompt('Projekt-Name:');
+            if (!name || !name.trim()) return;
+
+            const description = prompt('Beschreibung (optional):') || '';
+
+            if (!app.state.projects) app.state.projects = [];
+            app.state.projects.push({
+                id: Date.now(),
+                name: name.trim(),
+                description: description.trim(),
+                status: 'active',
+                progress: 0,
+                createdAt: new Date().toISOString()
+            });
+            app.saveState();
+            this.render();
+            app.gamification.addXP(20);
+        },
+
+        updateProgress(id) {
+            const project = app.state.projects.find(p => p.id === id);
+            if (!project) return;
+
+            const progress = prompt(`Fortschritt für "${project.name}" (0-100):`, project.progress);
+            if (progress === null) return;
+
+            const num = parseInt(progress);
+            if (isNaN(num) || num < 0 || num > 100) {
+                alert('Bitte eine Zahl zwischen 0 und 100 eingeben.');
+                return;
+            }
+
+            project.progress = num;
+            if (num >= 100) {
+                project.status = 'completed';
+                app.gamification.addXP(50);
+            }
+            app.saveState();
+            this.render();
+        },
+
+        delete(id) {
+            if (confirm('Projekt löschen?')) {
+                app.state.projects = app.state.projects.filter(p => p.id !== id);
+                app.saveState();
+                this.render();
+            }
+        },
+
+        render() {
+            const container = document.getElementById('projectsPreview');
+            if (!container) return;
+
+            if (!app.state.projects || app.state.projects.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine aktiven Projekte</div>';
+                return;
+            }
+
+            const activeProjects = app.state.projects.filter(p => p.status === 'active').slice(0, 2);
+
+            if (activeProjects.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 10px; text-align: center;">Alle Projekte abgeschlossen! 🎉</div>';
+                return;
+            }
+
+            container.innerHTML = activeProjects.map(project => `
+                <div style="padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; cursor: pointer;"
+                    onclick="app.projects.updateProgress(${project.id})">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="font-weight: 600; font-size: 0.9rem;">${project.name}</div>
+                        <div style="font-size: 0.75rem; color: #8b5cf6;">${project.progress}%</div>
+                    </div>
+                    <div style="width: 100%; background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; overflow: hidden;">
+                        <div style="width: ${project.progress}%; height: 100%; background: #8b5cf6; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    },
+
+    // --- MEETINGS MODULE ---
+    meetings: {
+        add() {
+            const title = prompt('Meeting-Titel:');
+            if (!title || !title.trim()) return;
+
+            const notes = prompt('Notizen (optional):') || '';
+            const participants = prompt('Teilnehmer (optional):') || '';
+
+            if (!app.state.meetings) app.state.meetings = [];
+            app.state.meetings.unshift({
+                id: Date.now(),
+                title: title.trim(),
+                notes: notes.trim(),
+                participants: participants.trim(),
+                date: new Date().toISOString()
+            });
+            app.saveState();
+            this.render();
+            app.gamification.addXP(15);
+        },
+
+        view(id) {
+            const meeting = app.state.meetings.find(m => m.id === id);
+            if (!meeting) return;
+
+            const date = new Date(meeting.date).toLocaleString('de-DE');
+            alert(
+                `📋 ${meeting.title}\n\n` +
+                `📅 ${date}\n` +
+                (meeting.participants ? `👥 ${meeting.participants}\n\n` : '\n') +
+                (meeting.notes ? `📝 ${meeting.notes}` : 'Keine Notizen')
+            );
+        },
+
+        delete(id) {
+            if (confirm('Meeting-Notiz löschen?')) {
+                app.state.meetings = app.state.meetings.filter(m => m.id !== id);
+                app.saveState();
+                this.render();
+            }
+        },
+
+        render() {
+            const container = document.getElementById('meetingsPreview');
+            if (!container) return;
+
+            if (!app.state.meetings || app.state.meetings.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine Meeting-Notizen</div>';
+                return;
+            }
+
+            container.innerHTML = app.state.meetings.slice(0, 3).map(meeting => `
+                <div style="padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
+                    onclick="app.meetings.view(${meeting.id})">
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.85rem; font-weight: 600;">${meeting.title}</div>
+                        <div class="text-muted text-xs" style="margin-top: 2px;">${new Date(meeting.date).toLocaleDateString('de-DE')}</div>
+                    </div>
+                    <button onclick="event.stopPropagation(); app.meetings.delete(${meeting.id})" 
+                        style="background: none; border: none; color: var(--danger); opacity: 0.6; cursor: pointer; padding: 4px;"
+                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                        <i data-lucide="trash-2" size="14"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
         }
     }
 };
