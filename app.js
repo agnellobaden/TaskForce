@@ -2853,10 +2853,28 @@ const app = {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 info.date = tomorrow.toISOString().split('T')[0];
+            } else if (lower.includes('übermorgen')) {
+                const day = new Date();
+                day.setDate(day.getDate() + 2);
+                info.date = day.toISOString().split('T')[0];
+            } else {
+                // Check for weekdays
+                const weekdays = ['sonntag', 'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag'];
+                const dayIdx = weekdays.findIndex(d => lower.includes(d));
+                if (dayIdx !== -1) {
+                    const d = new Date();
+                    const currentDay = d.getDay();
+                    let diff = dayIdx - currentDay;
+                    if (diff <= 0) diff += 7; // Next week
+                    d.setDate(d.getDate() + diff);
+                    info.date = d.toISOString().split('T')[0];
+                    info.weekdayMatch = weekdays[dayIdx];
+                }
             }
 
             // Extract location
-            const locationMatch = text.match(/(in|bei|am|straße|platz|weg)\s+([A-ZÄÖÜ][a-zäöüß\s]+(?:straße|platz|weg|allee|dorf|stadt)?)/i);
+            const locationRegex = /(in|straße|platz|weg|allee|dorf|stadt|bahnhof|flughafen)\s+([A-ZÄÖÜ][a-zäöüß\s]+(?:straße|platz|weg|allee|dorf|stadt)?)/i;
+            const locationMatch = text.match(locationRegex);
             if (locationMatch) info.location = locationMatch[2].trim();
 
             // Extract title/description
@@ -2865,20 +2883,29 @@ const app = {
             if (info.email) title = title.replace(info.email, '');
             if (info.amount) title = title.replace(/(\d+[,.]?\d*)\s*(euro|€)/i, '');
             if (info.time) title = title.replace(/(\d{1,2}):(\d{2})|um\s+(\d{1,2})\s*(uhr)?/i, '');
-            if (info.location) title = title.replace(new RegExp(`(in|bei|am|straße|platz|weg)\\s+${info.location}`, 'i'), '');
+            if (info.location) title = title.replace(new RegExp(`(in|straße|platz|weg|allee|dorf|stadt|bahnhof|flughafen)\\s+${info.location}`, 'i'), '');
+
+            // Remove extracted date keywords from title
+            if (info.date) {
+                title = title.replace(/heute|morgen|übermorgen/gi, '');
+                if (info.weekdayMatch) title = title.replace(new RegExp(`(am\\s+)?${info.weekdayMatch}`, 'i'), '');
+            }
 
             // Specific Cleanup for Task/Shopping/Event phrasing (German)
-            // 1. Remove list destinations like "auf die einkaufsliste", "in der todo-liste"
+            // 1. Remove list destinations
             title = title.replace(/(auf|in|zu|für|von|mit)(\s+(die|der|meine|meiner|den|dem|das|einer|einer))?\s+(einkaufsliste|liste|artikelliste|todo-liste|todo|aufgabenliste|tasks|finanzliste|ausgaben|kalender|terminen|shoppingliste)/gi, '');
 
             // 2. Remove common action triggers at the start
-            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal|notier\s+mal|füge\s+hinzu|bitte|mach|mache)\s*/i, '');
+            title = title.replace(/^(termin|meeting|einkauf|kaufen|ausgabe|kosten|todo|aufgabe|erinnere\s+mich\s+an|setz\s+mal|pack\s+mal|schreib\s+mal|notier\s+mal|füge\s+hinzu|bitte|mach|mache|neuer|neues)\s*/i, '');
 
-            // 3. Remove trailing filler words
-            title = title.replace(/\s+(bitte|notieren|aufschreiben|setzen|packen|schreiben|erinnern|hinzufügen|dazu|drauf|liste|melden|erstellen)\s*$/i, '');
+            // 3. Remove subject-prepositions if they are now at the start
+            title = title.replace(/^(beim|beim\s+|am|am\s+|im|im\s+|beim\s+|beim\s+|zu|zum|zur|an)\s+/i, '');
 
-            // Final trim & cleanup
-            title = title.trim();
+            // 4. Remove trailing filler words
+            title = title.replace(/\s+(bitte|notieren|aufschreiben|setzen|packen|schreiben|erinnern|hinzufügen|dazu|drauf|liste|melden|erstellen|machen|am|um)\s*$/i, '');
+
+            // Final cleaning
+            title = title.replace(/\s+/g, ' ').trim();
 
             if (title.length > 0) {
                 // Ensure first letter is capitalized
