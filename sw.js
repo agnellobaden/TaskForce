@@ -1,5 +1,5 @@
 // Service Worker for TaskForce PWA
-const CACHE_NAME = 'taskforce-v15';
+const CACHE_NAME = 'taskforce-v16';
 const urlsToCache = [
     './',
     './index.html',
@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Push notification event
+// Push notification event (Server-side trigger)
 self.addEventListener('push', (event) => {
     let data = { title: 'TaskForce', body: 'Du hast dringende Aufgaben!' };
     try {
@@ -67,16 +67,12 @@ self.addEventListener('push', (event) => {
 
     const options = {
         body: data.body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        vibrate: [200, 100, 200, 100, 400], // Stronger vibration
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        vibrate: [200, 100, 200, 100, 400],
         requireInteraction: true,
         tag: 'taskforce-alert',
-        renotify: true,
-        actions: [
-            { action: 'open', title: 'Öffnen' },
-            { action: 'dismiss', title: 'Später' }
-        ]
+        renotify: true
     };
 
     event.waitUntil(
@@ -88,9 +84,18 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
-    if (event.action === 'open' || !event.action) {
-        event.waitUntil(
-            clients.openWindow('/')
-        );
-    }
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            // Find existing tab
+            for (const client of clientList) {
+                if (client.url.includes('/') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // Or open new one
+            if (clients.openWindow) {
+                return clients.openWindow('./');
+            }
+        })
+    );
 });

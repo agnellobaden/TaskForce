@@ -818,9 +818,15 @@
                             <p class="text-muted text-sm" style="margin-bottom: 1.5rem;">Wähle deinen bevorzugten AI
                                 Provider und gib deinen API Key ein.</p>
 
-                            <button class="btn btn-secondary" style="width:100%; margin-bottom:15px;"
+                            <button class="btn btn-secondary" style="width:100%; margin-bottom:10px;"
                                 onclick="app.notifications.requestPermission()">
                                 <i data-lucide="bell-ring"></i> Benachrichtigungen Aktivieren
+                            </button>
+
+                            <button class="btn btn-secondary"
+                                style="width:100%; margin-bottom:20px; border: 1px dashed var(--primary); background: rgba(59, 130, 246, 0.05);"
+                                onclick="setTimeout(() => app.notifications.send('🔔 Test Alarm', 'Das System funktioniert! Du siehst diesen Alarm im Hintergrund.', true), 5000); alert('Test-Alarm startet in 5 Sekunden. Minimiere JETZT die App oder sperre das Handy!');">
+                                <i data-lucide="play"></i> Hintergrund-Test (5 Sek. Verzögerung)
                             </button>
 
                             <div class="form-group">
@@ -972,6 +978,15 @@
 
 
     <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker aktiviert ✅', reg))
+                    .catch(err => console.error('Service Worker Fehler ❌', err));
+            });
+        }
+    </script>
     <style>
         /* Extra inline styles */
         .action-btn-tile {
