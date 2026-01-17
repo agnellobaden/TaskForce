@@ -4142,6 +4142,19 @@ const app = {
                             <label class="form-label">Homepage (URL)</label>
                             <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de">
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Kategorie</label>
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                                    <input type="radio" name="contactType" value="business" ${(!app.state.ui || app.state.ui.dashboardMode !== 'private') ? 'checked' : ''}> 
+                                    <span>Business</span>
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                                    <input type="radio" name="contactType" value="private" ${(app.state.ui && app.state.ui.dashboardMode === 'private') ? 'checked' : ''}> 
+                                    <span>Privat</span>
+                                </label>
+                            </div>
+                        </div>
                         <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
                             <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> Speichern</button>
@@ -5146,9 +5159,9 @@ const app = {
         }
     },
     contacts: {
-        add(n, p, e, a, h = '') {
+        add(n, p, e, a, h = '', type = 'business') {
             if (!app.state.contacts) app.state.contacts = [];
-            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h });
+            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h, type: type });
             app.saveState();
             this.render();
             app.renderDashboard();
@@ -5175,7 +5188,7 @@ const app = {
                             const phone = c.tel ? c.tel[0] : '';
                             const email = c.email ? c.email[0] : '';
                             if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
-                            this.add(name, phone, email, '', '');
+                            this.add(name, phone, email, '', '', 'business');
                         });
                         alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
                     }
@@ -5187,11 +5200,16 @@ const app = {
         search(q) {
             const list = document.getElementById('contactsList');
             if (!list) return;
-            const contacts = (app.state.contacts || []).filter(c =>
-                c.name.toLowerCase().includes(q.toLowerCase()) ||
-                (c.phone && c.phone.includes(q)) ||
-                (c.email && c.email.toLowerCase().includes(q.toLowerCase()))
-            );
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+
+            const contacts = (app.state.contacts || []).filter(c => {
+                const cType = c.type || 'business';
+                if (cType !== mode) return false;
+
+                return c.name.toLowerCase().includes(q.toLowerCase()) ||
+                    (c.phone && c.phone.includes(q)) ||
+                    (c.email && c.email.toLowerCase().includes(q.toLowerCase()));
+            });
             this.renderFiltered(contacts);
         },
         renderFiltered(contacts) {
@@ -5206,9 +5224,9 @@ const app = {
                             ${c.name.charAt(0).toUpperCase()}
                         </div>
                         <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                            <div style="font-weight:700; font-size:1.1rem; color:white; line-height: 1.3;">${c.name}</div>
                             <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${c.phone || c.email || 'Business Kontakt'}
+                                ${c.phone || c.email || (c.type === 'private' ? 'Privat Kontakt' : 'Business Kontakt')}
                             </div>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center;">
@@ -5225,7 +5243,22 @@ const app = {
             const list = document.getElementById('contactsList');
             if (!list) return;
 
-            const contacts = app.state.contacts || [];
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+
+            // Update Header dynamically
+            const titleEl = document.querySelector('#view-contacts h1');
+            if (titleEl) titleEl.textContent = mode === 'business' ? 'Business Kontakte' : 'Private Kontakte';
+
+            const descEl = document.querySelector('#view-contacts p');
+            if (descEl) descEl.textContent = mode === 'business' ? 'Dein zentrales Adressbuch für Partner & Firmen.' : 'Deine Familie, Freunde und Bekannte.';
+
+            let contacts = app.state.contacts || [];
+
+            // Filter by mode
+            contacts = contacts.filter(c => {
+                const cType = c.type || 'business';
+                return cType === mode;
+            });
 
             if (contacts.length === 0) {
                 list.innerHTML = `
@@ -5234,7 +5267,7 @@ const app = {
                             <i data-lucide="contact-2" size="40" class="text-primary"></i>
                         </div>
                         <h3 style="margin-bottom: 10px;">Adressbuch noch leer</h3>
-                        <p class="text-muted">Füge deinen ersten Business-Partner hinzu.</p>
+                        <p class="text-muted">Füge deinen ersten ${mode === 'private' ? 'privaten' : 'Business'} Kontakt hinzu.</p>
                         <button class="btn btn-primary" style="margin-top: 20px;" onclick="app.modals.open('addContact')">
                             <i data-lucide="plus"></i> Kontakt hinzufügen
                         </button>
@@ -5255,9 +5288,9 @@ const app = {
                             ${c.name.charAt(0).toUpperCase()}
                         </div>
                         <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                            <div style="font-weight:700; font-size:1.1rem; color:white; line-height: 1.3;">${c.name}</div>
                             <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${c.phone || c.email || 'Business Kontakt'}
+                                ${c.phone || c.email || (c.type === 'private' ? 'Privat Kontakt' : 'Business Kontakt')}
                             </div>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center;">
@@ -5279,20 +5312,26 @@ const app = {
 
             const importBtn = document.getElementById('importContactsBtn');
             if (importBtn) {
-                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
+                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window && mode === 'business') ? 'flex' : 'none';
             }
         },
         renderQuick() {
             const container = document.getElementById('dashboardQuickContacts');
             if (!container) return;
-            const contacts = (app.state.contacts || []).slice(0, 3);
+
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+
+            const contacts = (app.state.contacts || [])
+                .filter(c => (c.type || 'business') === mode)
+                .slice(0, 3);
+
             if (contacts.length === 0) {
-                container.innerHTML = `<div class="text-xs text-muted" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.05);">Keine Favoriten für Schnellzugriff.</div>`;
+                container.innerHTML = `<div class="text-xs text-muted" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.05);">Keine ${mode === 'private' ? 'privaten ' : ''}Favoriten.</div>`;
                 return;
             }
             container.innerHTML = `
                 <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
-                    <i data-lucide="star" size="10" class="text-primary"></i> Business Favoriten
+                    <i data-lucide="star" size="10" class="text-primary"></i> ${mode === 'business' ? 'Business Favoriten' : 'Wichtige Kontakte'}
                 </div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     ${contacts.map(c => `
@@ -5300,7 +5339,7 @@ const app = {
                             <div style="width:32px; height:32px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:bold; color:white; flex-shrink:0;">${c.name.charAt(0).toUpperCase()}</div>
                             <div style="flex:1; min-width:0;">
                                 <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
-                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || 'Business Partner'}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || (mode === 'business' ? 'Business Partner' : 'Kontakt')}</div>
                             </div>
                             <i data-lucide="chevron-right" size="14" style="opacity:0.3;"></i>
                         </div>
@@ -5320,7 +5359,11 @@ const app = {
             const e = document.getElementById('newContactEmail').value;
             const a = document.getElementById('newContactAddress').value;
             const h = document.getElementById('newContactHomepage')?.value || '';
-            if (n) { this.add(n, p, e, a, h); app.modals.close(); }
+
+            const typeRadio = document.querySelector('input[name="contactType"]:checked');
+            const type = typeRadio ? typeRadio.value : 'business';
+
+            if (n) { this.add(n, p, e, a, h, type); app.modals.close(); }
         }
     },
     businessSearch: {
