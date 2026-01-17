@@ -615,6 +615,48 @@
                         </div>
 
 
+                        <!-- Private Communication Card -->
+                        <div id="dashboardPrivateCommCard" class="card dash-card card-communication card-medium"
+                            style="grid-column: span 2; order: 12; background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.03)); border-left: 3px solid #a855f7; display:none;"
+                            draggable="true">
+                            <div class="card-header" onclick="app.navigateTo('contacts')"
+                                style="cursor:pointer; margin-bottom: 12px;">
+                                <span class="card-title"><i data-lucide="heart" style="color: #a855f7;"></i>
+                                    Privat-Chat & Familie</span>
+                                <i data-lucide="chevron-right" size="16" class="text-muted"></i>
+                            </div>
+                            <div class="comm-grid">
+                                <button class="comm-tile phone" onclick="app.comms.call()"
+                                    style="--tile-color: #a855f7;">
+                                    <div class="tile-circle"
+                                        style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><i
+                                            data-lucide="phone-call" size="20"></i></div>
+                                    <span>Anruf</span>
+                                </button>
+                                <button class="comm-tile whatsapp" onclick="app.comms.whatsapp()"
+                                    style="--tile-color: #25d366;">
+                                    <div class="tile-circle"
+                                        style="background: rgba(37, 211, 102, 0.1); color: #25d366;"><i
+                                            data-lucide="message-circle" size="20"></i></div>
+                                    <span>WhatsApp</span>
+                                </button>
+                                <button class="comm-tile" onclick="app.navigateTo('contacts')"
+                                    style="background:rgba(168, 85, 247, 0.05); --tile-color: #a855f7;">
+                                    <div class="tile-circle"
+                                        style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><i
+                                            data-lucide="users" size="20"></i></div>
+                                    <span>Familie</span>
+                                </button>
+                                <button class="comm-tile" onclick="app.modals.open('quickNote')"
+                                    style="background:rgba(236, 72, 153, 0.05); --tile-color: #ec4899;">
+                                    <div class="tile-circle"
+                                        style="background: rgba(236, 72, 153, 0.1); color: #ec4899;"><i
+                                            data-lucide="sticky-note" size="20"></i></div>
+                                    <span>Quick-Info</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- HOUSEHOLD CARD (Private Only) -->
                         <div id="dashboardHouseholdCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02)); display:none;"
@@ -926,7 +968,7 @@
                         </div>
 
                         <!-- Day Headers -->
-                        <div
+                        <div class="calendar-day-headers desktop-only"
                             style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; padding-bottom:10px; border-bottom:2px solid var(--border); font-weight:600; margin-bottom:10px;">
                             <div>Mo</div>
                             <div>Di</div>

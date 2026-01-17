@@ -896,7 +896,13 @@ const app = {
             const dim = new Date(y, m + 1, 0).getDate();
 
             // Render days
+            const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+            const weekdaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
             for (let d = 1; d <= dim; d++) {
+                const dayDate = new Date(y, m, d);
+                const wd = weekdaysShort[dayDate.getDay()];
+
                 const cell = document.createElement('div');
                 cell.className = 'calendar-day';
 
@@ -913,7 +919,12 @@ const app = {
                 });
 
                 // Build day content
-                let dayContent = `<div class="day-number">${d}</div>`;
+                let dayContent = `
+                    <div class="day-header-mobile">
+                        <span class="day-weekday mobile-only">${wd}., </span>
+                        <span class="day-number">${d}</span>
+                    </div>
+                `;
 
                 // Add event markers
                 if (dayEvents.length > 0) {
@@ -3919,13 +3930,21 @@ const app = {
         },
         applyLayoutPreference() {
             const grids = document.querySelectorAll('.dashboard-grid');
+            const currentLayout = app.state.dashboardLayout || 'double';
+
             grids.forEach(g => {
-                if (app.state.dashboardLayout === 'single') {
+                if (currentLayout === 'single') {
                     g.classList.add('single-column-mode');
                 } else {
                     g.classList.remove('single-column-mode');
                 }
             });
+
+            // Update button text to reflect current state
+            const btnText = document.getElementById('layoutToggleText');
+            if (btnText) {
+                btnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
+            }
         },
         initPayPal() {
             if (app.state.user.isPro) return;
@@ -5540,6 +5559,7 @@ const app = {
                 'dashboardMealPlanCard',
                 'dashboardHouseholdCard',
                 'dashboardJournalCard',
+                'dashboardPrivateCommCard',
                 'dashboardShortcutsCard',
                 'dashboardNotesCard',
                 'dashboardAlarmsCard',
@@ -5652,7 +5672,7 @@ const app = {
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
                 'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
-                'dashboardHouseholdCard', 'dashboardJournalCard'
+                'dashboardHouseholdCard', 'dashboardJournalCard', 'dashboardPrivateCommCard'
             ];
 
             allCards.forEach(id => {

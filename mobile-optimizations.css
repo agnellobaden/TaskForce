@@ -60,76 +60,167 @@
 
     /* Compact top bar */
     .top-bar {
-        gap: 8px;
-        margin-bottom: 10px;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+        margin-bottom: 20px;
     }
 
-    /* Calendar optimization for small screens */
-    .calendar-day {
-        min-height: 50px;
-        padding: 3px;
-        font-size: 0.7rem;
+    .top-left-actions {
+        width: 100%;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
     }
 
-    .day-number {
-        font-size: 0.8rem;
+    .top-command-field {
+        max-width: 100% !important;
+        width: 100% !important;
+        display: flex !important;
     }
 
-    .event-marker {
-        font-size: 0.6rem;
-        padding: 1px 3px;
+    .dash-mode-switcher {
+        width: 100%;
+        display: flex !important;
+        justify-content: center !important;
     }
 
-    /* Form elements */
-    .form-input,
-    input,
-    textarea,
-    select {
-        font-size: 16px !important;
+
+    /* Dashboard Grid 2-Column Space Optimization (respects user preference) */
+    .dashboard-grid:not(.single-column-mode) {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 5px !important;
+        padding-bottom: 110px !important;
+    }
+
+    /* Single column mode on mobile */
+    .dashboard-grid.single-column-mode {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        padding: 5px !important;
+        padding-bottom: 110px !important;
+    }
+
+    .dashboard-grid:not(.single-column-mode)>.card {
+        grid-column: span 1 !important;
         padding: 10px !important;
     }
 
-    /* Modal full screen on small devices */
-    #modalContent {
-        width: 98% !important;
-        max-height: 95vh;
-        padding: 12px;
+    .dashboard-grid.single-column-mode>.card {
+        grid-column: span 1 !important;
+        padding: 10px !important;
     }
 
-    /* Compact mobile nav */
-    .mobile-nav {
-        padding: 6px 0;
+    /* Keep certain cards full width for readability (only in 2-column mode) */
+    .dashboard-grid:not(.single-column-mode) .card-medium,
+    .dashboard-grid:not(.single-column-mode) .card-wide,
+    .dashboard-grid:not(.single-column-mode) .card-communication,
+    .dashboard-grid:not(.single-column-mode) #dashboardEventsCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardFinanceCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardSearchCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardAiCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardStatusCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardNotesCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardProjectsCard,
+    .dashboard-grid:not(.single-column-mode) #dashboardMeetingsCard,
+    .dashboard-grid:not(.single-column-mode) #view-contacts .card {
+        grid-column: span 2 !important;
     }
 
-    .nav-item-mobile {
-        font-size: 0.65rem;
+    .card-value {
+        font-size: 1.2rem;
     }
 
-    .voice-inner {
-        width: 50px;
-        height: 50px;
+    /* Calendar Vertical View for Mobile */
+    .calendar-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
     }
 
-    /* Task and expense entries more compact */
-    .task-item,
-    .expense-entry,
-    .health-entry {
-        padding: 10px;
-        font-size: 0.9rem;
+    .calendar-day.empty {
+        display: none !important;
     }
 
-    /* Communication tiles smaller */
+    .calendar-day {
+        min-height: auto !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 15px;
+        padding: 12px !important;
+    }
+
+    .day-header-mobile {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 60px;
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: inline !important;
+    }
+
+    .event-markers {
+        flex: 1;
+        margin-top: 0 !important;
+    }
+
+    /* Contact View Fixes */
+    #view-contacts .card-header {
+        padding: 15px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    #view-contacts h1 {
+        font-size: 1.4rem !important;
+    }
+
+    #view-contacts div[style*="display:flex; gap:10px;"] {
+        width: 100%;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        gap: 5px !important;
+    }
+
+    #view-contacts .btn {
+        flex: 1 1 45%;
+        font-size: 0.75rem;
+        padding: 8px 4px;
+        white-space: nowrap;
+    }
+
+    /* Communication tiles LARGER for better visibility */
     .comm-tile {
-        padding: 10px;
+        padding: 16px 12px !important;
+        min-height: 90px !important;
     }
 
     .tile-circle {
-        width: 36px;
-        height: 36px;
+        width: 50px !important;
+        height: 50px !important;
     }
 
     .comm-tile span {
-        font-size: 0.65rem;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Communication card always visible and prominent */
+    .card-communication {
+        padding: 18px !important;
+    }
+
+    .comm-grid {
+        gap: 12px !important;
     }
 }
 
@@ -140,8 +231,13 @@
         padding-bottom: 80px;
     }
 
-    .dashboard-grid {
+    .dashboard-grid:not(.single-column-mode) {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+    }
+
+    .dashboard-grid.single-column-mode {
+        grid-template-columns: 1fr !important;
         gap: 10px;
     }
 
