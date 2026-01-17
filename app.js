@@ -2333,7 +2333,7 @@ const app = {
                 l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben.</div>';
             } else {
                 l.innerHTML = f.map(t => `
-                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}">
+                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}" style="border-left: 3px solid var(--primary);">
                     <div style="display:flex;align-items:center;gap:10px; width:100%;">
                         <div class="checkbox-circle ${t.done ? 'checked' : ''}" onclick="app.tasks.toggle(${t.id})"></div>
                         
@@ -2348,8 +2348,8 @@ const app = {
                              ${t.category && t.category !== 'todo' && t.category !== 'shopping' ? `<span class="text-xs text-muted">${t.category}</span>` : ''}
                         </div>
 
-                        <button class="btn" onclick="app.tasks.delete(${t.id})" title="Archivieren" style="color:var(--text-muted); opacity:0.7;">
-                            <i data-lucide="archive" size="16"></i>
+                        <button class="btn" onclick="app.tasks.delete(${t.id})" style="color:var(--text-muted); opacity:0.7;">
+                            <i data-lucide="trash-2" size="16"></i>
                         </button>
                     </div>
                 </div>`).join('');

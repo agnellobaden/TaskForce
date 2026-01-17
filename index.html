@@ -730,57 +730,7 @@
                         </div>
                     </div>
 
-                    <!-- Inline Add Task Form -->
-                    <div
-                        style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:25px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
-                        <input type="text" id="inlineTaskInput" class="form-input"
-                            placeholder="✨ Neue Aufgabe hinzufügen..."
-                            style="background:transparent; border:none; padding:0; height:auto; font-size:1.1rem;"
-                            onkeypress="if(event.key === 'Enter') app.tasks.addInline()">
-                        <button class="btn-primary" onclick="app.tasks.addInline()"
-                            style="border-radius:12px; width:48px; flex-shrink:0;"><i
-                                data-lucide="arrow-up"></i></button>
-                    </div>
 
-                    <!-- Statistics Bar -->
-                    <div class="tasks-stats-bar">
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(59, 130, 246, 0.15);">
-                                <i data-lucide="list-todo" size="18" style="color: #3b82f6;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Offen</span>
-                                <span class="tasks-stat-value" id="tasksStatOpen">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(239, 68, 68, 0.15);">
-                                <i data-lucide="flame" size="18" style="color: #ef4444;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Dringend</span>
-                                <span class="tasks-stat-value" id="tasksStatUrgent" style="color: #ef4444;">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
-                                <i data-lucide="shopping-cart" size="18" style="color: #22c55e;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Einkauf</span>
-                                <span class="tasks-stat-value" id="tasksStatShopping" style="color: #22c55e;">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
-                                <i data-lucide="check-circle" size="18" style="color: #22c55e;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Erledigt</span>
-                                <span class="tasks-stat-value" id="tasksStatDone" style="color: #22c55e;">0</span>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Filter Tabs -->
                     <!-- Filter Tabs -->
@@ -804,19 +754,9 @@
                     </div>
 
                     <!-- Tasks Table -->
-                    <div class="tasks-table-container">
-                        <!-- Table Header -->
-                        <div class="tasks-table-header">
-                            <div>✓</div>
-                            <div>Aufgabe</div>
-                            <div class="task-category">Kategorie</div>
-                            <div class="task-priority">Priorität</div>
-                            <div class="task-date">Erstellt</div>
-                            <div style="text-align: right;">Aktionen</div>
-                        </div>
-
-                        <!-- Table Body -->
-                        <div id="taskListContainer">
+                    <!-- Tasks List (Card Style) -->
+                    <div class="card">
+                        <div id="taskListContainer" style="display: flex; flex-direction: column; gap: 8px;">
                             <!-- Tasks will be rendered here -->
                         </div>
                     </div>
@@ -995,6 +935,10 @@
                         <div class="card" onclick="app.modals.open('setAlarm')">
                             <div class="card-header"><span class="card-title">⏰ Wecker</span></div>
                             <div id="activeAlarmDisplay" class="text-muted text-sm">Kein Wecker gestellt.</div>
+                        </div>
+
+                        <div class="card" onclick="app.navigateTo('calendar')">
+                            <div class="card-header"><span class="card-title">📅 Kalender</span></div>
                         </div>
 
                         <div class="card" onclick="app.navigateTo('health')">
@@ -1442,8 +1386,9 @@
             </div>
         </div>
 
-        <button class="nav-item-mobile" data-page="calendar"><i data-lucide="calendar"></i></button>
-        <button class="nav-item-mobile" onclick="app.toggleSidebar()"><i data-lucide="menu"></i></button>
+
+        <button class="nav-item-mobile" data-page="tools"><i data-lucide="grid"></i></button>
+        <button class="nav-item-mobile" onclick="app.toggleSidebar()"><i data-lucide="more-vertical"></i></button>
     </nav>
     </div>
 
