@@ -1,0 +1,82 @@
+/* COMPACT 3-DOTS MENU & HEADER FOR MOBILE - CLEAN LAYOUT (BUTTON IN FOOTER) */
+
+@media (max-width: 480px) {
+
+    /* --- FOOTER MENU BUTTON --- */
+    /* Target the button in the bottom nav */
+    .mobile-nav .nav-item-mobile i[data-lucide="menu"] {
+        /* Optional: make it stand out closer to the original style if desired, 
+           but usually footer icons are uniform. We can leave it as is or add a subtle glow. */
+        filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.4));
+    }
+
+    /* Ensure no residual styles affect the top bar if I missed any classes */
+    .top-bar .mobile-menu-toggle {
+        display: none !important;
+    }
+
+    /* --- COMPACT SWITCHER: Hide Text Labels --- */
+    .dash-mode-switcher .mode-text {
+        display: none !important;
+    }
+
+    /* Make buttons distinct */
+    .dash-mode-switcher button.mode-btn {
+        padding: 6px 10px !important;
+        margin: 0 !important;
+    }
+
+    /* Ensure the container fits tightly */
+    .dash-mode-switcher {
+        gap: 2px !important;
+        padding: 3px !important;
+    }
+
+    /* --- HEADER LAYOUT FLOW --- */
+    .top-bar {
+        position: relative !important;
+        z-index: 1000 !important;
+        flex-wrap: nowrap !important;
+        /* FORCE Single Line */
+        gap: 6px !important;
+
+        /* FIX: Ensure proper spacing from top edge of screen */
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-bottom: 8px !important;
+        /* Use max() to ensure at least 15px top padding, or Safe Area if larger */
+        padding-top: max(15px, env(safe-area-inset-top)) !important;
+
+        margin-top: 5px !important;
+        /* Additional breathing room */
+        align-items: center !important;
+    }
+
+    .top-left-actions {
+        position: relative !important;
+        z-index: 1001 !important;
+        flex-shrink: 0 !important;
+        width: auto !important;
+        gap: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    /* --- SEARCH BAR --- */
+    .top-command-field {
+        flex: 1 !important;
+        /* Take remaining space */
+        min-width: 0 !important;
+        /* Allow shrinking */
+        margin: 0 !important;
+        height: 38px !important;
+    }
+
+    /* Adjust input padding to be tight */
+    .top-command-field input {
+        width: 100% !important;
+        padding: 6px 1px 6px 30px !important;
+        font-size: 0.85rem !important;
+        height: 100% !important;
+    }
+}

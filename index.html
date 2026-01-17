@@ -27,6 +27,8 @@
     <link rel="stylesheet" href="mobile-optimizations.css">
     <link rel="stylesheet" href="button-toolbar.css">
     <link rel="stylesheet" href="styles/tasks-table.css">
+    <!-- EMERGENCY FIX: Force hamburger button visibility on mobile -->
+    <link rel="stylesheet" href="hamburger-force-visible.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -173,36 +175,32 @@
         <main class="main-content" id="mainContent">
             <!-- Header -->
             <header class="top-bar">
-                <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                    <button class="mobile-menu-toggle" onclick="app.toggleSidebar()" style="flex-shrink: 0;">
-                        <i data-lucide="menu"></i>
-                        <span style="font-size: 24px; position:absolute; opacity:0; pointer-events:none;">☰</span>
-                    </button>
+                <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px;">
                     <!-- Dashboard Mode Switcher -->
                     <div class="dash-mode-switcher"
-                        style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-right: 10px;">
+                        style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                         <button id="btnModeBusiness" class="mode-btn active" onclick="app.dashboard.setMode('business')"
                             style="padding: 6px 15px; border-radius: 16px; border: none; background: var(--primary); color: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
-                            <i data-lucide="briefcase" size="14"></i> Business
+                            <i data-lucide="briefcase" size="14"></i> <span class="mode-text">Business</span>
                         </button>
                         <button id="btnModePrivate" class="mode-btn" onclick="app.dashboard.setMode('private')"
                             style="padding: 6px 15px; border-radius: 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
-                            <i data-lucide="user" size="14"></i> Privat
+                            <i data-lucide="user" size="14"></i> <span class="mode-text">Privat</span>
                         </button>
                     </div>
+                </div>
 
-                    <!-- Top Smart Command Bar -->
-                    <div class="top-command-field"
-                        style="flex: 1; max-width: 250px; position: relative; display: flex; align-items: center;">
-                        <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
-                        <input type="text" id="smartInput" placeholder="Was tun?"
-                            onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
-                            style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 40px 8px 35px; color: white; font-size: 0.9rem; outline: none;">
-                        <button onclick="app.voice.startGlobal()" title="Sprachbefehl"
-                            style="position: absolute; right: 8px; background: none; border: none; color: white; opacity: 0.6; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="mic" size="16"></i>
-                        </button>
-                    </div>
+                <!-- Top Smart Command Bar -->
+                <div class="top-command-field"
+                    style="flex: 1; max-width: 450px; position: relative; display: flex; align-items: center; margin: 0 15px;">
+                    <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
+                    <input type="text" id="smartInput" placeholder="Was tun?"
+                        onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
+                        style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 40px 8px 35px; color: white; font-size: 0.9rem; outline: none;">
+                    <button onclick="app.voice.startGlobal()" title="Sprachbefehl"
+                        style="position: absolute; right: 8px; background: none; border: none; color: white; opacity: 0.6; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="mic" size="16"></i>
+                    </button>
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn" title="AI Assistant" onclick="app.modals.open('aiChat')"><i
@@ -1445,7 +1443,7 @@
         </div>
 
         <button class="nav-item-mobile" data-page="calendar"><i data-lucide="calendar"></i></button>
-        <button class="nav-item-mobile" data-page="tools"><i data-lucide="grid"></i></button>
+        <button class="nav-item-mobile" onclick="app.toggleSidebar()"><i data-lucide="menu"></i></button>
     </nav>
     </div>
 

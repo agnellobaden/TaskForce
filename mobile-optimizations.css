@@ -58,25 +58,50 @@
         height: 32px;
     }
 
+
+    /* HAMBURGER BUTTON - ALWAYS VISIBLE ON MOBILE! */
+    .mobile-menu-toggle {
+        display: flex !important;
+        position: relative !important;
+        z-index: 9999 !important;
+        width: 50px !important;
+        height: 50px !important;
+        background: rgba(139, 92, 246, 0.3) !important;
+        border: 2px solid rgba(139, 92, 246, 0.6) !important;
+        border-radius: 12px !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+    }
+
+    .mobile-menu-toggle i {
+        width: 28px !important;
+        height: 28px !important;
+        color: white !important;
+    }
+
     /* Compact top bar */
     .top-bar {
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        gap: 12px !important;
-        margin-bottom: 20px;
+        gap: 8px !important;
+        margin-bottom: 15px;
+        padding: 10px !important;
+        flex-wrap: wrap !important;
     }
 
     .top-left-actions {
         width: 100%;
         display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
     }
 
     .top-command-field {
-        max-width: 100% !important;
-        width: 100% !important;
+        flex: 1 !important;
+        min-width: 150px !important;
         display: flex !important;
     }
 
@@ -84,6 +109,7 @@
         width: 100%;
         display: flex !important;
         justify-content: center !important;
+        order: 10;
     }
 
 
@@ -135,42 +161,77 @@
         font-size: 1.2rem;
     }
 
-    /* Calendar Vertical View for Mobile */
+    /* Calendar Standard Square View for Mobile */
     .calendar-grid {
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 2px !important;
     }
 
     .calendar-day.empty {
-        display: none !important;
+        display: flex !important;
+        /* Show empty days to maintain grid alignment */
+        visibility: hidden;
+        /* Hide content but keep space */
     }
 
     .calendar-day {
-        min-height: auto !important;
-        flex-direction: row !important;
+        min-height: 40px !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1;
+        /* Force square shape */
+        flex-direction: column !important;
         align-items: center !important;
-        gap: 15px;
-        padding: 12px !important;
+        justify-content: flex-start !important;
+        gap: 2px !important;
+        padding: 4px !important;
+        font-size: 0.75rem !important;
     }
 
+    .day-number {
+        font-size: 0.8rem !important;
+        font-weight: 600;
+    }
+
+    /* Hide day names if they take too much space, or make them tiny */
     .day-header-mobile {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        min-width: 60px;
-    }
-
-    .desktop-only {
         display: none !important;
     }
 
-    .mobile-only {
-        display: inline !important;
+    /* Toggle visibility for event markers */
+    .event-marker.desktop-only {
+        display: none !important;
+    }
+
+    .event-dot.mobile-only {
+        display: block !important;
     }
 
     .event-markers {
         flex: 1;
-        margin-top: 0 !important;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 3px;
+        margin-top: 2px !important;
+        align-content: flex-end;
+        /* Push dots to bottom */
+    }
+
+    .event-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        /* Background color is set inline by JS, but provide default */
+        background-color: var(--primary);
+        box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .event-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: var(--primary);
     }
 
     /* Contact View Fixes */

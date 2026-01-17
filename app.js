@@ -103,6 +103,7 @@ const app = {
 
             // Browser Back Button Support
             this.setupBackButton();
+            this.setupMobileGestures();
 
             // Background & Alert Setup
             this.notifications.requestPermission();
@@ -142,6 +143,38 @@ const app = {
                 this.navigateTo('dashboard', true);
             }
         });
+    },
+
+    // --- MOBILE GESTURES ---
+    setupMobileGestures() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            // Strict Horizontal Check (Prevent accidental triggers while scrolling)
+            if (Math.abs(diffX) < Math.abs(diffY)) return;
+
+            // Swipe Right (Open Sidebar) - Only from very left edge (30px)
+            if (diffX > 50 && touchStartX < 40 && !app.isSidebarOpen) {
+                app.toggleSidebar();
+            }
+
+            // Swipe Left (Close Sidebar) - Only if open
+            if (diffX < -50 && app.isSidebarOpen) {
+                app.toggleSidebar();
+            }
+        }, { passive: true });
     },
 
     // --- STATE MANAGEMENT ---
@@ -931,7 +964,10 @@ const app = {
                     dayContent += '<div class="event-markers">';
                     dayEvents.forEach(ev => {
                         const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        dayContent += `<div class="event-marker ${ev.urgent ? 'urgent' : ''}" title="${ev.title} - ${eventTime}">${ev.title}</div>`;
+                        // Desktop Marker (Text)
+                        dayContent += `<div class="event-marker desktop-only ${ev.urgent ? 'urgent' : ''}" title="${ev.title} - ${eventTime}">${ev.title}</div>`;
+                        // Mobile Marker (Dot)
+                        dayContent += `<div class="event-dot mobile-only ${ev.urgent ? 'urgent' : ''}" style="width:5px; height:5px; border-radius:50%; background-color:${ev.urgent ? 'var(--danger)' : 'var(--primary)'};" title="${ev.title}"></div>`;
                     });
                     dayContent += '</div>';
                 }
