@@ -15,6 +15,10 @@ const app = {
         contacts: [],
         alarms: [],
         dailyTaskGoal: 5, // Anzahl Aufgaben pro Tag
+        ui: {
+            hiddenCards: [],
+            dashboardMode: 'business'
+        },
         aiConfig: {
             provider: 'openai',
             openaiKey: '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',
@@ -165,12 +169,22 @@ const app = {
         if (!this.state.contacts) this.state.contacts = [];
         if (!this.state.expenses) this.state.expenses = [];
         if (!this.state.tasks) this.state.tasks = [];
+        if (!this.state.meetings) this.state.meetings = []; // New Meetings Array
         if (!this.state.habits) this.state.habits = [];
-        if (!this.state.archives) this.state.archives = [];
         if (!this.state.archives) this.state.archives = [];
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
         if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
+
+        // UI Default State
+        if (!this.state.ui) this.state.ui = {};
+        if (!this.state.ui.hiddenCards) this.state.ui.hiddenCards = [];
+        if (!this.state.ui.dashboardMode) this.state.ui.dashboardMode = 'business';
+
+        // Household & Journal Migration
+        if (!this.state.household) this.state.household = [];
+        if (!this.state.meals) this.state.meals = new Array(7).fill('');
+        if (!this.state.journal) this.state.journal = [];
 
         // Firebase Default Config Migration
         if (!this.state.cloud) this.state.cloud = {};
@@ -534,6 +548,8 @@ const app = {
         if (page === 'health') app.health.render();
         if (page === 'contacts') app.contacts.render();
         if (page === 'shopping') app.shopping.render();
+        if (page === 'household') app.household.render();
+        if (page === 'journal') app.journal.render();
         if (page === 'settings') {
             app.settings.render();
             app.settings.initPayPal();
@@ -600,6 +616,92 @@ const app = {
             });
 
             if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    // --- MEETING NOTES MODULE (NEW) ---
+    meetings: {
+        add() {
+            app.modals.open('addMeeting');
+        },
+        showAll() {
+            app.modals.open('viewMeetings');
+        },
+        save(data) {
+            if (!app.state.meetings) app.state.meetings = [];
+
+            // If editing existing
+            if (data.id) {
+                const idx = app.state.meetings.findIndex(m => m.id === data.id);
+                if (idx !== -1) app.state.meetings[idx] = data;
+            } else {
+                data.id = Date.now();
+                app.state.meetings.push(data);
+            }
+
+            app.saveState();
+            this.render();
+            app.modals.close();
+            app.renderDashboard();
+        },
+        delete(id) {
+            if (confirm("Protokoll löschen?")) {
+                app.state.meetings = app.state.meetings.filter(m => m.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+                // If in modal, refresh or close?
+                const modal = document.getElementById('viewMeetingsList');
+                if (modal) {
+                    // Hacky refresh of modal
+                    app.modals.open('viewMeetings');
+                }
+            }
+        },
+        render() {
+            const p = document.getElementById('meetingsPreview');
+            const s = document.getElementById('meetingsStats');
+
+            if (!app.state.meetings) app.state.meetings = [];
+            const recent = app.state.meetings.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+
+            if (s) {
+                s.textContent = `${app.state.meetings.length} Protokolle`;
+            }
+
+            if (p) {
+                if (recent.length === 0) {
+                    p.innerHTML = `<div class="text-muted text-sm" style="padding: 20px; text-align: center;">
+                                    <i data-lucide="clipboard-x" size="24" style="opacity: 0.3; margin-bottom: 5px;"></i>
+                                    <div>Keine Protokolle</div>
+                                    <div class="text-xs" style="opacity:0.6;">Dokumentiere Meetings!</div>
+                                </div>`;
+                } else {
+                    p.innerHTML = recent.map(m => `
+                        <div class="card" style="padding:10px; margin:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="app.meetings.showAll()">
+                            <div style="font-weight:600; font-size:0.9rem;">${m.title}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="text-xs text-muted">${new Date(m.date).toLocaleDateString()}</div>
+                                <div class="text-xs text-muted" style="display:flex;gap:4px;"><i data-lucide="users" size="10"></i> ${m.attendees ? m.attendees.split(',').length : 0}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    // --- MEAL PLANNER MODULE (NEW) ---
+    meals: {
+        save(dayIndex, text) {
+            if (!app.state.meals) app.state.meals = new Array(7).fill('');
+            app.state.meals[dayIndex] = text;
+            app.saveState();
+        },
+        get(dayIndex) {
+            if (!app.state.meals) app.state.meals = new Array(7).fill('');
+            return app.state.meals[dayIndex] || '';
         }
     },
 
@@ -1226,9 +1328,14 @@ const app = {
         if (this.quickNotes) this.quickNotes.render();
         if (this.projects) this.projects.render();
         if (this.meetings) this.meetings.render();
-        if (this.dashboard) this.dashboard.applyOrder();
+        if (this.dashboard) {
+            this.dashboard.applyOrder();
+            this.dashboard.applyMode(); // Ensure mode visibility is applied
+        }
         if (window.lucide) lucide.createIcons();
     },
+
+
 
     startClock() {
         setInterval(() => {
@@ -3447,6 +3554,24 @@ const app = {
             return true;
         }
 
+        // 5. Journaling
+        if (text.startsWith('j ') || text.startsWith('journal ') || text.startsWith('tagebuch ')) {
+            const content = raw.substring(raw.indexOf(' ') + 1).trim();
+            if (content) {
+                if (!app.state.journal) app.state.journal = [];
+                app.state.journal.unshift({
+                    id: Date.now(),
+                    title: 'Gedanke',
+                    text: content,
+                    mood: '😌',
+                    date: new Date().toISOString()
+                });
+                app.saveState();
+                app.navigateTo('journal');
+                return true;
+            }
+        }
+
         // Default Case: Add as Task
         if (raw.length > 2) {
             app.tasks.add(finalTitle, false, 'todo');
@@ -4372,6 +4497,77 @@ const app = {
                     <button class="btn" style="width:100%; margin-top:20px;" onclick="app.modals.close()">Schließen</button>
                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
                 </div>`;
+            } else if (type === 'addMeeting') {
+                const today = new Date().toISOString().split('T')[0];
+                c.innerHTML = `
+                <div style="padding:20px;">
+                    <h3><i data-lucide="users-2"></i> Meeting Protokoll</h3>
+                    <div class="form-group">
+                        <label class="form-label">Titel / Thema</label>
+                        <input id="meetTitle" class="form-input" placeholder="z.B. Kickoff Projekt X">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Datum</label>
+                        <input type="date" id="meetDate" class="form-input" value="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teilnehmer</label>
+                        <input id="meetAttendees" class="form-input" placeholder="Namen, durch Komma getrennt">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notizen & Beschlüsse</label>
+                        <textarea id="meetNotes" class="form-input" rows="6" placeholder="Was wurde besprochen?"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="app.modals.submitMeeting()" style="width:100%; margin-top:10px;">Speichern</button>
+                </div>`;
+            } else if (type === 'viewMeetings') {
+                const ms = (app.state.meetings || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;" id="viewMeetingsList">
+                    <h3><i data-lucide="file-text"></i> Alle Protokolle</h3>
+                    ${ms.length === 0 ? '<div class="text-muted text-center p-4">Keine Einträge.</div>' : ''}
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${ms.map(m => `
+                            <div class="card" style="padding:15px; margin:0;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                    <div style="font-weight:bold;">${m.title}</div>
+                                    <div class="text-xs text-muted">${new Date(m.date).toLocaleDateString()}</div>
+                                </div>
+                                <div class="text-xs text-muted mb-2"><i data-lucide="users" size="10"></i> ${m.attendees || 'Keine Teilnehmer'}</div>
+                                <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; font-size:0.9rem; white-space:pre-wrap;">${m.notes}</div>
+                                <button class="btn-small" onclick="app.meetings.delete(${m.id})" style="margin-top:10px; background:rgba(239,68,68,0.1); color:var(--danger); border:none; width:100%;">
+                                    <i data-lucide="trash-2" size="14"></i> Löschen
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn" style="width:100%; margin-top:20px;" onclick="app.modals.close()">Schließen</button>
+                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                </div>`;
+            } else if (type === 'viewMealPlan') {
+                const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+                const meals = app.state.meals || new Array(7).fill('');
+
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <h3><i data-lucide="utensils" class="text-success"></i> Wochen-Menüplan</h3>
+                    <p class="text-muted text-sm mb-4">Was koche ich heute?</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        ${days.map((d, i) => `
+                            <div>
+                                <label class="text-xs text-muted" style="text-transform:uppercase; font-weight:600;">${d}</label>
+                                <div style="display:flex; gap:10px;">
+                                    <input type="text" class="form-input" value="${meals[i] || ''}" placeholder="Gericht planen..." 
+                                        onchange="app.meals.save(${i}, this.value)" style="border-left:3px solid var(--success);">
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <button class="btn" style="width:100%; margin-top:20px;" onclick="app.modals.close()">Fertig</button>
+                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                </div>`;
             } else if (type === 'addTeamMember') {
                 c.innerHTML = `<div style="padding:20px;"><h3>Mitarbeiter hinzufügen</h3><input id="teamMemberName" class="form-input" placeholder="Name"><button class="btn btn-primary" onclick="app.modals.submitTeamMember()" style="margin-top:10px;width:100%;">Hinzufügen</button></div>`;
             } else if (type === 'dailyStatus') {
@@ -4773,6 +4969,21 @@ const app = {
                     app.navigateTo('dashboard');
                     app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
                 }
+            }
+        },
+        submitMeeting() {
+            const title = document.getElementById('meetTitle').value;
+            const date = document.getElementById('meetDate').value;
+            if (title && date) {
+                const data = {
+                    title: title,
+                    date: date,
+                    attendees: document.getElementById('meetAttendees').value,
+                    notes: document.getElementById('meetNotes').value
+                };
+                app.meetings.save(data);
+            } else {
+                alert("Bitte Titel und Datum angeben.");
             }
         },
         submitExpense() {
@@ -5264,6 +5475,115 @@ const app = {
         }
     },
     dashboard: {
+        setMode(mode) {
+            app.state.ui.dashboardMode = mode;
+            app.saveState();
+            this.applyMode();
+            app.renderDashboard();
+        },
+        applyMode() {
+            const mode = app.state.ui.dashboardMode || 'business';
+            const btnBiz = document.getElementById('btnModeBusiness');
+            const btnPri = document.getElementById('btnModePrivate');
+
+            // Update Buttons
+            if (btnBiz && btnPri) {
+                if (mode === 'business') {
+                    btnBiz.classList.add('active');
+                    btnBiz.style.background = 'var(--primary)';
+                    btnBiz.style.color = 'white';
+                    btnPri.classList.remove('active');
+                    btnPri.style.background = 'transparent';
+                    btnPri.style.color = 'var(--text-muted)';
+                } else {
+                    btnPri.classList.add('active');
+                    btnPri.style.background = 'var(--primary)';
+                    btnPri.style.color = 'white';
+                    btnBiz.classList.remove('active');
+                    btnBiz.style.background = 'transparent';
+                    btnBiz.style.color = 'var(--text-muted)';
+                }
+            }
+
+            // Update UI Indicators
+            const statusPill = document.querySelector('.status-pill');
+            if (statusPill) {
+                statusPill.innerHTML = `<span class="status-dot"></span> ${mode === 'business' ? 'Business OS' : 'Privat Modus'}`;
+            }
+            document.body.classList.remove('mode-business', 'mode-private');
+            document.body.classList.add(`mode-${mode}`);
+
+            // Define which cards belong to which mode
+            const businessItems = [
+                'dashboardProjectsCard',
+                'dashboardCommunicationCard',
+                'dashboardFinanceCard',
+                'dashboardMeetingsCard',
+                'dashboardDriveCard',
+                'dashboardTimeTrackerCard',
+                'dashboardSearchCard',
+                // Sidebar items
+                'cat-business',
+                'nav-projects',
+                'nav-contacts',
+                'nav-finance',
+                'nav-meetings',
+                'nav-drive',
+                'nav-team'
+            ];
+
+            const privateItems = [
+                'dashboardTasksCard',
+                'dashboardShoppingCard',
+                'dashboardHabitsCard',
+                'dashboardHealthCard',
+                'dashboardMealPlanCard',
+                'dashboardHouseholdCard',
+                'dashboardJournalCard',
+                'dashboardShortcutsCard',
+                'dashboardNotesCard',
+                'dashboardAlarmsCard',
+                // Sidebar items
+                'cat-private',
+                'nav-tasks',
+                'nav-habits',
+                'nav-household',
+                'nav-journal',
+                'nav-shopping',
+                'nav-health',
+                'nav-alarms',
+                'nav-tools'
+            ];
+
+            // Always visible
+            const sharedItems = [
+                'dashboardEventsCard',
+                'dashboardStatusCard',
+                'dashboardAiCard',
+                'cat-general',
+                'nav-dashboard',
+                'nav-calendar'
+            ];
+
+            // Hide/Show based on mode
+            businessItems.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (mode === 'business') ? (el.tagName === 'A' || el.classList.contains('nav-category') ? 'flex' : 'flex') : 'none';
+            });
+
+            privateItems.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (mode === 'private') ? (el.tagName === 'A' || el.classList.contains('nav-category') ? 'flex' : 'flex') : 'none';
+            });
+
+            sharedItems.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'flex';
+            });
+
+            // Re-apply visibility for individual cards (user preference)
+            this.applyVisibility();
+        },
         initDragAndDrop() {
             const grid = document.querySelector('.dashboard-grid');
             if (!grid) return;
@@ -5331,7 +5651,8 @@ const app = {
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
-                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard'
+                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
+                'dashboardHouseholdCard', 'dashboardJournalCard'
             ];
 
             allCards.forEach(id => {
@@ -5719,6 +6040,171 @@ const app = {
                 </div>
             `).join('');
 
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    // --- HOUSEHOLD MODULE (UPGRADED) ---
+    household: {
+        add() {
+            const name = prompt('🧹 Haushalts-Aufgabe (z.B. Staubsaugen, Müll, Heizungswartung):');
+            if (!name || !name.trim()) return;
+
+            const freq = prompt('Wiederholung (keine, wöchentlich, monatlich, jährlich):', 'wöchentlich');
+
+            if (!app.state.household) app.state.household = [];
+            app.state.household.push({
+                id: Date.now(),
+                name: name.trim(),
+                frequency: freq || 'keine',
+                lastDone: null,
+                createdAt: new Date().toISOString()
+            });
+
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+            app.gamification.addXP(10);
+        },
+
+        toggleDone(id) {
+            const item = app.state.household.find(h => h.id === id);
+            if (item) {
+                item.lastDone = new Date().toISOString();
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+                app.gamification.addXP(20);
+                if (window.confetti) confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+            }
+        },
+
+        delete(id) {
+            if (confirm('Aufgabe wirklich löschen?')) {
+                app.state.household = app.state.household.filter(h => h.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
+
+        render() {
+            const list = document.getElementById('householdTasksList');
+            if (list) {
+                const items = app.state.household || [];
+                if (items.length === 0) {
+                    list.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben geplant. Alles sauber! ✨</div>';
+                } else {
+                    list.innerHTML = items.map(h => {
+                        const lastDoneText = h.lastDone ? new Date(h.lastDone).toLocaleDateString('de-DE') : 'Noch nie';
+                        return `
+                            <div class="task-item" style="border-left: 3px solid var(--success);">
+                                <div style="display:flex; align-items:center; gap:12px; width:100%;">
+                                    <div class="checkbox-circle" onclick="app.household.toggleDone(${h.id})"></div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;">${h.name}</div>
+                                        <div class="text-xs text-muted">Turnus: ${h.frequency} • Erledigt am: ${lastDoneText}</div>
+                                    </div>
+                                    <button class="btn" onclick="app.household.delete(${h.id})" style="opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Dashboard Preview
+            const preview = document.getElementById('dashboardHouseholdPreview');
+            if (preview) {
+                const items = (app.state.household || []).slice(0, 3);
+                if (items.length === 0) {
+                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
+                } else {
+                    preview.innerHTML = items.map(h => `
+                        <div style="font-size:0.85rem; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                            <span>${h.name}</span>
+                            <span class="text-xs text-muted">${h.frequency === 'keine' ? '' : h.frequency}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+    },
+
+    // --- JOURNAL MODULE ---
+    journal: {
+        add() {
+            const title = prompt('📖 Journal-Titel (z.B. Dankbarkeit, Gedanken, Erfolg):');
+            if (!title || !title.trim()) return;
+
+            const text = prompt('Was bewegt dich gerade?');
+            if (!text || !text.trim()) return;
+
+            const mood = prompt('Deine Stimmung (😀, 😎, 😌, 😤, 😔):', '😌');
+
+            if (!app.state.journal) app.state.journal = [];
+            app.state.journal.unshift({
+                id: Date.now(),
+                title: title.trim(),
+                text: text.trim(),
+                mood: mood || '😌',
+                date: new Date().toISOString()
+            });
+
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+            app.gamification.addXP(25);
+        },
+
+        delete(id) {
+            if (confirm('Eintrag wirklich löschen?')) {
+                app.state.journal = app.state.journal.filter(j => j.id !== id);
+                app.saveState();
+                this.render();
+                app.renderDashboard();
+            }
+        },
+
+        render() {
+            const list = document.getElementById('journalEntriesList');
+            if (list) {
+                const entries = app.state.journal || [];
+                if (entries.length === 0) {
+                    list.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:40px;">Noch keine Einträge. Starte dein Journal heute! ✨</div>';
+                } else {
+                    list.innerHTML = entries.map(j => `
+                        <div class="card" style="background:rgba(255,255,255,0.03); cursor:default;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                                <div>
+                                    <div style="font-weight:700; font-size:1.1rem; color:var(--accent);">${j.mood} ${j.title}</div>
+                                    <div class="text-xs text-muted">${new Date(j.date).toLocaleString('de-DE')}</div>
+                                </div>
+                                <button class="btn" onclick="app.journal.delete(${j.id})" style="opacity:0.4;"><i data-lucide="trash-2" size="14"></i></button>
+                            </div>
+                            <div style="font-size:0.95rem; line-height:1.5; white-space:pre-wrap;">${j.text}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Dashboard Preview
+            const preview = document.getElementById('dashboardJournalPreview');
+            if (preview) {
+                const entries = (app.state.journal || []).slice(0, 1);
+                if (entries.length === 0) {
+                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Halte deine Gedanken fest...</div>';
+                } else {
+                    preview.innerHTML = entries.map(j => `
+                        <div style="padding:5px;">
+                            <div style="font-weight:600; font-size:0.9rem;">${j.mood} ${j.title}</div>
+                            <div class="text-xs text-muted" style="margin-bottom:5px;">${new Date(j.date).toLocaleDateString()}</div>
+                            <div class="text-sm text-muted" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${j.text}</div>
+                        </div>
+                    `).join('');
+                }
+            }
             if (window.lucide) lucide.createIcons();
         }
     }

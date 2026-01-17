@@ -127,23 +127,36 @@
                 </div>
             </div>
 
-            <div class="nav-category">Planen</div>
-            <a class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-            <a class="nav-item" data-page="tasks"><i data-lucide="check-square"></i> Aufgaben & To-Do</a>
-            <a class="nav-item" data-page="shopping"><i data-lucide="shopping-cart"></i> Einkauf</a>
-            <a class="nav-item" data-page="calendar"><i data-lucide="calendar"></i> Kalender</a>
-            <a class="nav-item" data-page="habits"><i data-lucide="flame"></i> Gewohnheiten</a>
+            <div id="cat-general" class="nav-category">Planen</div>
+            <a id="nav-dashboard" class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i>
+                Dashboard</a>
+            <a id="nav-calendar" class="nav-item" data-page="calendar"><i data-lucide="calendar"></i> Kalender</a>
 
-            <div class="nav-category">Kommunikation</div>
-            <a class="nav-item" data-page="team"><i data-lucide="users"></i> Team Planer</a>
-            <a class="nav-item" data-page="contacts"><i data-lucide="user-circle-2"></i> Kontakte</a>
+            <div id="cat-business" class="nav-category">Business OS</div>
+            <a id="nav-projects" class="nav-item" data-page="projects"
+                onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardProjectsCard').scrollIntoView({behavior:'smooth'}), 100)"><i
+                    data-lucide="briefcase"></i> Projekte</a>
+            <a id="nav-contacts" class="nav-item" data-page="contacts"><i data-lucide="user-circle-2"></i> Kontakte
+                (CRM)</a>
+            <a id="nav-finance" class="nav-item" data-page="finance"><i data-lucide="wallet"></i> Finanzen</a>
+            <a id="nav-meetings" class="nav-item" data-page="meetings"
+                onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardMeetingsCard').scrollIntoView({behavior:'smooth'}), 100)"><i
+                    data-lucide="users-2"></i> Meetings</a>
+            <a id="nav-drive" class="nav-item" data-page="drive"><i data-lucide="car"></i> Fahrt-Modus</a>
+            <a id="nav-team" class="nav-item" data-page="team"><i data-lucide="users"></i> Team Planer</a>
 
-            <div class="nav-category">Tools</div>
-            <a class="nav-item" data-page="drive"><i data-lucide="car"></i> Fahrt-Modus</a>
-            <a class="nav-item" onclick="app.modals.open('setAlarm')"><i data-lucide="alarm-clock"></i> Wecker</a>
-            <a class="nav-item" data-page="tools"><i data-lucide="grid"></i> Tools</a>
-            <a class="nav-item" data-page="finance"><i data-lucide="wallet"></i> Finanzen</a>
-            <a class="nav-item" data-page="health"><i data-lucide="heart-pulse"></i> Gesundheit</a>
+            <div id="cat-private" class="nav-category">Privat</div>
+            <a id="nav-tasks" class="nav-item" data-page="tasks"><i data-lucide="check-square"></i> Aufgaben & To-Do</a>
+            <a id="nav-habits" class="nav-item" data-page="habits"><i data-lucide="flame"></i> Gewohnheiten</a>
+            <a id="nav-household" class="nav-item" data-page="household"
+                onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardHouseholdCard').scrollIntoView({behavior:'smooth'}), 100)"><i
+                    data-lucide="home"></i> Haushalt</a>
+            <a id="nav-journal" class="nav-item" data-page="journal"><i data-lucide="book-open"></i> Journal</a>
+            <a id="nav-shopping" class="nav-item" data-page="shopping"><i data-lucide="shopping-cart"></i> Einkauf</a>
+            <a id="nav-health" class="nav-item" data-page="health"><i data-lucide="heart-pulse"></i> Gesundheit</a>
+            <a id="nav-alarms" class="nav-item" onclick="app.modals.open('setAlarm')"><i data-lucide="alarm-clock"></i>
+                Wecker</a>
+            <a id="nav-tools" class="nav-item" data-page="tools"><i data-lucide="grid"></i> Tools</a>
 
             <div style="margin-top: auto;">
 
@@ -165,9 +178,22 @@
                         <i data-lucide="menu"></i>
                         <span style="font-size: 24px; position:absolute; opacity:0; pointer-events:none;">☰</span>
                     </button>
+                    <!-- Dashboard Mode Switcher -->
+                    <div class="dash-mode-switcher"
+                        style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-right: 10px;">
+                        <button id="btnModeBusiness" class="mode-btn active" onclick="app.dashboard.setMode('business')"
+                            style="padding: 6px 15px; border-radius: 16px; border: none; background: var(--primary); color: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
+                            <i data-lucide="briefcase" size="14"></i> Business
+                        </button>
+                        <button id="btnModePrivate" class="mode-btn" onclick="app.dashboard.setMode('private')"
+                            style="padding: 6px 15px; border-radius: 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
+                            <i data-lucide="user" size="14"></i> Privat
+                        </button>
+                    </div>
+
                     <!-- Top Smart Command Bar -->
                     <div class="top-command-field"
-                        style="flex: 1; max-width: 320px; position: relative; display: flex; align-items: center;">
+                        style="flex: 1; max-width: 250px; position: relative; display: flex; align-items: center;">
                         <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
                         <input type="text" id="smartInput" placeholder="Was tun?"
                             onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
@@ -248,8 +274,8 @@
 
 
 
-                        <div id="dashboardCommunicationCard" class="card dash-card card-communication"
-                            style="grid-column: span 1; order: 10;" draggable="true">
+                        <div id="dashboardCommunicationCard" class="card dash-card card-communication card-medium"
+                            style="grid-column: span 2; order: 10;" draggable="true">
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
@@ -278,8 +304,8 @@
                             </div>
                         </div>
 
-                        <div id="dashboardSearchCard" class="card dash-card"
-                            style="grid-column: span 1; order: 15; background: linear-gradient(135deg, rgba(30,30,30,0.8), rgba(10,10,10,0.95));"
+                        <div id="dashboardSearchCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 15; background: linear-gradient(135deg, rgba(30,30,30,0.8), rgba(10,10,10,0.95));"
                             draggable="true">
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <span class="card-title"><i data-lucide="scan-search" class="text-primary"></i> Business
@@ -306,8 +332,8 @@
                             </div>
                         </div>
 
-                        <div id="dashboardStatusCard" class="card dash-card"
-                            style="grid-column: span 1; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer; order: 20;"
+                        <div id="dashboardStatusCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer; order: 20;"
                             onclick="app.modals.open('dailyStatus')" draggable="true">
                             <div
                                 style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -320,7 +346,7 @@
                         </div>
 
                         <!-- 2.5 AI INSIGHTS -->
-                        <div id="dashboardAiCard" class="card dash-card"
+                        <div id="dashboardAiCard" class="card dash-card card-medium"
                             style="grid-column: span 2; padding: 15px; order: 25; border-left: 2px solid var(--accent); background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(255,255,255,0.02) 100%);"
                             draggable="true">
                             <div class="card-header" style="margin-bottom: 10px;">
@@ -340,7 +366,7 @@
                         </div>
 
                         <!-- 3. HERO: Termine (Consolidated Window) -->
-                        <div class="card dash-card" id="dashboardEventsCard"
+                        <div class="card dash-card card-medium" id="dashboardEventsCard"
                             style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
                             <div class="card-header" style="margin-bottom: 12px;">
                                 <span class="card-title"
@@ -356,7 +382,8 @@
                         </div>
 
                         <!-- 4. TASKS & EINKAUF (Parallel) -->
-                        <div id="dashboardTasksCard" class="card dash-card" style="grid-column: span 1; order: 40;"
+                        <div id="dashboardTasksCard" class="card dash-card card-mini"
+                            style="grid-column: span 1; order: 100;"
                             onclick="app.tasks.filter('todo'); app.navigateTo('tasks')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
@@ -368,7 +395,8 @@
                             <div id="dashboardTaskPreview"></div>
                         </div>
 
-                        <div id="dashboardShoppingCard" class="card dash-card" style="grid-column: span 1; order: 50;"
+                        <div id="dashboardShoppingCard" class="card dash-card card-mini"
+                            style="grid-column: span 1; order: 101;"
                             onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
@@ -381,8 +409,8 @@
                         </div>
 
                         <!-- 5. GESUNDHEIT & HABITS (Tracking) -->
-                        <div class="card dash-card" style="grid-column: span 1; order: 60;" id="dashboardHealthCard"
-                            draggable="true">
+                        <div class="card dash-card card-mini" style="grid-column: span 1; order: 37;"
+                            id="dashboardHealthCard" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="heart"></i> Vitalität</span>
                                 <button onclick="event.stopPropagation(); app.navigateTo('health');"
@@ -392,8 +420,8 @@
                             <div id="dashboardHealthPreview"></div>
                         </div>
 
-                        <div id="dashboardHabitsCard" class="card dash-card" style="grid-column: span 1; order: 70;"
-                            onclick="app.navigateTo('habits')" draggable="true">
+                        <div id="dashboardHabitsCard" class="card dash-card card-mini"
+                            style="grid-column: span 1; order: 38;" onclick="app.navigateTo('habits')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="flame"></i> Routinen</span>
                             </div>
@@ -401,8 +429,9 @@
                         </div>
 
                         <!-- 6. FINANZEN & WECKER (Utilities) -->
-                        <div id="dashboardFinanceCard" class="card dash-card" style="grid-column: span 1; order: 80;"
-                            onclick="app.navigateTo('finance')" draggable="true">
+                        <div id="dashboardFinanceCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 39;" onclick="app.navigateTo('finance')"
+                            draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
@@ -424,8 +453,8 @@
                             </div>
                         </div>
 
-                        <div class="card dash-card" style="grid-column: span 1; order: 90;" id="dashboardAlarmsCard"
-                            onclick="app.modals.open('setAlarm')" draggable="true">
+                        <div class="card dash-card card-medium" style="grid-column: span 2; order: 104;"
+                            id="dashboardAlarmsCard" onclick="app.modals.open('setAlarm')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="alarm-clock" class="text-secondary"></i>
                                     Wecker</span>
@@ -437,8 +466,9 @@
                         </div>
 
                         <!-- 7. BOTTOM TOOLS: Drive & Apps Pay -->
-                        <div id="dashboardDriveCard" class="card dash-card" style="grid-column: span 1; order: 100;"
-                            onclick="app.actions.toggleDriveMode()" draggable="true">
+                        <div id="dashboardDriveCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 51;" onclick="app.actions.toggleDriveMode()"
+                            draggable="true">
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div
                                     style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
@@ -451,8 +481,8 @@
                             </div>
                         </div>
 
-                        <div id="dashboardShortcutsCard" class="card dash-card" style="grid-column: span 1; order: 110;"
-                            draggable="true">
+                        <div id="dashboardShortcutsCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 180;" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="layers" class="text-primary"></i> Apps &
                                     Links</span>
@@ -468,8 +498,8 @@
                         <!-- NEW BUSINESS PRODUCTIVITY CARDS -->
 
                         <!-- Time Tracker Card -->
-                        <div id="dashboardTimeTrackerCard" class="card dash-card"
-                            style="grid-column: span 1; order: 120; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02));"
+                        <div id="dashboardTimeTrackerCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 21; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02));"
                             draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="clock" class="text-success"></i>
@@ -490,8 +520,8 @@
                         </div>
 
                         <!-- Quick Notes Card -->
-                        <div id="dashboardNotesCard" class="card dash-card"
-                            style="grid-column: span 1; order: 130; background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));"
+                        <div id="dashboardNotesCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 105; background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));"
                             draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="sticky-note" class="text-accent"></i>
@@ -507,8 +537,8 @@
                         </div>
 
                         <!-- Projects Card - PROFESSIONAL UPGRADE -->
-                        <div id="dashboardProjectsCard" class="card dash-card"
-                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.03)); border-left: 3px solid #8b5cf6;"
+                        <div id="dashboardProjectsCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 40; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.03)); border-left: 3px solid #8b5cf6;"
                             draggable="true">
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -546,8 +576,8 @@
                         </div>
 
                         <!-- Meeting Notes Card - PROFESSIONAL UPGRADE -->
-                        <div id="dashboardMeetingsCard" class="card dash-card"
-                            style="grid-column: span 2; order: 150; background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(219, 39, 119, 0.03)); border-left: 3px solid #ec4899;"
+                        <div id="dashboardMeetingsCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 60; background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(219, 39, 119, 0.03)); border-left: 3px solid #ec4899;"
                             draggable="true">
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -581,6 +611,59 @@
                                     <div class="text-xs" style="opacity: 0.6; margin-top: 5px;">Dokumentiere dein
                                         nächstes Meeting!</div>
                                 </div>
+                            </div>
+                        </div>
+
+
+                        <!-- HOUSEHOLD CARD (Private Only) -->
+                        <div id="dashboardHouseholdCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02)); display:none;"
+                            onclick="app.navigateTo('household')" draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="home" class="text-success"></i> Haushalt</span>
+                                <button class="btn-small" onclick="event.stopPropagation(); app.household.add()">
+                                    <i data-lucide="plus" size="14"></i>
+                                </button>
+                            </div>
+                            <div id="dashboardHouseholdPreview" style="padding: 10px 0;">
+                                <div class="text-muted text-sm" style="text-align: center;">Keine anstehenden Aufgaben
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JOURNAL CARD (Private Only) -->
+                        <div id="dashboardJournalCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.02)); display:none;"
+                            onclick="app.navigateTo('journal')" draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="book-open" class="text-accent"></i> Journal &
+                                    Me-Time</span>
+                                <button class="btn-small" onclick="event.stopPropagation(); app.journal.add()">
+                                    <i data-lucide="plus" size="14"></i>
+                                </button>
+                            </div>
+                            <div id="dashboardJournalPreview" style="padding: 10px 0;">
+                                <div class="text-muted text-sm" style="text-align: center;">Halte deine Gedanken fest...
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MEAL PLAN CARD (Private Only) -->
+                        <div id="dashboardMealPlanCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02)); display:none;"
+                            onclick="app.modals.open('viewMealPlan')" draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="utensils" class="text-accent"></i>
+                                    Wochenmenü</span>
+                                <button class="btn-small"
+                                    onclick="event.stopPropagation(); app.modals.open('viewMealPlan')">
+                                    <i data-lucide="chevron-right" size="14"></i>
+                                </button>
+                            </div>
+                            <div id="dashboardMealPlanPreview" style="padding: 10px 0;">
+                                <div id="todayMealText"
+                                    style="font-weight: 600; text-align: center; margin-bottom: 5px;">Heute: --</div>
+                                <div class="text-muted text-xs" style="text-align: center;">Klicke für Wochenplan</div>
                             </div>
                         </div>
 
@@ -733,10 +816,16 @@
                             <h1 style="margin-bottom: 5px; color: var(--success);">Einkauf & Besorgungen</h1>
                             <p class="text-muted text-sm" style="margin: 0;">Alles für deinen Einkauf</p>
                         </div>
-                        <button class="btn-primary" onclick="app.modals.open('addTask', { category: 'shopping' })"
-                            style="background: var(--success);">
-                            <i data-lucide="plus"></i> Einkauf hinzufügen
-                        </button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn" onclick="app.modals.open('viewMealPlan')"
+                                style="background:rgba(34, 197, 94, 0.1); border:1px solid rgba(34, 197, 94, 0.2); color:white;">
+                                <i data-lucide="utensils"></i> Wochenplan
+                            </button>
+                            <button class="btn-primary" onclick="app.modals.open('addTask', { category: 'shopping' })"
+                                style="background: var(--success);">
+                                <i data-lucide="plus"></i> Einkauf hinzufügen
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Filter Tabs (Shopping Only) -->
@@ -758,6 +847,44 @@
                     <div class="card">
                         <div id="shoppingListContainer" style="display: flex; flex-direction: column; gap: 8px;">
                             <!-- Shopping Items will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOUSEHOLD VIEW -->
+                <div id="view-household" class="view-section hidden">
+                    <div class="card-header">
+                        <h1>Haushalts-Management</h1>
+                        <button class="btn-primary" onclick="app.household.add()"><i data-lucide="plus"></i>
+                            Aufgabe</button>
+                    </div>
+                    <p class="text-muted">Putzplan, Wartungen & Abfallkalender</p>
+
+                    <div class="dashboard-grid" style="margin-top:20px;">
+                        <div class="card" style="grid-column: span 2;">
+                            <h3>Anstehende Aufgaben</h3>
+                            <div id="householdTasksList"
+                                style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JOURNAL VIEW -->
+                <div id="view-journal" class="view-section hidden">
+                    <div class="card-header">
+                        <h1>Mein Journal</h1>
+                        <button class="btn-primary" onclick="app.journal.add()"><i data-lucide="plus"></i>
+                            Eintrag</button>
+                    </div>
+                    <p class="text-muted">Platz für Gedanken, Dankbarkeit & Me-Time</p>
+
+                    <div class="dashboard-grid" style="margin-top:20px;">
+                        <div class="card" style="grid-column: span 2;">
+                            <div id="journalEntriesList" style="display:flex; flex-direction:column; gap:15px;">
+                                <!-- Injected by JS -->
+                            </div>
                         </div>
                     </div>
                 </div>

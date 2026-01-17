@@ -140,8 +140,23 @@ svg {
     z-index: 1000;
 }
 
+/* Mode Specific Styling */
+body.mode-business {
+    --primary: #3b82f6;
+    /* Blue for Business */
+    --primary-glow: rgba(59, 130, 246, 0.3);
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent), #000;
+}
+
+body.mode-private {
+    --primary: #10b981;
+    /* Green for Private */
+    --primary-glow: rgba(16, 185, 129, 0.3);
+    background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.05), transparent), #000;
+}
+
 .dash-card {
-    transition: order var(--transition-slow), transform var(--transition-base);
+    transition: order var(--transition-slow), transform var(--transition-base), opacity 0.3s ease;
 }
 
 .pulse-sync {
@@ -327,25 +342,43 @@ h4 {
     box-shadow: var(--shadow-md);
 }
 
-/* Dashboard Grid */
+/* Dashboard Grid - Pro 4-Column Layout */
 .dashboard-grid {
     display: grid;
-    /* Max 2 columns on desktop (1fr 1fr), but also responsive */
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Granular 4-column grid for precise layout control */
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: min-content;
     gap: var(--spacing-md);
-    /* Reduced gap */
-    padding-bottom: 80px;
-    /* Space for mobile nav */
-    max-width: 100%;
-    /* Prevent overflow */
+    padding-bottom: 120px;
     width: 100%;
-    /* Full width of container */
     margin: 0 auto;
     box-sizing: border-box;
-    /* Include padding in width calculation */
+    align-items: stretch;
 }
 
-/* Single Column Mode (User Preference) */
+/* Specific Card Width Helper Classes */
+.card-mini {
+    grid-column: span 1 !important;
+    padding: var(--spacing-md) !important;
+}
+
+.card-mini .card-title {
+    font-size: 0.75rem;
+}
+
+.card-mini .card-value {
+    font-size: 2.2rem;
+}
+
+.card-medium {
+    grid-column: span 2 !important;
+}
+
+.card-wide {
+    grid-column: span 4 !important;
+}
+
+/* Single Column Mode (User Preference or Small Screens) */
 .dashboard-grid.single-column-mode {
     grid-template-columns: 1fr !important;
 }
@@ -361,16 +394,21 @@ h4 {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
-    transition: all var(--transition-base);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), opacity 0.3s ease;
     position: relative;
     overflow: hidden;
+    /* Prevent content spillover */
     box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    /* Webkit fix for grid items */
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-lg), 0 0 20px var(--primary-glow);
     background: linear-gradient(145deg, rgba(30, 30, 33, 0.95), rgba(15, 15, 17, 0.98));
 }
 
@@ -381,6 +419,7 @@ h4 {
     align-items: center;
     margin-bottom: var(--spacing-md);
     gap: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 .card-title {
@@ -436,7 +475,18 @@ h4 {
     z-index: 100;
 }
 
-/* Responsive adjustments */
+/* --- RESPONSIVE ADJUSTMENTS --- */
+
+/* Tablets & Small Desktops (Switch to 2 columns) */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* On 2-col, 'mini' cards (span 1) take half width, which is fine */
+}
+
+/* Medium Tablets & Mobile (Up to 768px) */
 @media (max-width: 768px) {
     .sidebar {
         display: none;
@@ -446,198 +496,226 @@ h4 {
         display: flex;
     }
 
-    /* Mobile Layout Adjustments */
     .main-content {
-        padding: 12px;
-        /* Reduced padding for mobile */
+        padding: 16px;
         padding-bottom: 100px;
-        /* Extra space for mobile nav */
+        /* Space for mobile nav */
     }
 
     .dashboard-grid {
-        /* Keep 2 columns by default (respects user preference) */
         gap: 12px;
         padding-bottom: 100px;
-        /* Extra space for mobile nav */
     }
 
-    /* Single column mode when user selects it */
-    .dashboard-grid.single-column-mode {
+    /* Keep 2 columns on tablets unless single-mode is on */
+    .dashboard-grid:not(.single-column-mode) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Small Mobile Devices (Up to 600px) */
+@media (max-width: 600px) {
+    .dashboard-grid {
         grid-template-columns: 1fr !important;
     }
 
-    /* All cards span full width ONLY in single-column mode */
-    .dashboard-grid.single-column-mode>.card {
+    .dashboard-grid>.card {
         grid-column: span 1 !important;
-        max-width: 100%;
     }
 
-    /* Ensure cards don't overflow */
-    .card {
-        padding: 14px;
-        /* Slightly reduced padding for mobile */
-        overflow: visible;
-        /* Ensure content is visible */
-    }
-
-    /* Card titles smaller on mobile */
-    .card-title {
-        font-size: 0.85rem;
-    }
-
-    .card-value {
-        font-size: 1.5rem;
-        /* Smaller values on mobile */
-    }
-
-    /* Top bar adjustments for mobile */
     .top-bar {
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
     }
 
     .top-command-field {
-        flex: 1;
-        min-width: 200px;
+        max-width: none;
+        width: 100%;
     }
 
     .top-actions {
-        gap: 6px;
+        justify-content: space-between;
+        width: 100%;
     }
 
-    .icon-btn {
-        width: 36px;
-        height: 36px;
-    }
-
-    /* Hero clock adjustments */
     .hero-clock-card {
-        margin: -12px -12px 12px -12px !important;
+        margin: -16px -16px 16px -16px !important;
+        border-radius: 0 0 20px 20px;
     }
 
     .clock-large {
-        font-size: 2.5rem !important;
+        font-size: 2.8rem !important;
+    }
+}
+
+/* Single Column Mode Override */
+.dashboard-grid.single-column-mode {
+    grid-template-columns: 1fr !important;
+}
+
+.dashboard-grid.single-column-mode>.card {
+    grid-column: span 1 !important;
+}
+
+
+/* Card titles smaller on mobile */
+.card-title {
+    font-size: 0.85rem;
+}
+
+.card-value {
+    font-size: 1.5rem;
+    /* Smaller values on mobile */
+}
+
+/* Top bar adjustments for mobile */
+.top-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.top-command-field {
+    flex: 1;
+    min-width: 200px;
+}
+
+.top-actions {
+    gap: 6px;
+}
+
+.icon-btn {
+    width: 36px;
+    height: 36px;
+}
+
+/* Hero clock adjustments */
+.hero-clock-card {
+    margin: -12px -12px 12px -12px !important;
+}
+
+.clock-large {
+    font-size: 2.5rem !important;
+}
+
+/* Calendar grid mobile optimization */
+.calendar-day {
+    min-height: 60px;
+    padding: 4px;
+    font-size: 0.75rem;
+}
+
+.day-number {
+    font-size: 0.9rem;
+}
+
+.event-marker {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+}
+
+.nav-item-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    gap: 4px;
+    flex: 1;
+}
+
+.nav-item-mobile.active {
+    color: var(--primary);
+}
+
+.nav-item-mobile.active i {
+    filter: drop-shadow(0 0 5px var(--primary-glow));
+}
+
+.nav-voice-center {
+    position: relative;
+    width: 60px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 101;
+}
+
+.voice-inner {
+    width: 54px;
+    height: 54px;
+    background: var(--primary);
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 10px;
+    box-shadow: 0 0 20px var(--primary-glow);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.voice-inner:active {
+    transform: scale(0.9) translateY(2px);
+}
+
+.voice-inner i {
+    filter: none !important;
+}
+
+/* Voice Listening Active Glow */
+.voice-listening-active .voice-inner {
+    background: #3b82f6 !important;
+    /* Blue background */
+    color: #fff !important;
+    box-shadow: 0 0 25px #3b82f6, 0 0 50px rgba(59, 130, 246, 0.4);
+    animation: pulse-blue-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-blue-glow {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 20px #3b82f6;
     }
 
-    /* Calendar grid mobile optimization */
-    .calendar-day {
-        min-height: 60px;
-        padding: 4px;
-        font-size: 0.75rem;
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 35px #3b82f6, 0 0 60px rgba(59, 130, 246, 0.6);
     }
 
-    .day-number {
-        font-size: 0.9rem;
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 20px #3b82f6;
     }
+}
 
-    .event-marker {
-        font-size: 0.65rem;
-        padding: 2px 4px;
-    }
+/* Form inputs mobile optimization */
+.form-input {
+    font-size: 16px !important;
+    /* Prevents zoom on iOS */
+}
 
-    .nav-item-mobile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        background: none;
-        border: none;
-        gap: 4px;
-        flex: 1;
-    }
+/* Modal adjustments for mobile */
+#modalContent {
+    width: 95% !important;
+    max-height: 90vh;
+    overflow-y: auto;
+}
 
-    .nav-item-mobile.active {
-        color: var(--primary);
-    }
+/* Button adjustments for mobile */
+.btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+}
 
-    .nav-item-mobile.active i {
-        filter: drop-shadow(0 0 5px var(--primary-glow));
-    }
-
-    .nav-voice-center {
-        position: relative;
-        width: 60px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 101;
-    }
-
-    .voice-inner {
-        width: 54px;
-        height: 54px;
-        background: var(--primary);
-        color: #000;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        bottom: 10px;
-        box-shadow: 0 0 20px var(--primary-glow);
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .voice-inner:active {
-        transform: scale(0.9) translateY(2px);
-    }
-
-    .voice-inner i {
-        filter: none !important;
-    }
-
-    /* Voice Listening Active Glow */
-    .voice-listening-active .voice-inner {
-        background: #3b82f6 !important;
-        /* Blue background */
-        color: #fff !important;
-        box-shadow: 0 0 25px #3b82f6, 0 0 50px rgba(59, 130, 246, 0.4);
-        animation: pulse-blue-glow 1.5s infinite ease-in-out;
-    }
-
-    @keyframes pulse-blue-glow {
-        0% {
-            transform: scale(1);
-            box-shadow: 0 0 20px #3b82f6;
-        }
-
-        50% {
-            transform: scale(1.1);
-            box-shadow: 0 0 35px #3b82f6, 0 0 60px rgba(59, 130, 246, 0.6);
-        }
-
-        100% {
-            transform: scale(1);
-            box-shadow: 0 0 20px #3b82f6;
-        }
-    }
-
-    /* Form inputs mobile optimization */
-    .form-input {
-        font-size: 16px !important;
-        /* Prevents zoom on iOS */
-    }
-
-    /* Modal adjustments for mobile */
-    #modalContent {
-        width: 95% !important;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    /* Button adjustments for mobile */
-    .btn {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
-    }
-
-    .btn-small {
-        width: 28px;
-        height: 28px;
-    }
+.btn-small {
+    width: 28px;
+    height: 28px;
 }
 
 /* Utility Classes */
@@ -1429,6 +1507,12 @@ button {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
+}
+
+@media (max-width: 480px) {
+    .comm-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .comm-tile {
