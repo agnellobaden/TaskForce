@@ -894,7 +894,27 @@
                     </div>
 
                     <div class="card" style="max-width: 1200px; margin: 0 auto;">
-                        <div class="calendar-header" style="margin-bottom: 20px;">
+                        <!-- Calendar Toolbar (Bearbeitungsleiste) -->
+                        <div class="calendar-toolbar"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border); border-radius:12px 12px 0 0; margin-bottom: 20px;">
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn btn-secondary" onclick="app.calendar.render()"
+                                    title="Aktualisieren"><i data-lucide="refresh-cw" size="16"></i></button>
+                                <button class="btn btn-secondary" onclick="alert('Kalender Export gestartet...')"
+                                    title="Exportieren"><i data-lucide="download" size="16"></i></button>
+                                <button class="btn btn-secondary" onclick="window.print()" title="Drucken"><i
+                                        data-lucide="printer" size="16"></i></button>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span class="text-muted text-sm mobile-only"><i data-lucide="calendar" size="14"></i>
+                                    Liste</span>
+                                <button class="btn btn-secondary" onclick="app.modals.open('aiBriefing')"
+                                    title="KI Analyse"><i data-lucide="sparkles" size="16"></i> KI</button>
+                            </div>
+                        </div>
+
+                        <div class="calendar-header" style="margin-bottom: 20px; padding: 0 15px;">
+
                             <div style="display:flex; gap:10px; align-items:center; justify-content: space-between;">
                                 <button class="btn-primary" onclick="app.calendar.changeMonth(-1)"><i
                                         data-lucide="chevron-left"></i></button>

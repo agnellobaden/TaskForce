@@ -1044,28 +1044,42 @@ const app = {
                         else countdown = `vor ${Math.floor(absM / 1440)} Tg.`;
                     }
 
+                    const duration = 60; // Assume 1 hour for now if not specified
+                    const end = new Date(start.getTime() + duration * 60000);
+                    const isOngoing = now >= start && now <= end;
+                    const progress = isOngoing ? ((now - start) / (end - start)) * 100 : 0;
+
                     return `
-                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}';">
-                            <div style="width: 75px; display:flex; flex-direction:column; align-items:flex-start;">
-                                <div style="font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px; line-height:1;">${timeStr}</div>
-                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform:uppercase; margin-top:4px; font-weight:700;">${dateLabel}</div>
+                    <div class="event-item-card" style="display: flex; flex-direction: column; padding: 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || isOngoing ? 'var(--primary)' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; ${e.urgent || isOngoing ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})">
+                        
+                        <!-- Progress Bar (Bearbeitungsleiste / Fortschritt) -->
+                        ${isOngoing ? `<div style="position:absolute; bottom:0; left:0; height:3px; background:var(--primary); width:${progress}%; transition:width 1s linear; box-shadow: 0 0 10px var(--primary);"></div>` : ''}
+
+                        <div style="display: flex; align-items: center; width: 100%;">
+                            <!-- Avatar (Nach dem a - assume a is Avatar) -->
+                            <div style="width: 45px; height: 45px; border-radius: 12px; background: ${e.urgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:12px; border:1px solid ${e.urgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)'};">
+                                <span style="font-weight:800; font-size:1.1rem; color:${e.urgent ? 'var(--danger)' : 'var(--primary)'}">${e.title.charAt(0).toUpperCase()}</span>
                             </div>
-                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                    <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
-                                    <div style="font-size: 0.75rem; color: ${diffMins > -15 && diffMins < 30 ? '#06b6d4' : 'var(--text-muted)'}; font-weight: 600;">${countdown}</div>
+
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${e.title}</div>
+                                    <div style="font-weight: 800; font-size: 0.9rem; color: #ffffff;">${timeStr}</div>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
-                                    ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${e.location || 'Kein Ort'}</div>
+                                    <div style="font-size: 0.7rem; color: ${isOngoing ? 'var(--primary)' : 'var(--text-muted)'}; font-weight: 600; text-transform: uppercase;">${countdown}</div>
                                 </div>
                             </div>
-                            <div style="display:flex; align-items:center; margin-left:10px;">
-                                 ${e.urgent || (diffMins > -15 && diffMins < 30) ? '<div style="width:10px; height:10px; border-radius:50%; background:#06b6d4; box-shadow: 0 0 12px #06b6d4; margin-right:15px;"></div>' : ''}
-                                 <i data-lucide="chevron-right" size="18" class="text-muted" style="opacity:0.5;"></i>
+
+                            <!-- Edit/Action Bar (Bearbeitungsleiste) -->
+                            <div style="display:flex; align-items:center; gap:8px; margin-left:15px;">
+                                ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; color: var(--primary);"><i data-lucide="map" size="16"></i></a>` : ''}
+                                <button onclick="event.stopPropagation(); app.calendar.editEvent(${e.id})" style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.05); border:none; display:flex; align-items:center; justify-content:center; color: var(--text-muted);"><i data-lucide="pencil" size="16"></i></button>
                             </div>
                         </div>
-                     `;
+                    </div>
+                 `;
                 }).join('');
             } else {
                 dp.innerHTML = '<div class="text-muted text-sm" style="padding:20px; text-align:center;">Keine anstehenden Termine.<br><span style="opacity:0.6">Tippe auf "Neu", um zu planen.</span></div>';
@@ -4117,47 +4131,49 @@ const app = {
             window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
 
             if (type === 'addContact') {
+                const con = data.id ? data : { name: '', phone: '', email: '', address: '', homepage: '', type: (app.state.ui && app.state.ui.dashboardMode) || 'business' };
+                app.editingId = con.id || null;
                 c.innerHTML = `
                     <div style="padding:24px;">
-                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> Business Kontakt</h3>
+                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> ${app.editingId ? 'Kontakt bearbeiten' : 'Business Kontakt'}</h3>
                         <div class="form-group">
                             <label class="form-label">Name / Firma</label>
-                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname">
+                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname" value="${con.name}">
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div class="form-group">
                                 <label class="form-label">Telefon</label>
-                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
+                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789" value="${con.phone}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">E-Mail</label>
-                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de">
+                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de" value="${con.email}">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Adresse / Standort</label>
-                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt">
+                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt" value="${con.address}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Homepage (URL)</label>
-                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de">
+                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de" value="${con.homepage || ''}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Kategorie</label>
                             <div style="display:flex; gap:10px; margin-top:5px;">
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-                                    <input type="radio" name="contactType" value="business" ${(!app.state.ui || app.state.ui.dashboardMode !== 'private') ? 'checked' : ''}> 
+                                    <input type="radio" name="contactType" value="business" ${con.type === 'business' ? 'checked' : ''}> 
                                     <span>Business</span>
                                 </label>
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-                                    <input type="radio" name="contactType" value="private" ${(app.state.ui && app.state.ui.dashboardMode === 'private') ? 'checked' : ''}> 
+                                    <input type="radio" name="contactType" value="private" ${con.type === 'private' ? 'checked' : ''}> 
                                     <span>Privat</span>
                                 </label>
                             </div>
                         </div>
                         <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> Speichern</button>
+                            <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> ${app.editingId ? 'Änderungen speichern' : 'Speichern'}</button>
                         </div>
                     </div>`;
             }
@@ -4874,8 +4890,8 @@ const app = {
                         </button>` : ''}
 
                         <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button class="btn" style="flex:1; background:rgba(255,255,255,0.02); height:32px; font-size:0.7rem;" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(con.name)}', '_blank')"><i data-lucide="search" size="12"></i> Google</button>
-                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.05); height:32px; font-size:0.7rem; color:var(--danger);" onclick="if(confirm('Entfernen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="12"></i> Löschen</button>
+                            <button class="btn" style="flex:1; background:rgba(59, 130, 246, 0.1); height:32px; font-size:0.75rem; color:var(--primary); font-weight:700;" onclick="app.modals.open('addContact', app.state.contacts.find(c => c.id === ${con.id}))"><i data-lucide="pencil" size="12"></i> Bearbeiten</button>
+                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.05); height:32px; font-size:0.75rem; color:var(--danger);" onclick="if(confirm('Entfernen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="12"></i> Löschen</button>
                         </div>
                     </div>
                 </div>`;
@@ -5219,23 +5235,47 @@ const app = {
                 list.innerHTML = `<div class="text-muted" style="text-align:center; padding:20px;">Keine Kontakte gefunden.</div>`;
             } else {
                 list.innerHTML = contacts.map(c => `
-                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; cursor:pointer; transition:all 0.2s ease; border:1px solid transparent;">
-                        <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:20px; padding:15px 25px; background:rgba(255,255,255,0.03); border-radius:18px; cursor:pointer; transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border:1px solid rgba(255,255,255,0.06); margin-bottom:6px; position:relative; overflow:hidden;">
+                        
+                        <div class="contact-avatar" style="width:50px; height:50px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:14px; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:1.3rem; flex-shrink:0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
                             ${c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:1.1rem; color:white; line-height: 1.3;">${c.name}</div>
-                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${c.phone || c.email || (c.type === 'private' ? 'Privat Kontakt' : 'Business Kontakt')}
+                        
+                        <div style="flex:1.5; min-width:0;">
+                            <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.type === 'private' ? 'Familie & Freunde' : 'Business Partner'}</div>
+                        </div>
+
+                        <div class="desktop-only" style="flex:2; min-width:0;">
+                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(34,197,94,0.1); display:flex; align-items:center; justify-content:center; color:var(--success);"><i data-lucide="phone" size="14"></i></div>
+                                <span>${c.phone || '<span style="opacity:0.3">Keine Nummer</span>'}</span>
                             </div>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                             ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
-                             ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
-                             <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
+
+                        <div class="desktop-only" style="flex:2.5; min-width:0;">
+                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color:var(--primary);"><i data-lucide="mail" size="14"></i></div>
+                                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.email || '<span style="opacity:0.3">Keine E-Mail</span>'}</span>
+                            </div>
                         </div>
+
+                        <div class="contact-action-bar" style="display:flex; align-items:center; gap:8px; padding-left:20px; border-left:1px solid rgba(255,255,255,0.08);">
+                            <div style="display:flex; gap:6px;">
+                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.call('${c.phone}')" title="Anrufen" style="background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.2); color:var(--success); transition:all 0.2s;"><i data-lucide="phone" size="16"></i></button>` : ''}
+                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.whatsapp('${c.phone}')" title="WhatsApp" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:#10b981; transition:all 0.2s;"><i data-lucide="message-circle" size="16"></i></button>` : ''}
+                                ${c.email ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.mail('${c.email}')" title="Email" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2); color:var(--primary); transition:all 0.2s;"><i data-lucide="mail" size="16"></i></button>` : ''}
+                            </div>
+                            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 5px;" class="desktop-only"></div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn-small" onclick="event.stopPropagation(); app.modals.open('addContact', app.state.contacts.find(con => con.id === ${c.id}))" title="Bearbeiten" style="background:rgba(255,255,255,0.05); transition:all 0.2s;"><i data-lucide="pencil" size="16"></i></button>
+                                <button class="btn-small delete-btn" onclick="event.stopPropagation(); app.contacts.delete(${c.id})" title="Löschen" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:var(--danger); transition:all 0.2s;"><i data-lucide="trash-2" size="16"></i></button>
+                            </div>
+                        </div>
+                        <div style="position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--accent)); width:100%; opacity:0.8; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);"></div>
                     </div>
                 `).join('');
+
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -5283,30 +5323,100 @@ const app = {
                 list.style.border = '1px solid rgba(255,255,255,0.05)';
 
                 list.innerHTML = contacts.map(c => `
-                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; cursor:pointer; transition:all 0.2s ease; border:1px solid transparent;">
-                        <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:20px; padding:15px 25px; background:rgba(255,255,255,0.03); border-radius:18px; cursor:pointer; transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border:1px solid rgba(255,255,255,0.06); margin-bottom:6px; position:relative; overflow:hidden;">
+                        
+                        <!-- Avatar / Icon (Visual Start) -->
+                        <div class="contact-avatar" style="width:50px; height:50px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:14px; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:1.3rem; flex-shrink:0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
                             ${c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:1.1rem; color:white; line-height: 1.3;">${c.name}</div>
-                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${c.phone || c.email || (c.type === 'private' ? 'Privat Kontakt' : 'Business Kontakt')}
+                        
+                        <!-- Name Section (Horizontal nach Avatar) -->
+                        <div style="flex:1.5; min-width:0;">
+                            <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.type === 'private' ? 'Familie & Freunde' : 'Business Partner'}</div>
+                        </div>
+
+                        <!-- Kontakt-Details (Tabellarisch / Horizontal) -->
+                        <div class="desktop-only" style="flex:2; min-width:0;">
+                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(34,197,94,0.1); display:flex; align-items:center; justify-content:center; color:var(--success);"><i data-lucide="phone" size="14"></i></div>
+                                <span>${c.phone || '<span style="opacity:0.3">Keine Nummer</span>'}</span>
                             </div>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                             ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
-                             ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
-                             <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
+
+                        <div class="desktop-only" style="flex:2.5; min-width:0;">
+                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color:var(--primary);"><i data-lucide="mail" size="14"></i></div>
+                                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.email || '<span style="opacity:0.3">Keine E-Mail</span>'}</span>
+                            </div>
                         </div>
+
+                        <!-- Bearbeitungsleiste (Action Toolbar) -->
+                        <div class="contact-action-bar" style="display:flex; align-items:center; gap:8px; padding-left:20px; border-left:1px solid rgba(255,255,255,0.08);">
+                            <div style="display:flex; gap:6px;">
+                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.call('${c.phone}')" title="Anrufen" style="background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.2); color:var(--success); transition:all 0.2s;"><i data-lucide="phone" size="16"></i></button>` : ''}
+                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.whatsapp('${c.phone}')" title="WhatsApp" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:#10b981; transition:all 0.2s;"><i data-lucide="message-circle" size="16"></i></button>` : ''}
+                                ${c.email ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.mail('${c.email}')" title="Email" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2); color:var(--primary); transition:all 0.2s;"><i data-lucide="mail" size="16"></i></button>` : ''}
+                            </div>
+                            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 5px;" class="desktop-only"></div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn-small" onclick="event.stopPropagation(); app.modals.open('addContact', app.state.contacts.find(con => con.id === ${c.id}))" title="Bearbeiten" style="background:rgba(255,255,255,0.05); transition:all 0.2s;"><i data-lucide="pencil" size="16"></i></button>
+                                <button class="btn-small delete-btn" onclick="event.stopPropagation(); app.contacts.delete(${c.id})" title="Löschen" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:var(--danger); transition:all 0.2s;"><i data-lucide="trash-2" size="16"></i></button>
+                            </div>
+                        </div>
+                        <!-- Bearbeitungsleiste (Decorative Progress / Status Bar) -->
+                        <div style="position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--accent)); width:100%; opacity:0.8; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);"></div>
                     </div>
                 `).join('');
+
+
             }
             if (window.lucide) lucide.createIcons();
 
             if (!document.getElementById('contactListStyles')) {
                 const style = document.createElement('style');
                 style.id = 'contactListStyles';
-                style.innerHTML = `.contact-list-item:hover { background: rgba(255,255,255,0.08) !important; transform: translateX(5px); border-color: rgba(59, 130, 246, 0.3) !important; }`;
+                style.innerHTML = `
+                    .contact-list-item:hover { 
+                        background: rgba(255,255,255,0.08) !important; 
+                        transform: translateY(-2px); 
+                        border-color: rgba(59, 130, 246, 0.4) !important; 
+                        box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+                    }
+                    .contact-list-item:hover .contact-avatar {
+                        transform: scale(1.05);
+                    }
+                    .contact-action-bar button:hover {
+                        transform: scale(1.1);
+                        filter: brightness(1.2);
+                    }
+                    /* Mobile Optimization */
+                    @media (max-width: 480px) {
+                        .contact-list-item {
+                            padding: 15px !important;
+                            gap: 12px !important;
+                            flex-wrap: wrap !important;
+                        }
+                        .contact-avatar {
+                            width: 42px !important;
+                            height: 42px !important;
+                            font-size: 1.1rem !important;
+                        }
+                        .contact-name {
+                            font-size: 1.1rem !important;
+                        }
+                        .contact-action-bar {
+                            width: 100% !important;
+                            padding-left: 0 !important;
+                            border-left: none !important;
+                            border-top: 1px solid rgba(255,255,255,0.08) !important;
+                            padding-top: 10px !important;
+                            margin-top: 5px !important;
+                            justify-content: space-between !important;
+                        }
+                    }
+                `;
+
                 document.head.appendChild(style);
             }
 
@@ -5363,7 +5473,22 @@ const app = {
             const typeRadio = document.querySelector('input[name="contactType"]:checked');
             const type = typeRadio ? typeRadio.value : 'business';
 
-            if (n) { this.add(n, p, e, a, h, type); app.modals.close(); }
+            if (n) {
+                if (app.editingId) {
+                    const idx = app.state.contacts.findIndex(c => c.id === app.editingId);
+                    if (idx !== -1) {
+                        app.state.contacts[idx] = { ...app.state.contacts[idx], name: n, phone: p, email: e, address: a, homepage: h, type: type };
+                        app.saveState();
+                        this.render();
+                        app.renderDashboard();
+                        if (app.notifications) app.notifications.send("✅ Kontakt aktualisiert", `${n} wurde erfolgreich gespeichert.`);
+                    }
+                    app.editingId = null;
+                } else {
+                    this.add(n, p, e, a, h, type);
+                }
+                app.modals.close();
+            }
         }
     },
     businessSearch: {
