@@ -787,6 +787,17 @@ const app = {
                     return;
                 }
 
+                // Kollisions-Check: Gibt es bereits einen Termin zu dieser Zeit?
+                const collision = app.state.events.find(e =>
+                    e.id !== app.editingId &&
+                    e.start === start.toISOString()
+                );
+
+                if (collision) {
+                    const confirmMsg = `⚠️ Zeit-Konflikt!\n\nAm ${start.toLocaleDateString('de-DE')} um ${start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} hast du bereits einen Termin:\n"${collision.title}" (${collision.type === 'business' ? 'Business' : 'Privat'})\n\nMöchtest du diesen neuen Termin trotzdem zusätzlich speichern?`;
+                    if (!confirm(confirmMsg)) return;
+                }
+
                 if (app.editingId) {
                     const idx = app.state.events.findIndex(e => e.id === app.editingId);
                     if (idx !== -1) {
@@ -797,8 +808,9 @@ const app = {
                             location: data.location,
                             phone: data.phone,
                             email: data.email,
-                            notes: data.notes, // Update notes
-                            urgent: data.urgent
+                            notes: data.notes,
+                            urgent: data.urgent,
+                            type: data.type || 'business'
                         };
                     }
                     app.editingId = null;
@@ -810,8 +822,9 @@ const app = {
                         location: data.location || '',
                         phone: data.phone || '',
                         email: data.email || '',
-                        notes: data.notes || '', // Add notes
-                        urgent: data.urgent || false
+                        notes: data.notes || '',
+                        urgent: data.urgent || false,
+                        type: data.type || 'business'
                     });
                     app.gamification.addXP(30);
                 }
@@ -944,11 +957,13 @@ const app = {
                     cell.classList.add('today');
                 }
 
+                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                 // Find events for this day (including archives)
                 const allPossibleEvents = [...app.state.events, ...(app.state.archives || [])];
                 const dayEvents = allPossibleEvents.filter(e => {
                     const eventDate = new Date(e.start);
-                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y;
+                    const eventType = e.type || 'business';
+                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && eventType === mode;
                 });
 
                 // Build day content
@@ -964,10 +979,20 @@ const app = {
                     dayContent += '<div class="event-markers">';
                     dayEvents.forEach(ev => {
                         const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const isPrivate = ev.type === 'private';
+                        const color = isPrivate ? '#10b981' : '#3b82f6';
+                        const bg = isPrivate ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+
                         // Desktop Marker (Text)
-                        dayContent += `<div class="event-marker desktop-only ${ev.urgent ? 'urgent' : ''}" title="${ev.title} - ${eventTime}">${ev.title}</div>`;
+                        dayContent += `<div class="event-marker desktop-only ${ev.urgent ? 'urgent' : ''}" 
+                                            style="border-left: 3px solid ${color}; background: ${bg}; color: white; font-size: 0.65rem; padding: 2px 5px; margin-bottom: 2px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" 
+                                            title="${ev.title} - ${eventTime} [${isPrivate ? 'Familie' : 'Business'}]">
+                                            ${ev.title}
+                                       </div>`;
                         // Mobile Marker (Dot)
-                        dayContent += `<div class="event-dot mobile-only ${ev.urgent ? 'urgent' : ''}" style="width:5px; height:5px; border-radius:50%; background-color:${ev.urgent ? 'var(--danger)' : 'var(--primary)'};" title="${ev.title}"></div>`;
+                        dayContent += `<div class="event-dot mobile-only ${ev.urgent ? 'urgent' : ''}" 
+                                            style="width:5px; height:5px; border-radius:50%; background-color:${ev.urgent ? 'var(--danger)' : color}; margin: 2px;" 
+                                            title="${ev.title}"></div>`;
                     });
                     dayContent += '</div>';
                 }
@@ -1006,8 +1031,12 @@ const app = {
         if (dp) {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
             const up = app.state.events
-                .filter(e => new Date(e.start) >= startOfToday)
+                .filter(e => {
+                    const eventType = e.type || 'business';
+                    return new Date(e.start) >= startOfToday && eventType === mode;
+                })
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 5);
 
@@ -1062,6 +1091,9 @@ const app = {
                             </div>
 
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                                <div style="font-size: 0.65rem; color: ${e.type === 'private' ? '#10b981' : 'var(--primary)'}; font-weight: 800; text-transform: uppercase; margin-bottom: -1px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="${e.type === 'private' ? 'users' : 'briefcase'}" size="10"></i> ${e.type === 'private' ? 'Familie & Gemeinsam' : 'Business'}
+                                </div>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${e.title}</div>
                                     <div style="font-weight: 800; font-size: 0.9rem; color: #ffffff;">${timeStr}</div>
@@ -4158,10 +4190,10 @@ const app = {
                             <label class="form-label">Homepage (URL)</label>
                             <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de" value="${con.homepage || ''}">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" ${((app.state.ui && app.state.ui.dashboardMode) === 'private' && !app.editingId) ? 'style="display:none;"' : ''}>
                             <label class="form-label">Kategorie</label>
                             <div style="display:flex; gap:10px; margin-top:5px;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border); ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}">
                                     <input type="radio" name="contactType" value="business" ${con.type === 'business' ? 'checked' : ''}> 
                                     <span>Business</span>
                                 </label>
@@ -4371,6 +4403,22 @@ const app = {
 
                     <div class="form-group">
                         <textarea id="evtNotes" class="form-input" rows="3" placeholder="Bemerkungen / Notizen...">${no}</textarea>
+                    </div>
+
+                    <div class="form-group" ${((app.state.ui && app.state.ui.dashboardMode) === 'private' && !app.editingId) ? 'style="display:none;"' : ''}>
+                        <label class="form-label">Kategorie</label>
+                        <div style="display:grid; grid-template-columns: ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? '1fr' : '1fr 1fr'}; gap:10px; margin-top:8px;">
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(59, 130, 246, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s; ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}" id="labelTypeBusiness">
+                                <i data-lucide="briefcase" style="color:${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'var(--text-muted)'}"></i>
+                                <span style="font-size:0.8rem; font-weight:700; color:${(data.type === 'business' || !data.type) ? 'white' : 'var(--text-muted)'}">Business</span>
+                                <input type="radio" name="evtType" value="business" ${(data.type === 'business' || !data.type) ? 'checked' : ''} style="display:none;" onchange="this.parentElement.style.borderColor='var(--primary)'; this.parentElement.style.background='rgba(59, 130, 246, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='var(--primary)'; document.getElementById('labelTypePrivate').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').style.background='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypePrivate').querySelector('i').style.color='var(--text-muted)';">
+                            </label>
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${data.type === 'private' ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
+                                <i data-lucide="users" style="color:${data.type === 'private' ? '#10b981' : 'var(--text-muted)'}"></i>
+                                <span style="font-size:0.8rem; font-weight:700; color:${data.type === 'private' ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
+                                <input type="radio" name="evtType" value="private" ${data.type === 'private' ? 'checked' : ''} style="display:none;" onchange="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='rgba(16, 185, 129, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='#10b981'; document.getElementById('labelTypeBusiness').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').style.background='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypeBusiness').querySelector('i').style.color='var(--text-muted)';">
+                            </label>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -4659,9 +4707,13 @@ const app = {
                 const todayStr = now.toISOString().split('T')[0];
                 const dateDisplay = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 
+                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                 // --- DATA ---
                 const events = (app.state.events || [])
-                    .filter(e => e.start.startsWith(todayStr))
+                    .filter(e => {
+                        const eventType = e.type || 'business';
+                        return e.start.startsWith(todayStr) && eventType === mode;
+                    })
                     .sort((a, b) => new Date(a.start) - new Date(b.start));
 
                 const tasksOpen = (app.state.tasks || []).filter(t => !t.done && t.category !== 'shopping');
@@ -4710,6 +4762,7 @@ const app = {
                                     <div style="display: flex; align-items: center; gap: 15px; opacity: ${isPast ? 0.5 : 1}; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px;">
                                         <div style="background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; min-width: 60px; text-align: center;">${time}</div>
                                         <div>
+                                            <div style="font-size:0.6rem; color:${e.type === 'private' ? '#10b981' : 'var(--primary)'}; text-transform:uppercase; font-weight:800; margin-bottom:1px;">${e.type === 'private' ? 'Familie' : 'Business'}</div>
                                             <div style="font-weight: 600;">${e.title}</div>
                                             ${e.location ? `<div class="text-xs text-muted">📍 ${e.location}</div>` : ''}
                                         </div>
@@ -5156,6 +5209,7 @@ const app = {
             }
         },
         submitEvent() {
+            const typeRadio = document.querySelector('input[name="evtType"]:checked');
             const data = {
                 title: document.getElementById('evtTitle').value,
                 date: document.getElementById('evtDate').value,
@@ -5164,7 +5218,8 @@ const app = {
                 phone: document.getElementById('evtPhone').value,
                 email: document.getElementById('evtEmail').value,
                 notes: document.getElementById('evtNotes').value,
-                urgent: document.getElementById('evtUrgent').checked
+                urgent: document.getElementById('evtUrgent').checked,
+                type: typeRadio ? typeRadio.value : 'business'
             };
             if (data.title && data.date && data.time) {
                 app.calendar.addEvent(data);
