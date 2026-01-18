@@ -48,8 +48,18 @@
             <div class="card"
                 style="background: rgba(25, 25, 25, 0.9); border:1px solid var(--border); text-align: left; padding:25px;">
 
-                <!-- Toggle -->
-                <div style="display:flex; margin-bottom:20px; border-bottom:1px solid var(--border);">
+                <!-- Welcome Back Info (Visible if User exists) -->
+                <div id="loginWelcome" class="hidden"
+                    style="text-align:center; padding: 0 0 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
+                    <div id="userLoginAvatar"
+                        style="width:70px; height:70px; border-radius:50%; margin:0 auto 10px; border:2px solid var(--primary); background: #333; overflow:hidden;">
+                    </div>
+                    <div style="font-weight:800; font-size:1.3rem; color:white;" id="userLoginName">Hallo!</div>
+                    <div class="text-muted text-sm" id="userLoginPersona">Dein TaskForce Profil</div>
+                </div>
+
+                <!-- Toggle (Hidden if already registered) -->
+                <div id="authTabs" style="display:flex; margin-bottom:20px; border-bottom:1px solid var(--border);">
                     <button id="tabLogin" class="btn"
                         style="flex:1; border-radius:0; border-bottom:2px solid var(--primary); color:white;"
                         onclick="app.auth.switchTab('login')">Anmelden</button>
@@ -80,6 +90,16 @@
                         <input type="text" id="authTeam" class="form-input" placeholder="z.B. 'Familie'">
                         <p class="text-muted text-sm" style="margin-top:5px;">Nutze den gleichen Namen wie dein
                             Team-Partner.</p>
+                    </div>
+
+                    <div id="authPersonaField" class="form-group hidden">
+                        <label class="form-label">Nutzungs-Modus (Persona)</label>
+                        <select id="authPersona" class="form-input">
+                            <option value="mixed">Business & Familie (Gemischt)</option>
+                            <option value="business">2 Business User (Rein beruflich)</option>
+                            <option value="family">2 Familien Mitglieder (Rein privat)</option>
+                        </select>
+                        <p class="text-muted text-sm" style="margin-top:5px;">Wähle wie ihr TaskForce nutzen wollt.</p>
                     </div>
 
                     <div id="teamToggleContainer" class="form-group"
@@ -132,6 +152,8 @@
             <div id="cat-general" class="nav-category">Planen</div>
             <a id="nav-dashboard" class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i>
                 Dashboard</a>
+            <a id="nav-team-manager" class="nav-item" onclick="app.modals.open('switchTeams')"><i
+                    data-lucide="users"></i> Team Manager</a>
             <a id="nav-calendar" class="nav-item" data-page="calendar"><i data-lucide="calendar"></i> Kalender</a>
 
             <div id="cat-business" class="nav-category">Business OS</div>
@@ -145,7 +167,7 @@
                 onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardMeetingsCard').scrollIntoView({behavior:'smooth'}), 100)"><i
                     data-lucide="users-2"></i> Meetings</a>
             <a id="nav-drive" class="nav-item" data-page="drive"><i data-lucide="car"></i> Fahrt-Modus</a>
-            <a id="nav-team" class="nav-item" data-page="team"><i data-lucide="users"></i> Team Planer</a>
+
 
             <div id="cat-private" class="nav-category">Privat</div>
             <a id="nav-tasks" class="nav-item" data-page="tasks"><i data-lucide="check-square"></i> Aufgaben & To-Do</a>
@@ -176,6 +198,10 @@
             <!-- Header -->
             <header class="top-bar">
                 <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px;">
+                    <!-- Sidebar Toggle (Desktop & Mobile) -->
+                    <button class="icon-btn" onclick="app.toggleSidebar()" title="Menü ein/ausklappen">
+                        <i data-lucide="menu"></i>
+                    </button>
                     <!-- Dashboard Mode Switcher -->
                     <div class="dash-mode-switcher"
                         style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
@@ -206,7 +232,15 @@
                     <button class="icon-btn" title="AI Assistant" onclick="app.modals.open('aiChat')"><i
                             data-lucide="sparkles" class="text-accent"></i></button>
                     <button class="icon-btn" title="Suche"><i data-lucide="search"></i></button>
-                    <div id="headerSyncIndicator" class="sync-badge" title="Offline"
+                    <div id="headerTeamSwitch" class="sync-badge" title="Team wechseln"
+                        onclick="app.modals.open('switchTeams')"
+                        style="cursor:pointer; display:flex; align-items:center; gap:8px; background: rgba(59, 130, 246, 0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.2); margin-right: 5px; transition: all 0.3s;">
+                        <i data-lucide="users" size="14" class="text-primary"></i>
+                        <span id="headerTeamBadge"
+                            style="font-size: 0.75rem; font-weight: 700; color: white;">Privat</span>
+                    </div>
+
+                    <div id="headerSyncIndicator" class="sync-badge" title="Sync Status"
                         style="opacity: 0.4; display:flex; align-items:center; gap:5px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 20px; margin-right: 10px; border: 1px solid rgba(255,255,255,0.1);">
                         <div style="width:8px; height:8px; background: var(--success); border-radius: 50%;"></div>
                         <span id="syncStatusHeader"
@@ -1305,9 +1339,7 @@
                             </div>
                         </div>
 
-                        <!-- Firebase JS SDKs -->
-                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 
                         <div class="card" style="border: 1px solid var(--accent);">
                             <h3><i data-lucide="flame"></i> Team Sync (Firebase)</h3>
@@ -1393,6 +1425,10 @@
     </div>
 
 
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script src="app.js"></script>
     <script>

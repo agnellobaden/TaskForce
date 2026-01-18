@@ -41,13 +41,29 @@ const app = {
             // Check Login Status & Enforce Protection
             if (!this.state.user.isLoggedIn) {
                 const loginOverlay = document.getElementById('loginOverlay');
+                const authTabs = document.getElementById('authTabs');
                 if (loginOverlay) {
                     loginOverlay.classList.remove('hidden');
                     // Pre-fill if user exists
-                    if (this.state.user && this.state.user.name) {
+                    if (this.state.user && this.state.user.name && this.state.user.name !== 'Creator') {
+                        if (authTabs) authTabs.classList.add('hidden'); // Hide registration
                         app.auth.switchTab('login');
                         document.getElementById('authName').value = this.state.user.name;
+
+                        // Show Welcome Back
+                        const welcome = document.getElementById('loginWelcome');
+                        if (welcome) {
+                            welcome.classList.remove('hidden');
+                            document.getElementById('userLoginName').textContent = `Hallo, ${this.state.user.name}!`;
+                            const ava = document.getElementById('userLoginAvatar');
+                            if (ava) ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${this.state.user.name}" style="width:100%; height:100%; object-fit:cover;">`;
+
+                            const pText = (this.state.user.persona === 'family') ? 'Privat Modus' : (this.state.user.persona === 'business' ? 'Business OS' : 'Gemischter Modus');
+                            document.getElementById('userLoginPersona').textContent = pText;
+                        }
                     } else {
+                        if (authTabs) authTabs.classList.remove('hidden');
+                        document.getElementById('loginWelcome')?.classList.add('hidden');
                         app.auth.switchTab('register');
                     }
                 }
@@ -60,8 +76,9 @@ const app = {
             this.setupNavigation();
             this.startClock();
 
-            // Initialize Cloud Sync
+            // Initialize Cloud Sync & Teams UI
             this.cloud.init();
+            this.teams.updateHeaderBadge();
 
             // Render Initial Views
             this.tasks.render();
@@ -208,6 +225,12 @@ const app = {
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
         if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
+        if (!this.state.user.savedTeams) {
+            this.state.user.savedTeams = [
+                { id: Date.now(), label: 'Hauptteam', teamName: this.state.user.teamName || this.state.user.name || 'Owner', persona: this.state.user.persona || 'mixed' }
+            ];
+            this.saveState();
+        }
 
         // UI Default State
         if (!this.state.ui) this.state.ui = {};
@@ -339,10 +362,12 @@ const app = {
             //        Login    -> Hide Pass Repeat, Show Team
             if (m === 'register') {
                 document.getElementById('authPassRepeatField').classList.remove('hidden');
+                document.getElementById('authPersonaField').classList.remove('hidden');
                 document.getElementById('authTeamField').classList.add('hidden');
                 document.getElementById('teamToggleContainer').classList.add('hidden');
             } else {
                 document.getElementById('authPassRepeatField').classList.add('hidden');
+                document.getElementById('authPersonaField').classList.add('hidden');
                 document.getElementById('teamToggleContainer').classList.remove('hidden');
 
                 // Keep team field hidden unless checkbox is checked
@@ -379,15 +404,23 @@ const app = {
 
             if (this.mode === 'register') {
                 if (pass !== passRep) { alert("Die Passwörter stimmen nicht überein! ❌"); return; }
+                const persona = document.getElementById('authPersona').value;
 
-                // Save new user (Team Name set to empty initially or default)
+                // Save new user
                 app.state.user = {
                     name: name,
                     password: pass,
                     teamName: name, // Default Team Name is Username
+                    persona: persona,
                     team: [{ id: Date.now(), name: name }],
+                    savedTeams: [{ id: Date.now(), label: 'Mein Team', teamName: name, persona: persona }],
                     isLoggedIn: true
                 };
+
+                // Initial Mode based on persona
+                if (persona === 'family') app.state.ui.dashboardMode = 'private';
+                else app.state.ui.dashboardMode = 'business';
+
                 app.saveState();
                 alert(`Registrierung erfolgreich! Willkommen, ${name}. ✨`);
                 this.closeOverlay();
@@ -413,6 +446,12 @@ const app = {
                     if (!app.state.user.password && pass) {
                         app.state.user.password = pass;
                         app.state.user.isLoggedIn = true;
+
+                        // Ensure savedTeams exists
+                        if (!app.state.user.savedTeams) {
+                            app.state.user.savedTeams = [{ id: Date.now(), label: 'Mein Team', teamName: teamToUse, persona: app.state.user.persona || 'mixed' }];
+                        }
+
                         app.saveState();
                         alert(`Passwort festgelegt. ✅\nTeam: ${teamToUse}`);
                         this.closeOverlay();
@@ -435,6 +474,7 @@ const app = {
         closeOverlay() {
             document.getElementById('loginOverlay').classList.add('hidden');
             app.user.updateHeader();
+            app.dashboard.applyMode(); // Refresh UI to respect persona
         }
     },
 
@@ -492,56 +532,138 @@ const app = {
         }
     },
 
-    // --- TEAM MODULE ---
+    // --- TEAMS (Multi-Team Management) ---
+    teams: {
+        switch(teamId) {
+            const team = app.state.user.savedTeams.find(t => t.id === teamId);
+            if (!team) return;
+
+            app.state.user.teamName = team.teamName;
+            app.state.user.persona = team.persona;
+
+            // Force Mode if needed
+            if (team.persona === 'family') app.state.ui.dashboardMode = 'private';
+            else if (team.persona === 'business') app.state.ui.dashboardMode = 'business';
+
+            app.saveState();
+
+            // Re-sync
+            if (app.cloud && app.cloud.init) app.cloud.init();
+
+            app.dashboard.applyMode();
+            app.renderDashboard();
+            this.updateHeaderBadge();
+
+            app.modals.close();
+        },
+        add() {
+            const label = document.getElementById('newTeamLabel').value.trim();
+            const key = document.getElementById('newTeamKey').value.trim();
+            const persona = document.getElementById('newTeamPersona').value;
+
+            if (!label || !key) { alert("Bitte Name und Sync-Key eingeben."); return; }
+
+            if (!app.state.user.savedTeams) app.state.user.savedTeams = [];
+            if (app.state.user.savedTeams.some(t => t.teamName === key)) {
+                alert("Dieses Team ist bereits in deiner Liste.");
+                return;
+            }
+
+            const newTeam = {
+                id: Date.now(),
+                label: label,
+                teamName: key,
+                persona: persona
+            };
+            app.state.user.savedTeams.push(newTeam);
+            app.saveState();
+            this.switch(newTeam.id);
+        },
+        remove(id) {
+            if (app.state.user.savedTeams.length <= 1) { alert("Mindestens ein Team muss bleiben."); return; }
+            if (confirm("Dieses Team wirklich aus deiner Liste entfernen?")) {
+                const teamToRemove = app.state.user.savedTeams.find(t => t.id === id);
+                app.state.user.savedTeams = app.state.user.savedTeams.filter(t => t.id !== id);
+                if (teamToRemove && teamToRemove.teamName === app.state.user.teamName) {
+                    this.switch(app.state.user.savedTeams[0].id);
+                } else {
+                    app.saveState();
+                    app.modals.open('switchTeams');
+                }
+            }
+        },
+        updateHeaderBadge() {
+            const badge = document.getElementById('headerTeamBadge');
+            if (badge) {
+                const current = app.state.user.savedTeams?.find(t => t.teamName === app.state.user.teamName);
+                badge.textContent = current ? current.label : 'Offline';
+            }
+        }
+    },
+
+    // --- TEAM (Members List) ---
     team: {
-        addMember(name) {
-            if (!name) return;
-            app.state.user.team.push({ id: Date.now(), name: name });
+        render() {
+            const container = document.getElementById('teamMembersList');
+            if (!container) return;
+            const members = app.state.user.team || [];
+            if (members.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Team-Mitglieder hinterlegt.</div>';
+            } else {
+                container.innerHTML = members.map(m => `
+                    <div class="card" style="margin-bottom:10px; padding:15px; display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03);">
+                        <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">
+                            ${m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;">${m.name}</div>
+                            <div class="text-xs text-muted">Aktiv</div>
+                        </div>
+                        <button class="btn-small" onclick="app.team.remove('${m.id}')" style="background:none; border:none; color:var(--danger); opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
+                    </div>
+                `).join('');
+                if (window.lucide) lucide.createIcons();
+            }
+        },
+        add(name) {
+            if (!app.state.user.team) app.state.user.team = [];
+            app.state.user.team.push({ id: Date.now(), name });
             app.saveState();
             this.render();
         },
-        render() {
-            const list = document.getElementById('teamMembersList');
-            if (!list) return;
-            if (!app.state.user.team || app.state.user.team.length === 0) {
-                list.innerHTML = '<span class="text-muted text-sm">Noch keine Teammitglieder.</span>';
-            } else {
-                list.innerHTML = app.state.user.team.map(m => `
-                    <div class="team-member-chip">
-                        <div class="team-avatar">${m.name ? m.name.substring(0, 2).toUpperCase() : '??'}</div>
-                        ${m.name}
-                    </div>
-                 `).join('');
-            }
-
-            const tasks = document.getElementById('teamTasksList');
-            if (tasks) {
-                tasks.innerHTML = (app.state.user.team && app.state.user.team.length) ? app.state.user.team.map(m => `
-                    <div class="task-item">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                             <div class="team-avatar" style="width:20px;height:20px;font-size:0.6rem;">${m.name.substring(0, 2)}</div>
-                             <span class="text-muted">Aufgabe für ${m.name}...</span>
-                        </div>
-                    </div>
-                 `).join('') : '<div class="text-muted text-sm">Füge Mitglieder hinzu, um Aufgaben zu teilen.</div>';
+        remove(id) {
+            if (confirm("Mitglied entfernen?")) {
+                app.state.user.team = app.state.user.team.filter(m => m.id != id);
+                app.saveState();
+                this.render();
             }
         }
     },
 
     // --- NAVIGATION ---
     toggleSidebar() {
-        this.isSidebarOpen = !this.isSidebarOpen;
+        const layout = document.getElementById('app-layout');
         const sb = document.getElementById('mainSidebar');
-        const closeBtn = document.getElementById('sidebarCloseBtn');
-        if (!sb) return;
+        if (!layout || !sb) return;
 
-        if (this.isSidebarOpen) {
-            sb.classList.add('open');
-            if (closeBtn) closeBtn.style.display = 'block';
+        if (window.innerWidth <= 768) {
+            // Mobile: Toggle "open" class on sidebar
+            sb.classList.toggle('open');
+            this.isSidebarOpen = sb.classList.contains('open');
+
+            // Sync close button visibility
+            const closeBtn = document.getElementById('sidebarCloseBtn');
+            if (closeBtn) closeBtn.style.display = this.isSidebarOpen ? 'block' : 'none';
         } else {
-            sb.classList.remove('open');
-            if (closeBtn) closeBtn.style.display = 'none';
+            // Desktop: Toggle "sidebar-collapsed" on layout
+            layout.classList.toggle('sidebar-collapsed');
+            this.isSidebarOpen = !layout.classList.contains('sidebar-collapsed');
         }
+
+        // Save state if needed (optional)
+        // this.saveState();
+
+        if (window.lucide) lucide.createIcons();
     },
 
     setupNavigation() {
@@ -3665,6 +3787,19 @@ const app = {
             }
         }
 
+        // 6. Team Switching (Quick Key)
+        if (text.startsWith('team ') || text.startsWith('key ')) {
+            const query = text.substring(text.indexOf(' ') + 1).trim();
+            const found = app.state.user.savedTeams.find(t =>
+                t.label.toLowerCase().includes(query) ||
+                t.teamName.toLowerCase().includes(query)
+            );
+            if (found) {
+                app.teams.switch(found.id);
+                return true;
+            }
+        }
+
         // Default Case: Add as Task
         if (raw.length > 2) {
             app.tasks.add(finalTitle, false, 'todo');
@@ -3686,6 +3821,8 @@ const app = {
             else { app.navigateTo('dashboard'); }
         }
     },
+
+
 
     // --- CLOUD SYNC MODULE (Firebase) ---
     cloud: {
@@ -4144,11 +4281,11 @@ const app = {
             }
         },
         resetApp() {
-            if (confirm("Möchtest du wirklich alle Daten löschen? Dies kann nicht rückgängig gemacht werden!")) {
+            if (confirm("⚠️ ACHTUNG: Das gesamte Konto wird gelöscht! Alle lokalen Daten gehen verloren und du musst dich neu registrieren. Fortfahren?")) {
                 localStorage.clear();
                 location.reload();
             }
-        }
+        },
     },
 
     // --- MODALS ---
@@ -5067,6 +5204,60 @@ const app = {
                          <button class="btn" style="background:transparent; border:none; color:var(--text-muted);" onclick="app.modals.close()">Abbrechen</button>
                     </div>
                 </div>`;
+            } else if (type === 'switchTeams') {
+                const teams = app.state.user.savedTeams || [];
+                const currentKey = app.state.user.teamName;
+
+                c.innerHTML = `
+                <div style="padding:24px; width:100%; max-width:450px;">
+                    <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="users" class="text-primary"></i> Team Manager</h3>
+                    <p class="text-muted text-sm mb-4">Umschalten zwischen deinen verbundenen Teams oder Familien-Bündnissen.</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
+                        ${teams.map(t => `
+                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:15px; margin:0; cursor:pointer; border:2px solid ${t.teamName === currentKey ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; background: ${t.teamName === currentKey ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)'}" onclick="app.teams.switch(${t.id})">
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <div style="width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;">
+                                        <i data-lucide="${t.persona === 'family' ? 'user' : (t.persona === 'business' ? 'briefcase' : 'layers')}" size="18" class="text-muted"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:700;">${t.label}</div>
+                                        <div class="text-xs text-muted" style="letter-spacing:0.5px; text-transform:uppercase;">Key: ${t.teamName}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    ${t.teamName === currentKey ? '<span style="font-size:0.6rem; background:var(--primary); padding:2px 6px; border-radius:10px; font-weight:800;">AKTIV</span>' : ''}
+                                    <button class="btn-small" onclick="event.stopPropagation(); app.teams.remove(${t.id})" style="background:none; border:none; color:var(--danger); opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
+                        <h4 style="font-size:0.9rem; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle" size="16"></i> Team hinzufügen</h4>
+                        <div class="form-group">
+                            <label class="form-label">Name des Teams (Anzeige)</label>
+                            <input id="newTeamLabel" class="form-input" placeholder="z.B. Firma XY oder Familie Müller">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sync-Key (Genauer Team-Namen)</label>
+                            <input id="newTeamKey" class="form-input" placeholder="Genau wie bei deinem Partner">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Modus</label>
+                            <select id="newTeamPersona" class="form-input">
+                                <option value="mixed">Mixed (Business & Familie)</option>
+                                <option value="business">Nur Business</option>
+                                <option value="family">Nur Familie</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="app.teams.add()" style="width:100%; margin-top:10px;">Verbindung herstellen</button>
+                    </div>
+
+                    <div style="display:flex; justify-content:center; margin-top:20px;">
+                        <button class="btn" onclick="app.modals.close()">Schließen</button>
+                    </div>
+                </div>`;
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -5760,9 +5951,25 @@ const app = {
             app.renderDashboard();
         },
         applyMode() {
-            const mode = app.state.ui.dashboardMode || 'business';
+            const persona = app.state.user.persona || 'mixed';
+            let activeMode = app.state.ui.dashboardMode || 'business';
+
+            // Force mode if persona is fixed
+            if (persona === 'business') activeMode = 'business';
+            if (persona === 'family') activeMode = 'private';
+
+            const mode = activeMode;
+            app.state.ui.dashboardMode = mode; // Keep state in sync
+
             const btnBiz = document.getElementById('btnModeBusiness');
             const btnPri = document.getElementById('btnModePrivate');
+            const switcher = document.querySelector('.dash-mode-switcher');
+
+            // Hide switcher if persona is NOT mixed
+            if (switcher) {
+                if (persona !== 'mixed') switcher.style.display = 'none';
+                else switcher.style.display = 'flex';
+            }
 
             // Update Buttons
             if (btnBiz && btnPri) {
@@ -5786,7 +5993,12 @@ const app = {
             // Update UI Indicators
             const statusPill = document.querySelector('.status-pill');
             if (statusPill) {
-                statusPill.innerHTML = `<span class="status-dot"></span> ${mode === 'business' ? 'Business OS' : 'Privat Modus'}`;
+                let statusText = 'TaskForce OS';
+                if (persona === 'business') statusText = 'Business OS';
+                else if (persona === 'family') statusText = 'Privat Modus';
+                else statusText = mode === 'business' ? 'Business OS' : 'Privat Modus';
+
+                statusPill.innerHTML = `<span class="status-dot"></span> ${statusText}`;
             }
             document.body.classList.remove('mode-business', 'mode-private');
             document.body.classList.add(`mode-${mode}`);
