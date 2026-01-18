@@ -396,6 +396,16 @@ const app = {
                 });
             }
         });
+
+        // Health Data Migration (Fix Persistence Bug)
+        if (!this.state.healthData) this.state.healthData = [];
+        if (this.state.healthData.length > 0) {
+            this.state.healthData.forEach(d => {
+                if (d.shared === undefined) d.shared = false;
+            });
+            this.saveState();
+        }
+
         this.saveState();
     },
 
@@ -3143,7 +3153,8 @@ const app = {
                 date: today,
                 timestamp: new Date().toISOString(),
                 reminder: reminder,
-                scope: 'private'
+                scope: 'private',
+                shared: false
             });
 
             app.saveState();
@@ -3174,7 +3185,8 @@ const app = {
                 value: steps,
                 date: today,
                 timestamp: new Date().toISOString(),
-                scope: 'private'
+                scope: 'private',
+                shared: false
             });
 
             app.saveState();
@@ -3192,7 +3204,8 @@ const app = {
                 date: today,
                 timestamp: new Date().toISOString(),
                 reminder: reminder,
-                scope: 'private'
+                scope: 'private',
+                shared: false
             });
 
             app.saveState();
@@ -3214,7 +3227,8 @@ const app = {
                 date: today,
                 timestamp: new Date().toISOString(),
                 reminder: reminder,
-                scope: 'private'
+                scope: 'private',
+                shared: false
             });
 
             app.saveState();
@@ -4375,6 +4389,75 @@ const app = {
         },
     },
 
+
+
+    // --- DRIVE MODE MODULE ---
+    drive: {
+        init() {
+            this.render();
+        },
+        render() {
+            let container = document.getElementById('view-drive');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'view-drive';
+                container.className = 'hidden';
+                container.style.position = 'fixed';
+                container.style.inset = '0';
+                container.style.background = '#0d0d0d'; // Dark background
+                container.style.zIndex = '5000';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                document.body.appendChild(container); // Append to body
+            }
+
+            // Fullscreen Drive UI
+            container.innerHTML = `
+                <div style="flex:1; padding:20px; display:flex; flex-direction:column; gap:20px; max-width:600px; margin:0 auto; width:100%;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i data-lucide="car" size="32" class="text-primary"></i>
+                            <h1 style="margin:0; font-size:2rem; font-weight:800;">Drive</h1>
+                        </div>
+                        <div style="font-size:2rem; font-weight:bold; font-family:monospace;">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    
+                    <button class="btn-primary" style="flex:1; font-size:1.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px; border-radius:24px; box-shadow:0 10px 30px rgba(59,130,246,0.3);" onclick="app.voice.start()">
+                        <div style="background:white; color:var(--primary); width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                            <i data-lucide="mic" size="32"></i>
+                        </div>
+                        <span>Sprachbefehl</span>
+                    </button>
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; height:180px;">
+                        <button class="btn" style="background:rgba(255,255,255,0.1); font-size:1.2rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:24px; gap:10px;" onclick="window.open('https://maps.google.com', '_blank')">
+                            <i data-lucide="map" size="32" class="text-accent"></i> 
+                            <span>Maps</span>
+                        </button>
+                         <button class="btn" style="background:rgba(255,255,255,0.1); font-size:1.2rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:24px; gap:10px;" onclick="app.modals.open('addEvent', {voice:true})">
+                            <i data-lucide="plus" size="32" class="text-success"></i>
+                            <span>Termin</span>
+                        </button>
+                    </div>
+                    
+                    <button class="btn-danger" style="padding:20px; font-size:1.2rem; border-radius:18px; margin-top:auto;" onclick="app.drive.close()">
+                        <i data-lucide="x-circle"></i> Beenden
+                    </button>
+                </div>
+            `;
+
+            container.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+            if (app.requestWakeLock) app.requestWakeLock();
+        },
+        close() {
+            const container = document.getElementById('view-drive');
+            if (container) container.classList.add('hidden');
+            if (app.releaseWakeLock) app.releaseWakeLock();
+            app.navigateTo('dashboard');
+        }
+    },
+
     // --- MODALS ---
     modals: {
         open(type, data = {}) {
@@ -4387,7 +4470,7 @@ const app = {
             window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
 
             if (type === 'addContact') {
-                const con = data.id ? data : { name: '', phone: '', email: '', address: '', homepage: '', type: (app.state.ui && app.state.ui.dashboardMode) || 'business' };
+                const con = data.id ? data : { name: '', phone: '', email: '', address: '', homepage: '', type: (app.state.ui && app.state.ui.dashboardMode) || 'business', shared: false };
                 app.editingId = con.id || null;
                 c.innerHTML = `
                     <div style="padding:24px;">
@@ -4429,9 +4512,10 @@ const app = {
                         </div>
                         <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
                             <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                <input type="checkbox" id="contactShared" value="true" checked style="width:18px; height:18px;">
+                                <input type="checkbox" id="contactShared" value="true" ${con.shared ? 'checked' : ''} style="width:18px; height:18px;">
                                 <div>
-                                    <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
+                                    <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards sichtbar</div>
+                                    <div class="text-xs text-muted">Kontakt erscheint privat & geschäftlich</div>
                                 </div>
                             </label>
                         </div>
@@ -5337,7 +5421,26 @@ const app = {
                                 <label class="form-label">Website</label>
                                 <input id="impUrl" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                             </div>
-                            <button class="btn btn-primary" style="width:100%; margin-top:8px; height:52px; font-size:1.1rem; border-radius:14px;" onclick="app.businessSearch.saveImported()">
+                            
+                            <!-- CLASSIFICATION -->
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:5px;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                                    <input type="radio" name="impType" value="business" checked> 
+                                    <span style="font-size:0.85rem;">Business</span>
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                                    <input type="radio" name="impType" value="private"> 
+                                    <span style="font-size:0.85rem;">Privat</span>
+                                </label>
+                            </div>
+                            <div class="form-group" style="margin:0; padding-top:5px;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                    <input type="checkbox" id="impShared" style="width:16px; height:16px;">
+                                    <span style="font-size:0.85rem; color:var(--text-muted);">In beiden Dashboards anzeigen</span>
+                                </label>
+                            </div>
+
+                            <button class="btn btn-primary" style="width:100%; margin-top:15px; height:52px; font-size:1.1rem; border-radius:14px;" onclick="app.businessSearch.saveImported()">
                                 <i data-lucide="check-circle"></i> In Adressbuch speichern
                             </button>
                         </div>
@@ -5410,6 +5513,62 @@ const app = {
                         <button class="btn" onclick="app.modals.close()">Schließen</button>
                     </div>
                 </div>`;
+            }
+            else if (type === 'importContactsReview') {
+                const contacts = data.rawContacts || [];
+                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+
+                let listHtml = contacts.map((c, idx) => {
+                    const name = c.name ? c.name[0] : 'Unbekannt';
+                    const phone = c.tel ? c.tel[0] : '';
+                    const email = c.email ? c.email[0] : '';
+
+                    return `
+                        <div class="import-review-item" data-name="${name}" data-phone="${phone}" data-email="${email}" 
+                             style="padding:15px; background:rgba(255,255,255,0.03); border-radius:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-weight:700; color:white; margin-bottom:10px;">${name}</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div>
+                                    <label class="text-xs text-muted">Bereich</label>
+                                    <select class="form-input" style="padding:6px; font-size:0.8rem;">
+                                        <option value="business" ${mode === 'business' ? 'selected' : ''}>Business</option>
+                                        <option value="private" ${mode === 'private' ? 'selected' : ''}>Privat</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:20px;">
+                                    <input type="checkbox" style="width:16px; height:16px;">
+                                    <label class="text-xs text-muted">Beides</label>
+                                </div>
+                            </div>
+                            <div class="text-xs text-muted" style="margin-top:8px; opacity:0.6;">
+                                ${phone} ${email ? ' • ' + email : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                c.innerHTML = `
+                    <div style="padding:24px; max-height:80vh; display:flex; flex-direction:column;">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:15px;">
+                            <h3 style="display:flex; align-items:center; gap:10px;">
+                                <i data-lucide="download" class="text-primary"></i> Kontakte importieren
+                            </h3>
+                            <button onclick="app.modals.close()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" size="20"></i></button>
+                        </div>
+                        <p class="text-muted text-sm" style="margin-bottom:20px;">
+                            Wähle aus, in welche Kategorie die Kontakte sortiert werden sollen.
+                        </p>
+                        <div style="flex:1; overflow-y:auto; margin-bottom:20px; padding-right:5px; -webkit-overflow-scrolling: touch;">
+                            ${listHtml}
+                        </div>
+                        <div style="display:flex; justify-content:end; gap:12px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
+                            <button class="btn" onclick="app.modals.close()">Abbrechen</button>
+                            <button class="btn btn-primary" onclick="app.contacts.submitImportBatch()">
+                                <i data-lucide="check"></i> Alle Importieren
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -5576,14 +5735,14 @@ const app = {
         }
     },
     contacts: {
-        add(n, p, e, a, h = '', type = 'business') {
+        add(n, p, e, a, h = '', type = 'business', shared = false) {
             if (!app.state.contacts) app.state.contacts = [];
-            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h, type: type });
+            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h, type: type, shared: shared });
             app.saveState();
             this.render();
             app.renderDashboard();
             app.modals.close(); // Close if open
-            app.navigateTo('dashboard');
+            app.navigateTo('contacts');
         },
         delete(id) {
             app.state.contacts = app.state.contacts.filter(c => c.id !== id);
@@ -5600,19 +5759,46 @@ const app = {
                     const props = ['name', 'email', 'tel', 'address'];
                     const contacts = await navigator.contacts.select(props, { multiple: true });
                     if (contacts.length > 0) {
-                        contacts.forEach(c => {
-                            const name = c.name ? c.name[0] : 'Unbekannt';
-                            const phone = c.tel ? c.tel[0] : '';
-                            const email = c.email ? c.email[0] : '';
-                            if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
-                            this.add(name, phone, email, '', '', 'business');
-                        });
-                        alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
+                        app.modals.open('importContactsReview', { rawContacts: contacts });
                     }
+                } else {
+                    alert("Dein Browser unterstützt den Kontakt-Import leider nicht (funktioniert primär auf Android mit Chrome).");
                 }
             } catch (err) {
                 console.error("Contact Import Error:", err);
             }
+        },
+        submitImportBatch() {
+            const items = document.querySelectorAll('.import-review-item');
+            let count = 0;
+            items.forEach(item => {
+                const name = item.dataset.name;
+                const phone = item.dataset.phone;
+                const email = item.dataset.email;
+                const type = item.querySelector('select').value;
+                const isShared = item.querySelector('input[type="checkbox"]').checked;
+
+                // Avoid duplicates
+                if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
+
+                app.state.contacts.push({
+                    id: Date.now() + Math.random(),
+                    name,
+                    phone,
+                    email,
+                    address: '',
+                    homepage: '',
+                    type,
+                    shared: isShared
+                });
+                count++;
+            });
+
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+            app.modals.close();
+            alert(`${count} Kontakte erfolgreich hinzugefügt! ✨`);
         },
         search(q) {
             const list = document.getElementById('contactsList');
@@ -5621,7 +5807,7 @@ const app = {
 
             const contacts = (app.state.contacts || []).filter(c => {
                 const cType = c.type || 'business';
-                if (cType !== mode) return false;
+                if (cType !== mode && !c.shared) return false;
 
                 return c.name.toLowerCase().includes(q.toLowerCase()) ||
                     (c.phone && c.phone.includes(q)) ||
@@ -5644,7 +5830,7 @@ const app = {
                         
                         <div style="flex:1.5; min-width:0;">
                             <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.type === 'private' ? 'Familie & Freunde' : 'Business Partner'}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.shared ? 'Business & Privat' : (c.type === 'private' ? 'Familie & Freunde' : 'Business Partner')}</div>
                         </div>
 
                         <div class="desktop-only" style="flex:2; min-width:0;">
@@ -5698,7 +5884,7 @@ const app = {
             // Filter by mode
             contacts = contacts.filter(c => {
                 const cType = c.type || 'business';
-                return cType === mode;
+                return cType === mode || c.shared;
             });
 
             if (contacts.length === 0) {
@@ -5734,7 +5920,7 @@ const app = {
                         <!-- Name Section (Horizontal nach Avatar) -->
                         <div style="flex:1.5; min-width:0;">
                             <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.type === 'private' ? 'Familie & Freunde' : 'Business Partner'}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.shared ? 'Business & Privat' : (c.type === 'private' ? 'Familie & Freunde' : 'Business Partner')}</div>
                         </div>
 
                         <!-- Kontakt-Details (Tabellarisch / Horizontal) -->
@@ -5821,9 +6007,8 @@ const app = {
                 document.head.appendChild(style);
             }
 
-            const importBtn = document.getElementById('importContactsBtn');
             if (importBtn) {
-                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window && mode === 'business') ? 'flex' : 'none';
+                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
             }
         },
         renderQuick() {
@@ -5833,7 +6018,10 @@ const app = {
             const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
 
             const contacts = (app.state.contacts || [])
-                .filter(c => (c.type || 'business') === mode)
+                .filter(c => {
+                    const cType = c.type || 'business';
+                    return cType === mode || c.shared;
+                })
                 .slice(0, 3);
 
             if (contacts.length === 0) {
@@ -5850,7 +6038,7 @@ const app = {
                             <div style="width:32px; height:32px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:bold; color:white; flex-shrink:0;">${c.name.charAt(0).toUpperCase()}</div>
                             <div style="flex:1; min-width:0;">
                                 <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
-                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || (mode === 'business' ? 'Business Partner' : 'Kontakt')}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || (c.shared ? 'Geteilter Kontakt' : (c.type === 'business' ? 'Business Partner' : 'Privat'))}</div>
                             </div>
                             <i data-lucide="chevron-right" size="14" style="opacity:0.3;"></i>
                         </div>
@@ -5873,12 +6061,13 @@ const app = {
 
             const typeRadio = document.querySelector('input[name="contactType"]:checked');
             const type = typeRadio ? typeRadio.value : 'business';
+            const shared = document.getElementById('contactShared') ? document.getElementById('contactShared').checked : false;
 
             if (n) {
                 if (app.editingId) {
                     const idx = app.state.contacts.findIndex(c => c.id === app.editingId);
                     if (idx !== -1) {
-                        app.state.contacts[idx] = { ...app.state.contacts[idx], name: n, phone: p, email: e, address: a, homepage: h, type: type };
+                        app.state.contacts[idx] = { ...app.state.contacts[idx], name: n, phone: p, email: e, address: a, homepage: h, type: type, shared: shared };
                         app.saveState();
                         this.render();
                         app.renderDashboard();
@@ -5886,7 +6075,7 @@ const app = {
                     }
                     app.editingId = null;
                 } else {
-                    this.add(n, p, e, a, h, type);
+                    this.add(n, p, e, a, h, type, shared);
                 }
                 app.modals.close();
             }
@@ -5989,8 +6178,12 @@ const app = {
             const a = document.getElementById('impAddress').value;
             const h = document.getElementById('impUrl').value;
 
+            const typeRadio = document.querySelector('input[name="impType"]:checked');
+            const type = typeRadio ? typeRadio.value : 'business';
+            const shared = document.getElementById('impShared') ? document.getElementById('impShared').checked : false;
+
             if (n) {
-                app.contacts.add(n, p, e, a, h);
+                app.contacts.add(n, p, e, a, h, type, shared);
                 app.modals.close();
                 app.navigateTo('contacts');
                 if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
