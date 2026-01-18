@@ -209,18 +209,33 @@ h4 {
     color: var(--text-muted);
 }
 
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: flex;
+    }
+}
+
 /* Layout Structure */
 #app-layout {
-    display: flex;
-    height: 100%;
-    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
     transition: all 0.3s ease;
+}
+
+#app-layout.sidebar-collapsed {
+    grid-template-columns: 0 1fr;
 }
 
 #app-layout.sidebar-collapsed .sidebar {
     width: 0;
     min-width: 0;
-    margin-left: -260px;
     padding: 0;
     opacity: 0;
     pointer-events: none;
@@ -236,6 +251,7 @@ h4 {
 /* Sidebar Navigation (Desktop) */
 .sidebar {
     width: 260px;
+    flex-shrink: 0;
     background: var(--bg-app);
     backdrop-filter: blur(16px);
     border-right: 1px solid var(--border);
@@ -306,6 +322,7 @@ h4 {
 /* Main Content Area */
 .main-content {
     flex: 1;
+    min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: var(--spacing-lg);
@@ -536,17 +553,39 @@ h4 {
 
 /* --- RESPONSIVE ADJUSTMENTS --- */
 
-/* Tablets & Small Desktops (Switch to 2 columns) */
-@media (max-width: 1200px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
+/* Large Laptop / Standard Desktop (Switch to 3 columns) */
+@media (max-width: 1440px) {
+    .dashboard-grid:not(.single-column-mode) {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Tablets & Small Laptops (Switch to 2 columns) */
+@media (max-width: 1100px) {
+    .dashboard-grid:not(.single-column-mode) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    /* On 2-col, 'mini' cards (span 1) take half width, which is fine */
+    .top-bar {
+        gap: 10px;
+    }
+
+    .top-command-field {
+        max-width: 300px !important;
+    }
+
+    /* Hide text labels in mode switcher on smaller laptops to save space */
+    .dash-mode-switcher .mode-text {
+        display: none;
+    }
 }
 
 /* Medium Tablets & Mobile (Up to 768px) */
 @media (max-width: 768px) {
+    #app-layout {
+        display: block !important;
+    }
+
     .sidebar {
         display: none;
     }
@@ -599,12 +638,74 @@ h4 {
     }
 
     .hero-clock-card {
-        margin: -16px -16px 16px -16px !important;
-        border-radius: 0 0 20px 20px;
+        margin: -16px -16px 20px -16px !important;
+        border-radius: 0 0 30px 30px;
+        padding-top: 40px !important;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%) !important;
     }
 
     .clock-large {
-        font-size: 2.8rem !important;
+        font-size: 3.2rem !important;
+    }
+
+    /* Hide the old search bar in the top-bar on mobile */
+    .top-bar .top-command-field {
+        display: none !important;
+    }
+
+    /* Hide search in top actions too */
+    .top-actions button[title="Suche"] {
+        display: none !important;
+    }
+
+    .top-bar {
+        padding-top: 15px !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* Floating Command Bar for Mobile */
+    .floating-command-bar {
+        position: fixed;
+        bottom: 85px;
+        /* Above Bottom Nav */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 400px;
+        background: rgba(20, 20, 25, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 25px;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 1000;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .floating-command-bar input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 10px 15px;
+        color: white;
+        font-size: 0.95rem;
+        outline: none;
+    }
+
+    .floating-voice-btn {
+        width: 40px;
+        height: 40px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 0 15px var(--primary-glow);
     }
 }
 
@@ -727,7 +828,13 @@ h4 {
     filter: none !important;
 }
 
-/* Voice Listening Active Glow */
+/* Hide central voice button from bottom nav on mobile to make room for floating bar if needed */
+@media (max-width: 480px) {
+    .nav-voice-center {
+        display: none !important;
+    }
+}
+
 .voice-listening-active .voice-inner {
     background: #3b82f6 !important;
     /* Blue background */

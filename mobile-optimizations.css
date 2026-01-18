@@ -2,7 +2,26 @@
 @media (max-width: 480px) {
 
     /* Extra small screens (phones in portrait) */
+    /* Extra small screens (phones in portrait) */
+    /* ENABLE SCROLLING ON MOBILE */
+    html,
+    body {
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overscroll-behavior-y: none;
+        /* Optional: prevents bounce if desired, but auto is key */
+    }
+
+    #app-layout {
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
     .main-content {
+        height: auto !important;
+        overflow: visible !important;
         padding: 8px;
         padding-bottom: 110px;
     }
@@ -107,7 +126,9 @@
         margin: 0 10px !important;
     }
 
-    .top-command-field {
+    /* Show Header Search on Mobile (Standard) */
+    .top-bar .top-command-field {
+        display: flex !important;
         width: 100% !important;
         max-width: none !important;
         margin: 0 !important;
@@ -117,6 +138,11 @@
         width: 100% !important;
         padding: 12px 40px !important;
         /* Better touch target */
+    }
+
+    /* Hide Hero Search (Reverting move) */
+    .hero-clock-card .top-command-field {
+        display: none !important;
     }
 
 
@@ -162,6 +188,13 @@
     .dashboard-grid:not(.single-column-mode) #dashboardMeetingsCard,
     .dashboard-grid:not(.single-column-mode) #view-contacts .card {
         grid-column: span 2 !important;
+        display: flex !important;
+        /* FORCE VISIBILITY */
+    }
+
+    /* Force ALL cards to show on mobile, overriding any specific hides */
+    .dashboard-grid .card {
+        display: flex !important;
     }
 
     .card-value {
@@ -336,5 +369,35 @@
 
     .top-bar {
         padding-top: max(0px, env(safe-area-inset-top));
+    }
+}
+
+/* === TABLET OPTIMIZATIONS (Portrait & Small Laptop) === */
+@media (max-width: 1024px) {
+
+    /* Ensure scrolling works on tablets too */
+    html,
+    body {
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #app-layout {
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    .main-content {
+        height: auto !important;
+        overflow: visible !important;
+        padding-bottom: 120px;
+    }
+
+    /* Force visibility of all cards on tablets */
+    .dashboard-grid .card {
+        display: flex !important;
     }
 }

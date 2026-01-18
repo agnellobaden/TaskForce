@@ -264,7 +264,9 @@
 
                     <!-- HERO SECTION AT THE VERY TOP -->
                     <div class="hero-clock-card"
-                        style="margin: -20px -20px 20px -20px; border-radius: 0 0 30px 30px; display: flex; flex-direction: column; align-items: center; padding: 25px 20px;">
+                        style="border-radius: 0 0 30px 30px; display: flex; flex-direction: column; align-items: center; padding: 25px 20px;">
+
+
 
 
 
@@ -645,7 +647,7 @@
 
                         <!-- Private Communication Card -->
                         <div id="dashboardPrivateCommCard" class="card dash-card card-communication card-medium"
-                            style="grid-column: span 2; order: 12; background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.03)); border-left: 3px solid #a855f7; display:none;"
+                            style="grid-column: span 2; order: 12; background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.03)); border-left: 3px solid #a855f7;"
                             draggable="true">
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
@@ -687,7 +689,7 @@
 
                         <!-- HOUSEHOLD CARD (Private Only) -->
                         <div id="dashboardHouseholdCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02)); display:none;"
+                            style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02);"
                             onclick="app.navigateTo('household')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="home" class="text-success"></i> Haushalt</span>
@@ -703,7 +705,7 @@
 
                         <!-- JOURNAL CARD (Private Only) -->
                         <div id="dashboardJournalCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.02)); display:none;"
+                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.02);"
                             onclick="app.navigateTo('journal')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="book-open" class="text-accent"></i> Journal &
@@ -720,7 +722,7 @@
 
                         <!-- MEAL PLAN CARD (Private Only) -->
                         <div id="dashboardMealPlanCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02)); display:none;"
+                            style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02);"
                             onclick="app.modals.open('viewMealPlan')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="utensils" class="text-accent"></i>
@@ -1404,6 +1406,8 @@
     </div>
 
     </main>
+
+
 
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-nav">
