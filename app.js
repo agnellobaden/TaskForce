@@ -225,6 +225,7 @@ const app = {
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
         if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
+        if (!this.state.sync_deleted) this.state.sync_deleted = [];
         if (!this.state.user.savedTeams) {
             this.state.user.savedTeams = [
                 { id: Date.now(), label: 'Hauptteam', teamName: this.state.user.teamName || this.state.user.name || 'Owner', persona: this.state.user.persona || 'mixed' }
@@ -969,7 +970,8 @@ const app = {
                 phone: e.phone,
                 email: e.email,
                 notes: e.notes,
-                urgent: e.urgent
+                urgent: e.urgent,
+                type: e.type
             });
         },
         calculateDailyRoute() {
@@ -1085,7 +1087,7 @@ const app = {
                 const dayEvents = allPossibleEvents.filter(e => {
                     const eventDate = new Date(e.start);
                     const eventType = e.type || 'business';
-                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && eventType === mode;
+                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && (eventType === mode || eventType === 'mixed');
                 });
 
                 // Build day content
@@ -1101,7 +1103,7 @@ const app = {
                     dayContent += '<div class="event-markers">';
                     dayEvents.forEach(ev => {
                         const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        const isPrivate = ev.type === 'private';
+                        const isPrivate = ev.type === 'private' || ev.type === 'mixed';
                         const color = isPrivate ? '#10b981' : '#3b82f6';
                         const bg = isPrivate ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)';
 
@@ -1157,7 +1159,7 @@ const app = {
             const up = app.state.events
                 .filter(e => {
                     const eventType = e.type || 'business';
-                    return new Date(e.start) >= startOfToday && eventType === mode;
+                    return new Date(e.start) >= startOfToday && (eventType === mode || eventType === 'mixed');
                 })
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 5);
@@ -1213,8 +1215,8 @@ const app = {
                             </div>
 
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-                                <div style="font-size: 0.65rem; color: ${e.type === 'private' ? '#10b981' : 'var(--primary)'}; font-weight: 800; text-transform: uppercase; margin-bottom: -1px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                                    <i data-lucide="${e.type === 'private' ? 'users' : 'briefcase'}" size="10"></i> ${e.type === 'private' ? 'Familie & Gemeinsam' : 'Business'}
+                                <div style="font-size: 0.65rem; color: ${(e.type === 'private' || e.type === 'mixed') ? '#10b981' : 'var(--primary)'}; font-weight: 800; text-transform: uppercase; margin-bottom: -1px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="${(e.type === 'private' || e.type === 'mixed') ? 'users' : 'briefcase'}" size="10"></i> ${(e.type === 'private' || e.type === 'mixed') ? 'Familie & Gemeinsam' : 'Business'} ${e.type === 'mixed' ? '<span style="opacity:0.6; margin-left:4px;">(Mixed)</span>' : ''}
                                 </div>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${e.title}</div>
@@ -3928,85 +3930,42 @@ const app = {
                         if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Live Sync (${new Date().toLocaleTimeString()})</span>`;
                     } else if (!doc.exists && !doc.metadata.hasPendingWrites) {
                         // NEW TEAM DETECTED (No cloud data found)
-                        // "sollen meine ganzen anderen termine nicht drin stehen"
-                        // Clear local data to start fresh for this new individual team
-                        console.log("New Team detected. Clearing local state.");
-                        app.state.tasks = [];
-                        app.state.events = [];
-                        app.state.expenses = [];
-                        app.state.habits = [];
-                        app.state.healthData = [];
-                        app.state.alarms = [];
-
-                        app.saveState(); // Save empty state locally
-                        app.renderDashboard(); // Update UI
-
-                        // Optional: Create initial empty doc in cloud? 
-                        // Or wait for first user action to create it via pushState.
+                        // Instead of clearing local state, we push our local events to start the cloud doc.
+                        console.log("New Team detected. Initializing cloud with local data.");
+                        this.push();
                     }
                 });
         },
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            const merge = (key, fallback) => {
-                if (cloudState[key] !== undefined) return cloudState[key];
-                return app.state[key] || fallback;
-            };
+            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts'];
+            let changed = false;
 
-            // Compare versions for quick dirty check
-            const localCompare = {
-                tasks: app.state.tasks,
-                events: app.state.events,
-                expenses: app.state.expenses,
-                habits: app.state.habits,
-                healthData: app.state.healthData || [],
-                alarms: app.state.alarms || [],
-                contacts: app.state.contacts || [],
-                shortcuts: app.state.shortcuts || [],
-                xp: app.state.xp || 0,
-                level: app.state.level || 1,
-                ui: app.state.ui || {}
-            };
+            collections.forEach(key => {
+                if (cloudState[key] !== undefined && JSON.stringify(app.state[key]) !== JSON.stringify(cloudState[key])) {
+                    app.state[key] = cloudState[key];
+                    changed = true;
+                }
+            });
 
-            const cloudCompare = {
-                tasks: merge('tasks', []),
-                events: merge('events', []),
-                expenses: merge('expenses', []),
-                habits: merge('habits', []),
-                healthData: merge('healthData', []),
-                alarms: merge('alarms', []),
-                contacts: merge('contacts', []),
-                shortcuts: merge('shortcuts', []),
-                xp: merge('xp', 0),
-                level: merge('level', 1),
-                ui: merge('ui', {})
-            };
+            if (cloudState.xp !== undefined && cloudState.xp > app.state.xp) {
+                app.state.xp = cloudState.xp;
+                app.state.level = cloudState.level || 1;
+                changed = true;
+            }
 
-            if (JSON.stringify(localCompare) !== JSON.stringify(cloudCompare)) {
-                app.state.tasks = cloudCompare.tasks;
-                app.state.events = cloudCompare.events;
-                app.state.expenses = cloudCompare.expenses;
-                app.state.habits = cloudCompare.habits;
-                app.state.healthData = cloudCompare.healthData;
-                app.state.alarms = cloudCompare.alarms;
-                app.state.contacts = cloudCompare.contacts;
-                app.state.shortcuts = cloudCompare.shortcuts;
-                app.state.xp = cloudCompare.xp;
-                app.state.level = cloudCompare.level;
-                app.state.ui = cloudCompare.ui;
-
-                app.saveState(true); // Skip Push to avoid loop
+            if (changed) {
+                app.saveState(true); // Skip manual periodic push
                 app.renderDashboard();
                 if (app.tasks) app.tasks.render();
                 if (app.calendar) app.calendar.render();
                 if (app.finance) app.finance.render();
                 if (app.habits) app.habits.render();
                 if (app.health) app.health.render();
-                console.log("☁️ Data Synchronized from Cloud");
-
-                this.updateIndicator(true);
+                console.log("☁️ Data Synchronized from Cloud (Mirror)");
             }
+            this.updateIndicator(true);
         },
         updateIndicator(active) {
             const el = document.getElementById('headerSyncIndicator');
@@ -4050,7 +4009,7 @@ const app = {
                     shortcuts: app.state.shortcuts || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
-                    ui: app.state.ui || {},
+                    sync_deleted: app.state.sync_deleted || [],
                     last_updated: new Date().toISOString()
                 },
                 updated_at: new Date().toISOString()
@@ -4548,14 +4507,32 @@ const app = {
                             <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(59, 130, 246, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s; ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}" id="labelTypeBusiness">
                                 <i data-lucide="briefcase" style="color:${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'var(--text-muted)'}"></i>
                                 <span style="font-size:0.8rem; font-weight:700; color:${(data.type === 'business' || !data.type) ? 'white' : 'var(--text-muted)'}">Business</span>
-                                <input type="radio" name="evtType" value="business" ${(data.type === 'business' || !data.type) ? 'checked' : ''} style="display:none;" onchange="this.parentElement.style.borderColor='var(--primary)'; this.parentElement.style.background='rgba(59, 130, 246, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='var(--primary)'; document.getElementById('labelTypePrivate').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').style.background='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypePrivate').querySelector('i').style.color='var(--text-muted)';">
+                                <input type="radio" name="evtType" value="business" ${(data.type === 'business' || !data.type) ? 'checked' : ''} style="display:none;" 
+                                    onchange="this.parentElement.style.borderColor='var(--primary)'; this.parentElement.style.background='rgba(59, 130, 246, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='var(--primary)'; 
+                                    document.getElementById('labelTypePrivate').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').style.background='rgba(255,255,255,0.05)'; 
+                                    document.getElementById('labelTypePrivate').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypePrivate').querySelector('i').style.color='var(--text-muted)';
+                                    document.getElementById('mixedToggleContainer').style.display='none';">
                             </label>
-                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${data.type === 'private' ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
-                                <i data-lucide="users" style="color:${data.type === 'private' ? '#10b981' : 'var(--text-muted)'}"></i>
-                                <span style="font-size:0.8rem; font-weight:700; color:${data.type === 'private' ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
-                                <input type="radio" name="evtType" value="private" ${data.type === 'private' ? 'checked' : ''} style="display:none;" onchange="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='rgba(16, 185, 129, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='#10b981'; document.getElementById('labelTypeBusiness').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').style.background='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypeBusiness').querySelector('i').style.color='var(--text-muted)';">
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(data.type === 'private' || data.type === 'mixed') ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
+                                <i data-lucide="users" style="color:${(data.type === 'private' || data.type === 'mixed') ? '#10b981' : 'var(--text-muted)'}"></i>
+                                <span style="font-size:0.8rem; font-weight:700; color:${(data.type === 'private' || data.type === 'mixed') ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
+                                <input type="radio" name="evtType" value="private" ${(data.type === 'private' || data.type === 'mixed') ? 'checked' : ''} style="display:none;" 
+                                    onchange="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='rgba(16, 185, 129, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='#10b981'; 
+                                    document.getElementById('labelTypeBusiness').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').style.background='rgba(255,255,255,0.05)'; 
+                                    document.getElementById('labelTypeBusiness').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypeBusiness').querySelector('i').style.color='var(--text-muted)';
+                                    document.getElementById('mixedToggleContainer').style.display='block';">
                             </label>
                         </div>
+                    </div>
+
+                    <div id="mixedToggleContainer" style="display: ${(data.type === 'private' || data.type === 'mixed') ? 'block' : 'none'}; margin-bottom: 20px; background: rgba(59, 130, 246, 0.05); padding: 12px; border-radius: 12px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <input type="checkbox" id="evtMixed" ${data.type === 'mixed' ? 'checked' : ''} style="width:18px; height:18px;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.9rem;">Im Business-Dashboard anzeigen</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Erlaubt es, diesen privaten Termin auch in der Business-Ansicht zu sehen.</div>
+                            </div>
+                        </label>
                     </div>
 
                     <div class="form-group">
@@ -4849,7 +4826,7 @@ const app = {
                 const events = (app.state.events || [])
                     .filter(e => {
                         const eventType = e.type || 'business';
-                        return e.start.startsWith(todayStr) && eventType === mode;
+                        return e.start.startsWith(todayStr) && (eventType === mode || eventType === 'mixed');
                     })
                     .sort((a, b) => new Date(a.start) - new Date(b.start));
 
@@ -5401,6 +5378,7 @@ const app = {
         },
         submitEvent() {
             const typeRadio = document.querySelector('input[name="evtType"]:checked');
+            const mixedCheck = document.getElementById('evtMixed');
             const data = {
                 title: document.getElementById('evtTitle').value,
                 date: document.getElementById('evtDate').value,
@@ -5410,7 +5388,7 @@ const app = {
                 email: document.getElementById('evtEmail').value,
                 notes: document.getElementById('evtNotes').value,
                 urgent: document.getElementById('evtUrgent').checked,
-                type: typeRadio ? typeRadio.value : 'business'
+                type: (typeRadio && typeRadio.value === 'private' && mixedCheck && mixedCheck.checked) ? 'mixed' : (typeRadio ? typeRadio.value : 'business')
             };
             if (data.title && data.date && data.time) {
                 app.calendar.addEvent(data);
