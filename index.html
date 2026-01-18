@@ -35,7 +35,15 @@
     <script src="https://www.paypal.com/sdk/js?client-id=test&currency=EUR"></script>
 </head>
 
+<link rel="stylesheet" href="pull-refresh.css">
+</head>
+
 <body>
+    <!-- PULL TO REFRESH INDICATOR -->
+    <div id="pullToRefresh">
+        <i data-lucide="arrow-down" class="icon"></i>
+        <div class="spinner"></div>
+    </div>
 
     <!-- LOGIN OVERLAY -->
     <div id="loginOverlay" class="hidden"
@@ -250,9 +258,12 @@
                             class="badg"
                             style="position: absolute; top:8px; right:8px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
                     <div class="user-avatar" id="headerUserAvatar"
-                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden; position: relative;">
+                        onclick="document.getElementById('avatarUpload').click()"
+                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden; position: relative; cursor: pointer;">
                         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
                     </div>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                        onchange="app.user.handleUpload(this)">
                 </div>
             </header>
 

@@ -162,19 +162,67 @@ const app = {
         });
     },
 
-    // --- MOBILE GESTURES ---
+    // --- MOBILE GESTURES (Swipe & Pull-to-Refresh) ---
     setupMobileGestures() {
         let touchStartX = 0;
         let touchStartY = 0;
+        let ptrDist = 0;
+        const ptrThreshold = 150; // Distance to trigger refresh
+        const ptrIndicator = document.getElementById('pullToRefresh');
 
         document.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
         }, { passive: true });
 
+        document.addEventListener('touchmove', e => {
+            const touchCurrentY = e.changedTouches[0].screenY;
+            const scrollY = window.scrollY;
+
+            // PULL TO REFRESH LOGIC
+            // Only if at the very top of the page
+            if (scrollY === 0 && touchCurrentY > touchStartY) {
+                ptrDist = touchCurrentY - touchStartY;
+
+                // Show indicator visually
+                if (ptrDist > 0 && ptrIndicator) {
+                    // Add resistance
+                    const resistance = 0.5;
+                    const move = Math.min(ptrDist * resistance, 100);
+                    ptrIndicator.style.top = `${move - 60}px`; // -60 is hidden height
+
+                    // Rotate icon if close to threshold
+                    const icon = ptrIndicator.querySelector('.icon');
+                    if (icon) {
+                        icon.style.transform = ptrDist > ptrThreshold ? 'rotate(0deg)' : 'rotate(180deg)';
+                    }
+                }
+            }
+        }, { passive: false });
+
         document.addEventListener('touchend', e => {
             const touchEndX = e.changedTouches[0].screenX;
             const touchEndY = e.changedTouches[0].screenY;
+
+            // Handle Pull To Refresh
+            if (ptrDist > ptrThreshold && window.scrollY <= 0) {
+                if (ptrIndicator) {
+                    ptrIndicator.classList.add('refreshing');
+                    ptrIndicator.style.top = '20px';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500); // Visual delay
+                }
+                return;
+            } else {
+                // Reset
+                if (ptrIndicator) {
+                    ptrIndicator.style.top = '-60px';
+                    ptrIndicator.classList.remove('refreshing');
+                }
+                ptrDist = 0;
+            }
+
 
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
@@ -503,7 +551,30 @@ const app = {
             const n = document.getElementById('headerUserName');
             if (n) n.textContent = app.state.user.name || 'Gast';
             const ava = document.getElementById('headerUserAvatar');
-            if (ava && app.state.user.name) ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${app.state.user.name}" alt="User">`;
+            if (ava && app.state.user.name) {
+                if (app.state.user.customAvatar) {
+                    ava.innerHTML = `<img src="${app.state.user.customAvatar}" alt="User" style="width:100%; height:100%; object-fit:cover;">`;
+                } else {
+                    ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${app.state.user.name}" alt="User">`;
+                }
+            }
+        },
+        handleUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    app.state.user.customAvatar = e.target.result;
+                    app.saveState();
+                    app.user.updateHeader();
+                    // Also update login avatar if visible
+                    const loginAva = document.getElementById('userLoginAvatar');
+                    if (loginAva) {
+                        loginAva.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    if (typeof confetti === 'function') confetti({ particleCount: 50, spread: 50, origin: { y: 0.1, x: 0.9 } });
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
         },
         upgradeToPro() {
             app.state.user.isPro = true;
