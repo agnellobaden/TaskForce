@@ -388,7 +388,7 @@ h4 {
 /* Dashboard Grid - Pro 4-Column Layout */
 .dashboard-grid {
     display: grid;
-    /* Granular 4-column grid for precise layout control */
+    /* Adaptive column count for standard desktop */
     grid-template-columns: repeat(4, 1fr);
     grid-auto-rows: min-content;
     grid-auto-flow: dense;
@@ -398,6 +398,20 @@ h4 {
     margin: 0 auto;
     box-sizing: border-box;
     align-items: stretch;
+}
+
+/* HD+ Screens: 6 Columns (3 Medium Cards per row) */
+@media (min-width: 1400px) {
+    .dashboard-grid:not(.single-column-mode) {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+/* 4K / Ultra-Wide Screens: 8 Columns (4 Medium Cards per row) */
+@media (min-width: 2000px) {
+    .dashboard-grid:not(.single-column-mode) {
+        grid-template-columns: repeat(8, 1fr);
+    }
 }
 
 /* Specific Card Width Helper Classes */
@@ -419,7 +433,8 @@ h4 {
 }
 
 .card-wide {
-    grid-column: span 4 !important;
+    grid-column: 1 / -1 !important;
+    /* Always span full row width */
 }
 
 /* Single Column Mode (User Preference or Small Screens) */
@@ -461,7 +476,7 @@ h4 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
     gap: var(--spacing-sm);
     flex-shrink: 0;
 }
@@ -1467,6 +1482,16 @@ button {
     letter-spacing: -2px;
     color: #ffffff;
     text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+@media (min-width: 1024px) {
+    .clock-large {
+        font-size: 3.5rem;
+    }
+
+    .hero-clock-card {
+        padding: 15px 20px !important;
+    }
 }
 
 .clock-details {

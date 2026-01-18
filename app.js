@@ -237,6 +237,7 @@ const app = {
         if (!this.state.ui) this.state.ui = {};
         if (!this.state.ui.hiddenCards) this.state.ui.hiddenCards = [];
         if (!this.state.ui.dashboardMode) this.state.ui.dashboardMode = 'business';
+        if (!this.state.ui.eventFilter) this.state.ui.eventFilter = 'all';
 
         // Household & Journal Migration
         if (!this.state.household) this.state.household = [];
@@ -331,6 +332,23 @@ const app = {
             this.state.ui.hiddenCards = [];
             this.saveState();
         }
+
+        // Ensure all historical data has a type for the new mode filtering
+        const mode = (this.state.ui && this.state.ui.dashboardMode) || 'business';
+        ['events', 'tasks', 'expenses', 'habits'].forEach(key => {
+            if (this.state[key] && Array.isArray(this.state[key])) {
+                this.state[key].forEach(item => {
+                    if (!item.type) {
+                        item.type = 'business'; // Default legacy to business
+                        // Try to guess if it's private based on keywords
+                        if (item.title && (item.title.toLowerCase().includes('privat') || item.title.toLowerCase().includes('familie'))) {
+                            item.type = 'private';
+                        }
+                    }
+                });
+            }
+        });
+        this.saveState();
     },
 
     saveState(skipSync = false) {
@@ -933,11 +951,13 @@ const app = {
                             email: data.email,
                             notes: data.notes,
                             urgent: data.urgent,
-                            type: data.type || 'business'
+                            type: data.type || 'business',
+                            shared: data.shared !== undefined ? data.shared : true
                         };
                     }
                     app.editingId = null;
                 } else {
+                    const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                     app.state.events.push({
                         id: Date.now(),
                         title: data.title,
@@ -947,7 +967,8 @@ const app = {
                         email: data.email || '',
                         notes: data.notes || '',
                         urgent: data.urgent || false,
-                        type: data.type || 'business'
+                        type: data.type || mode,
+                        shared: data.shared !== undefined ? data.shared : (data.type !== 'private')
                     });
                     app.gamification.addXP(30);
                 }
@@ -971,7 +992,8 @@ const app = {
                 email: e.email,
                 notes: e.notes,
                 urgent: e.urgent,
-                type: e.type
+                type: e.type,
+                shared: e.shared
             });
         },
         calculateDailyRoute() {
@@ -1087,7 +1109,7 @@ const app = {
                 const dayEvents = allPossibleEvents.filter(e => {
                     const eventDate = new Date(e.start);
                     const eventType = e.type || 'business';
-                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && (eventType === mode || eventType === 'mixed');
+                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && (eventType === mode || eventType === 'mixed' || e.shared === true);
                 });
 
                 // Build day content
@@ -1156,10 +1178,17 @@ const app = {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+            const activeFilter = app.state.ui.eventFilter || 'all';
+
             const up = app.state.events
                 .filter(e => {
                     const eventType = e.type || 'business';
-                    return new Date(e.start) >= startOfToday && (eventType === mode || eventType === 'mixed');
+                    const isVisible = (eventType === mode || e.shared === true || eventType === 'mixed');
+                    if (!isVisible) return false;
+
+                    if (activeFilter !== 'all' && eventType !== activeFilter) return false;
+
+                    return new Date(e.start) >= startOfToday;
                 })
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 5);
@@ -1215,8 +1244,12 @@ const app = {
                             </div>
 
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-                                <div style="font-size: 0.65rem; color: ${(e.type === 'private' || e.type === 'mixed') ? '#10b981' : 'var(--primary)'}; font-weight: 800; text-transform: uppercase; margin-bottom: -1px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                                    <i data-lucide="${(e.type === 'private' || e.type === 'mixed') ? 'users' : 'briefcase'}" size="10"></i> ${(e.type === 'private' || e.type === 'mixed') ? 'Familie & Gemeinsam' : 'Business'} ${e.type === 'mixed' ? '<span style="opacity:0.6; margin-left:4px;">(Mixed)</span>' : ''}
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                    <div style="font-size: 0.65rem; color: ${(e.type === 'private') ? '#10b981' : (e.type === 'mixed' ? '#8b5cf6' : 'var(--primary)')}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">
+                                        <i data-lucide="${(e.type === 'private') ? 'users' : (e.type === 'mixed' ? 'layers' : 'briefcase')}" size="10"></i> 
+                                        ${(e.type === 'private') ? 'Privat' : (e.type === 'mixed' ? 'Gemischt' : 'Business')}
+                                    </div>
+                                    ${e.shared ? `<div style="font-size: 0.6rem; background: var(--success); color: white; padding: 2px 6px; border-radius: 4px; font-weight: 800;">TEAM</div>` : ''}
                                 </div>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${e.title}</div>
@@ -2457,8 +2490,18 @@ const app = {
             }
         },
         toggleUrgency(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.urgent = !t.urgent; app.saveState(); this.render(); app.renderDashboard(); } },
-        add(t, u, category = 'todo') {
-            app.state.tasks.push({ id: Date.now(), title: t, urgent: u, category: category, done: false });
+        add(t, u, category = 'todo', shared = false) {
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+            const finalType = mode;
+            app.state.tasks.push({
+                id: Date.now(),
+                title: t,
+                urgent: u,
+                category: category,
+                type: finalType,
+                shared: shared,
+                done: false
+            });
             app.saveState();
             this.render(); // Renders Tasks
             if (category === 'shopping' && app.shopping) app.shopping.render(); // Renders Shopping if needed
@@ -2544,13 +2587,17 @@ const app = {
                 app.renderDashboard();
             }
         },
-        add(a, d, dateStr, urgent = false) {
+        add(a, d, dateStr, urgent = false, shared = false) {
+            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+            const finalType = mode;
             app.state.expenses.push({
                 id: Date.now(),
                 amount: parseFloat(a),
                 desc: d,
                 date: dateStr || new Date().toISOString().split('T')[0],
-                urgent: urgent
+                urgent: urgent,
+                type: finalType,
+                shared: shared
             });
             app.saveState();
             this.render();
@@ -3024,7 +3071,8 @@ const app = {
                 value: liters,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder
+                reminder: reminder,
+                scope: 'private'
             });
 
             app.saveState();
@@ -3054,7 +3102,8 @@ const app = {
                 type: 'steps',
                 value: steps,
                 date: today,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                scope: 'private'
             });
 
             app.saveState();
@@ -3071,7 +3120,8 @@ const app = {
                 value: hours,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder
+                reminder: reminder,
+                scope: 'private'
             });
 
             app.saveState();
@@ -3092,7 +3142,8 @@ const app = {
                 value: kg,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder
+                reminder: reminder,
+                scope: 'private'
             });
 
             app.saveState();
@@ -3714,7 +3765,7 @@ const app = {
 
             if (isNew) {
                 if (!app.state.alarms) app.state.alarms = [];
-                app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true });
+                app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true, type: 'private' });
             } else {
                 const a = app.state.alarms.find(x => x.id === id);
                 if (a) Object.assign(a, { title, time, sound, days });
@@ -3943,9 +3994,15 @@ const app = {
             let changed = false;
 
             collections.forEach(key => {
-                if (cloudState[key] !== undefined && JSON.stringify(app.state[key]) !== JSON.stringify(cloudState[key])) {
-                    app.state[key] = cloudState[key];
-                    changed = true;
+                if (cloudState[key] !== undefined) {
+                    const localPrivates = (app.state[key] || []).filter(item => item.shared === false || (key !== 'contacts' && item.type === 'private' && item.shared !== true));
+                    const teamItems = cloudState[key] || [];
+                    const merged = [...localPrivates, ...teamItems];
+
+                    if (JSON.stringify(app.state[key]) !== JSON.stringify(merged)) {
+                        app.state[key] = merged;
+                        changed = true;
+                    }
                 }
             });
 
@@ -3999,13 +4056,13 @@ const app = {
 
             const payload = {
                 data: {
-                    tasks: app.state.tasks,
-                    events: app.state.events,
-                    expenses: app.state.expenses,
-                    habits: app.state.habits,
-                    healthData: app.state.healthData || [],
-                    alarms: app.state.alarms || [],
-                    contacts: app.state.contacts || [],
+                    tasks: app.state.tasks.filter(t => t.type !== 'private' && t.shared !== false),
+                    events: app.state.events.filter(e => e.shared !== false),
+                    expenses: app.state.expenses.filter(e => e.type !== 'private' && e.shared !== false),
+                    habits: (app.state.habits || []).filter(h => h.type !== 'private' && h.shared !== false),
+                    healthData: (app.state.healthData || []).filter(d => d.scope !== 'private'),
+                    alarms: (app.state.alarms || []).filter(a => a.type !== 'private'),
+                    contacts: (app.state.contacts || []).filter(c => c.type !== 'private' && c.shared !== false),
                     shortcuts: app.state.shortcuts || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
@@ -4299,6 +4356,14 @@ const app = {
                                 </label>
                             </div>
                         </div>
+                        <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                <input type="checkbox" id="contactShared" value="true" checked style="width:18px; height:18px;">
+                                <div>
+                                    <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
+                                </div>
+                            </label>
+                        </div>
                         <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
                             <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> ${app.editingId ? 'Änderungen speichern' : 'Speichern'}</button>
@@ -4324,6 +4389,14 @@ const app = {
                             <!-- Hidden Category Input -->
                             <input type="hidden" name="taskCategory" value="shopping">
 
+                            <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 15px 0;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                    <input type="checkbox" id="newTaskShared" checked style="width:18px; height:18px;">
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
+                                    </div>
+                                </label>
+                            </div>
                             <div class="form-group">
                                 <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
                             </div>
@@ -4354,6 +4427,14 @@ const app = {
                                 </div>
                             </div>
 
+                            <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 15px 0;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                    <input type="checkbox" id="newTaskShared" checked style="width:18px; height:18px;">
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
+                                    </div>
+                                </label>
+                            </div>
                             <div class="form-group">
                                 <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
                             </div>
@@ -4467,6 +4548,8 @@ const app = {
                 const ph = data.phone || '';
                 const em = data.email || '';
                 const no = data.notes || ''; // New Notes Field
+                const currentMode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+                const finalType = data.type || (app.editingId ? 'business' : currentMode);
 
                 c.innerHTML = `
                 <div style="padding:20px;max-height:80vh;overflow-y:auto;">
@@ -4504,19 +4587,19 @@ const app = {
                     <div class="form-group" ${((app.state.ui && app.state.ui.dashboardMode) === 'private' && !app.editingId) ? 'style="display:none;"' : ''}>
                         <label class="form-label">Kategorie</label>
                         <div style="display:grid; grid-template-columns: ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? '1fr' : '1fr 1fr'}; gap:10px; margin-top:8px;">
-                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(59, 130, 246, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s; ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}" id="labelTypeBusiness">
-                                <i data-lucide="briefcase" style="color:${(data.type === 'business' || !data.type) ? 'var(--primary)' : 'var(--text-muted)'}"></i>
-                                <span style="font-size:0.8rem; font-weight:700; color:${(data.type === 'business' || !data.type) ? 'white' : 'var(--text-muted)'}">Business</span>
-                                <input type="radio" name="evtType" value="business" ${(data.type === 'business' || !data.type) ? 'checked' : ''} style="display:none;" 
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(59, 130, 246, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${finalType === 'business' ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s; ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}" id="labelTypeBusiness">
+                                <i data-lucide="briefcase" style="color:${finalType === 'business' ? 'var(--primary)' : 'var(--text-muted)'}"></i>
+                                <span style="font-size:0.8rem; font-weight:700; color:${finalType === 'business' ? 'white' : 'var(--text-muted)'}">Business</span>
+                                <input type="radio" name="evtType" value="business" ${finalType === 'business' ? 'checked' : ''} style="display:none;" 
                                     onchange="this.parentElement.style.borderColor='var(--primary)'; this.parentElement.style.background='rgba(59, 130, 246, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='var(--primary)'; 
                                     document.getElementById('labelTypePrivate').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').style.background='rgba(255,255,255,0.05)'; 
                                     document.getElementById('labelTypePrivate').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypePrivate').querySelector('i').style.color='var(--text-muted)';
                                     document.getElementById('mixedToggleContainer').style.display='none';">
                             </label>
-                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(data.type === 'private' || data.type === 'mixed') ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
-                                <i data-lucide="users" style="color:${(data.type === 'private' || data.type === 'mixed') ? '#10b981' : 'var(--text-muted)'}"></i>
-                                <span style="font-size:0.8rem; font-weight:700; color:${(data.type === 'private' || data.type === 'mixed') ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
-                                <input type="radio" name="evtType" value="private" ${(data.type === 'private' || data.type === 'mixed') ? 'checked' : ''} style="display:none;" 
+                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(finalType === 'private' || finalType === 'mixed') ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
+                                <i data-lucide="users" style="color:${(finalType === 'private' || finalType === 'mixed') ? '#10b981' : 'var(--text-muted)'}"></i>
+                                <span style="font-size:0.8rem; font-weight:700; color:${(finalType === 'private' || finalType === 'mixed') ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
+                                <input type="radio" name="evtType" value="private" ${(finalType === 'private' || finalType === 'mixed') ? 'checked' : ''} style="display:none;" 
                                     onchange="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='rgba(16, 185, 129, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='#10b981'; 
                                     document.getElementById('labelTypeBusiness').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').style.background='rgba(255,255,255,0.05)'; 
                                     document.getElementById('labelTypeBusiness').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypeBusiness').querySelector('i').style.color='var(--text-muted)';
@@ -4531,6 +4614,19 @@ const app = {
                             <div>
                                 <div style="font-weight:600; font-size:0.9rem;">Im Business-Dashboard anzeigen</div>
                                 <div style="font-size:0.75rem; color:var(--text-muted);">Erlaubt es, diesen privaten Termin auch in der Business-Ansicht zu sehen.</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px;">
+                        <label class="form-label" style="display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="eye" size="16"></i> Team-Sichtbarkeit
+                        </label>
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-top:10px;">
+                            <input type="checkbox" id="evtShared" ${data.shared !== false ? 'checked' : ''} style="width:20px; height:20px;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.9rem;">Mit Team teilen (Sync)</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Wenn deaktiviert, bleibt dieser Termin nur auf deinem Gerät.</div>
                             </div>
                         </label>
                     </div>
@@ -4614,6 +4710,14 @@ const app = {
                             <label class="form-label">Datum</label>
                             <input type="date" id="expDate" class="form-input" value="${today}">
                         </div>
+                    </div>
+                    <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom:15px;">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <input type="checkbox" id="expShared" checked style="width:18px; height:18px;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
+                            </div>
+                        </label>
                     </div>
                     <div class="form-group">
                         <label><input type="checkbox" id="expUrgent"> 🔥 Wichtig / Dringend</label>
@@ -5261,7 +5365,7 @@ const app = {
                     if (hidden) cat = hidden.value;
                 }
 
-                app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat);
+                app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat, document.getElementById('newTaskShared').checked);
                 this.close();
 
                 // Smart Navigation
@@ -5297,7 +5401,7 @@ const app = {
             const date = document.getElementById('expDate').value;
             const u = document.getElementById('expUrgent').checked;
             if (d && a && date) {
-                app.finance.add(a, d, date, u);
+                app.finance.add(a, d, date, u, document.getElementById('expShared').checked);
                 this.close();
                 app.navigateTo('dashboard');
                 app.dashboard.scrollToCard('dashboardFinanceCard');
@@ -5366,8 +5470,9 @@ const app = {
                 const time = document.getElementById('habitTime').value;
                 const urgent = document.getElementById('habitUrgent').checked;
                 const days = Array.from(document.querySelectorAll('input[name="habitDays"]:checked')).map(cb => parseInt(cb.value));
+                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                 if (!app.state.habits) app.state.habits = [];
-                app.state.habits.push({ id: Date.now(), name, streak: 0, goal, time, days, urgent, history: [] });
+                app.state.habits.push({ id: Date.now(), name, streak: 0, goal, time, days, urgent, history: [], type: mode });
                 app.saveState();
                 app.habits.render();
                 app.renderDashboard();
@@ -5388,7 +5493,8 @@ const app = {
                 email: document.getElementById('evtEmail').value,
                 notes: document.getElementById('evtNotes').value,
                 urgent: document.getElementById('evtUrgent').checked,
-                type: (typeRadio && typeRadio.value === 'private' && mixedCheck && mixedCheck.checked) ? 'mixed' : (typeRadio ? typeRadio.value : 'business')
+                shared: document.getElementById('evtShared').checked,
+                type: typeRadio ? typeRadio.value : 'business'
             };
             if (data.title && data.date && data.time) {
                 app.calendar.addEvent(data);
@@ -5922,6 +6028,25 @@ const app = {
         }
     },
     dashboard: {
+        setEventFilter(filter) {
+            app.state.ui.eventFilter = filter;
+            app.saveState();
+
+            // Update active button UI
+            document.querySelectorAll('.btn-filter').forEach(btn => {
+                if (btn.id === `evFilter_${filter}`) {
+                    btn.classList.add('active');
+                    btn.style.color = 'white';
+                    btn.style.background = 'rgba(255,255,255,0.15)';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.background = 'none';
+                }
+            });
+
+            app.renderDashboard();
+        },
         setMode(mode) {
             app.state.ui.dashboardMode = mode;
             app.saveState();

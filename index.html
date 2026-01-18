@@ -378,13 +378,31 @@
                         <!-- 3. HERO: Termine (Consolidated Window) -->
                         <div class="card dash-card card-medium" id="dashboardEventsCard"
                             style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
-                            <div class="card-header" style="margin-bottom: 12px;">
-                                <span class="card-title"
-                                    style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
-                                    ZEITPLAN</span>
-                                <button class="btn-small"
-                                    style="background: rgba(255,255,255,0.1); border-radius: 50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center;"
-                                    onclick="app.modals.open('addEvent')"><i data-lucide="plus" size="14"></i></button>
+                            <div class="card-header"
+                                style="margin-bottom: 12px; display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
+                                <div
+                                    style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                    <span class="card-title"
+                                        style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
+                                        ZEITPLAN</span>
+                                    <button class="btn-small"
+                                        style="background: rgba(255,255,255,0.1); border-radius: 50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center;"
+                                        onclick="app.modals.open('addEvent')"><i data-lucide="plus"
+                                            size="14"></i></button>
+                                </div>
+
+                                <div class="event-filters"
+                                    style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:3px; border-radius:10px; width:100%;">
+                                    <button onclick="app.dashboard.setEventFilter('all')" id="evFilter_all"
+                                        class="btn-filter active"
+                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:white; cursor :pointer;">Alle</button>
+                                    <button onclick="app.dashboard.setEventFilter('business')" id="evFilter_business"
+                                        class="btn-filter"
+                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:var(--text-muted); cursor:pointer;">Business</button>
+                                    <button onclick="app.dashboard.setEventFilter('private')" id="evFilter_private"
+                                        class="btn-filter"
+                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:var(--text-muted); cursor:pointer;">Privat</button>
+                                </div>
                             </div>
                             <div id="dashboardEventsPreview" style="display:flex; flex-direction:column;">
                                 <!-- Filled by JS (Consolidated View) -->
