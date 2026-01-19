@@ -267,8 +267,14 @@ const app = {
             const s = localStorage.getItem('taskforce_state');
             if (s) {
                 const parsed = JSON.parse(s);
-                // Deep merge or fallback to avoid nulls
-                this.state = { ...this.state, ...parsed };
+                // Nested merge for top-level objects to preserve defaults/new fields
+                for (const key in parsed) {
+                    if (parsed[key] && typeof parsed[key] === 'object' && !Array.isArray(parsed[key]) && this.state[key]) {
+                        this.state[key] = { ...this.state[key], ...parsed[key] };
+                    } else {
+                        this.state[key] = parsed[key];
+                    }
+                }
             }
         } catch (e) {
             console.error("State Load Error", e);
@@ -310,6 +316,10 @@ const app = {
         if (!this.state.household) this.state.household = [];
         if (!this.state.meals) this.state.meals = new Array(7).fill('');
         if (!this.state.journal) this.state.journal = [];
+        if (!this.state.quickNotes) this.state.quickNotes = [];
+        if (!this.state.projects) this.state.projects = [];
+        if (!this.state.lastChecks) this.state.lastChecks = {};
+        if (!this.state.timeTracking) this.state.timeTracking = [];
 
         // Firebase Default Config Migration
         if (!this.state.cloud) this.state.cloud = {};
