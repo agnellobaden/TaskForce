@@ -469,6 +469,12 @@ const app = {
                 // Keep team field hidden unless checkbox is checked
                 this.updateTeamFieldVisibility();
             }
+
+            // Toggle Footer Hints
+            const footerHint = document.getElementById('authFooterHint');
+            const footerLoginHint = document.getElementById('authFooterLoginHint');
+            if (footerHint) footerHint.classList.toggle('hidden', m !== 'login');
+            if (footerLoginHint) footerLoginHint.classList.toggle('hidden', m !== 'register');
         },
         toggleTeamField() {
             const cb = document.getElementById('useTeamSync');
@@ -1701,11 +1707,17 @@ const app = {
             mealPreview.innerHTML = previewHtml;
         }
 
-        // Update layout toggle button text
-        const layoutBtnText = document.getElementById('layoutToggleText');
-        if (layoutBtnText) {
-            const currentLayout = app.state.dashboardLayout || 'double';
-            layoutBtnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
+        // Update Status Card Summary
+        const statusSummary = document.getElementById('statusSummaryText');
+        if (statusSummary) {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const tasksCount = (app.state.tasks || []).filter(t => !t.done && t.category !== 'shopping').length;
+            const shopCount = (app.state.tasks || []).filter(t => !t.done && t.category === 'shopping').length;
+            const meals = app.state.meals || [];
+            const todayMeal = meals[(now.getDay() + 6) % 7];
+
+            statusSummary.textContent = `${tasksCount} Aufgaben • ${shopCount} Einkauf • ${todayMeal || 'Kein Menü'}`;
         }
 
         // 8. Drive Mode Card Update (Dynamic)
@@ -4029,14 +4041,12 @@ const app = {
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts'];
+            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts', 'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects'];
             let changed = false;
 
             collections.forEach(key => {
                 if (cloudState[key] !== undefined) {
-                    const localPrivates = (app.state[key] || []).filter(item => item.shared === false || (key !== 'contacts' && item.type === 'private' && item.shared !== true));
-                    const teamItems = cloudState[key] || [];
-                    const merged = [...localPrivates, ...teamItems];
+                    const merged = cloudState[key] || [];
 
                     if (JSON.stringify(app.state[key]) !== JSON.stringify(merged)) {
                         app.state[key] = merged;
@@ -4050,17 +4060,23 @@ const app = {
                 app.state.level = cloudState.level || 1;
                 changed = true;
             }
-
             if (changed) {
                 app.saveState(true); // Skip manual periodic push
                 app.renderDashboard();
                 if (app.tasks) app.tasks.render();
+                if (app.shopping) app.shopping.render();
                 if (app.calendar) app.calendar.render();
                 if (app.finance) app.finance.render();
                 if (app.habits) app.habits.render();
                 if (app.health) app.health.render();
+                if (app.quickNotes) app.quickNotes.render();
+                if (app.household) app.household.render();
+                if (app.journal) app.journal.render();
+                if (app.meetings) app.meetings.render();
+                if (app.projects) app.projects.render();
                 console.log("☁️ Data Synchronized from Cloud (Mirror)");
             }
+
             this.updateIndicator(true);
         },
         updateIndicator(active) {
@@ -4095,14 +4111,20 @@ const app = {
 
             const payload = {
                 data: {
-                    tasks: app.state.tasks.filter(t => t.type !== 'private' && t.shared !== false),
-                    events: app.state.events.filter(e => e.shared !== false),
-                    expenses: app.state.expenses.filter(e => e.type !== 'private' && e.shared !== false),
-                    habits: (app.state.habits || []).filter(h => h.type !== 'private' && h.shared !== false),
-                    healthData: (app.state.healthData || []).filter(d => d.scope !== 'private'),
-                    alarms: (app.state.alarms || []).filter(a => a.type !== 'private'),
-                    contacts: (app.state.contacts || []).filter(c => c.type !== 'private' && c.shared !== false),
+                    tasks: app.state.tasks,
+                    events: app.state.events,
+                    expenses: app.state.expenses,
+                    habits: app.state.habits || [],
+                    healthData: app.state.healthData || [],
+                    alarms: app.state.alarms || [],
+                    contacts: app.state.contacts || [],
                     shortcuts: app.state.shortcuts || [],
+                    quickNotes: app.state.quickNotes || [],
+                    household: app.state.household || [],
+                    meals: app.state.meals || [],
+                    journal: app.state.journal || [],
+                    meetings: app.state.meetings || [],
+                    projects: app.state.projects || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
                     sync_deleted: app.state.sync_deleted || [],
@@ -5228,13 +5250,23 @@ const app = {
                     .reduce((sum, d) => sum + d.value, 0);
                 const waterGoal = app.state.hydrationGoal || 2.5;
 
+                const householdTasks = (app.state.household || []);
+                const householdOpen = householdTasks.filter(h => !h.lastDone || new Date(h.lastDone).toDateString() !== now.toDateString());
+
+                const mealPlan = app.state.meals || [];
+                const todayMeal = mealPlan[(now.getDay() + 6) % 7];
+
+                const shoppingCount = (app.state.tasks || []).filter(t => !t.done && t.category === 'shopping').length;
+                const quickNotes = (app.state.quickNotes || []);
+                const latestNote = quickNotes.length > 0 ? quickNotes[0].content : null;
+
                 // --- UI ---
                 c.innerHTML = `
                 <div style="padding: 20px 20px 80px 20px; max-height: 85vh; overflow-y: auto;">
                     <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted);" onclick="app.modals.close()"><i data-lucide="x"></i></button>
                     
                     <div style="text-align: center; margin-bottom: 25px;">
-                        <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Tages-Check</h2>
+                        <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Team & Tages-Check</h2>
                         <div class="text-muted">${dateDisplay}</div>
                     </div>
 
@@ -5282,6 +5314,41 @@ const app = {
                             </div>
                         </div>
                     </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="users" size="18" class="text-success"></i> Team / Haushalt</h4>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="home" class="text-success" size="18"></i>
+                                    <span>Haushalt</span>
+                                </div>
+                                <div style="font-weight: bold;">${householdOpen.length} Offen</div>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="shopping-cart" class="text-primary" size="18"></i>
+                                    <span>Einkaufsliste</span>
+                                </div>
+                                <div style="font-weight: bold;">${shoppingCount} Artikel</div>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="utensils" class="text-accent" size="18"></i>
+                                    <span>Heute Menü</span>
+                                </div>
+                                <div style="font-weight: bold;">${todayMeal || 'Kein Plan'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${latestNote ? `
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="sticky-note" size="18" class="text-primary"></i> Letzte Notiz</h4>
+                        <div style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; font-size: 0.9rem; line-height: 1.4;">
+                            ${latestNote}
+                        </div>
+                    </div>` : ''}
 
                     <div style="margin-bottom: 25px;">
                         <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="bar-chart-2" size="18" class="text-accent"></i> Status</h4>
@@ -5562,52 +5629,62 @@ const app = {
                 const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
 
                 let listHtml = contacts.map((c, idx) => {
-                    const name = c.name ? c.name[0] : 'Unbekannt';
-                    const phone = c.tel ? c.tel[0] : '';
-                    const email = c.email ? c.email[0] : '';
+                    const name = c.name && c.name[0] ? c.name[0] : 'Unbekannt';
+                    const phone = c.tel && c.tel[0] ? c.tel[0] : '';
+                    const email = c.email && c.email[0] ? c.email[0] : '';
+                    const address = c.address && c.address[0] ? c.address[0] : '';
 
                     return `
-                        <div class="import-review-item" data-name="${name}" data-phone="${phone}" data-email="${email}" 
-                             style="padding:15px; background:rgba(255,255,255,0.03); border-radius:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.05);">
-                            <div style="font-weight:700; color:white; margin-bottom:10px;">${name}</div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="import-review-item" data-name="${name}" data-phone="${phone}" data-email="${email}" data-address="${address}"
+                             style="padding:15px; background:rgba(255,255,255,0.04); border-radius:16px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.08); transition:all 0.2s;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                                <div style="font-weight:700; color:white; font-size:1.1rem;">${name}</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" checked class="import-check" style="width:20px; height:20px; cursor:pointer;">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                                 <div>
-                                    <label class="text-xs text-muted">Bereich</label>
-                                    <select class="form-input" style="padding:6px; font-size:0.8rem;">
+                                    <label class="text-xs text-muted" style="display:block; margin-bottom:4px; text-transform:uppercase; font-weight:700;">Kategorie</label>
+                                    <select class="form-input import-type" style="padding:8px; font-size:0.85rem; height:40px;">
                                         <option value="business" ${mode === 'business' ? 'selected' : ''}>Business</option>
                                         <option value="private" ${mode === 'private' ? 'selected' : ''}>Privat</option>
                                     </select>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:8px; margin-top:20px;">
-                                    <input type="checkbox" style="width:16px; height:16px;">
-                                    <label class="text-xs text-muted">Beides</label>
+                                    <input type="checkbox" class="import-shared" style="width:18px; height:18px; cursor:pointer;" id="shared_${idx}">
+                                    <label for="shared_${idx}" class="text-xs text-muted" style="cursor:pointer; font-weight:600;">In beiden Ansichten</label>
                                 </div>
                             </div>
-                            <div class="text-xs text-muted" style="margin-top:8px; opacity:0.6;">
-                                ${phone} ${email ? ' • ' + email : ''}
+                            <div class="text-xs text-muted" style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-wrap:wrap; gap:10px;">
+                                ${phone ? `<span><i data-lucide="phone" size="10"></i> ${phone}</span>` : ''}
+                                ${email ? `<span><i data-lucide="mail" size="10"></i> ${email}</span>` : ''}
+                                ${address ? `<span><i data-lucide="map-pin" size="10"></i> ${address}</span>` : ''}
                             </div>
                         </div >
-    `;
+                    `;
                 }).join('');
 
                 c.innerHTML = `
-                    <div style="padding:24px; max-height:80vh; display:flex; flex-direction:column;">
-                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:15px;">
-                            <h3 style="display:flex; align-items:center; gap:10px;">
-                                <i data-lucide="download" class="text-primary"></i> Kontakte importieren
-                            </h3>
-                            <button onclick="app.modals.close()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" size="20"></i></button>
+                    <div style="padding:24px; max-height:85vh; display:flex; flex-direction:column; width:100%; max-width:500px;">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="display:flex; align-items:center; gap:10px; margin:0;">
+                                    <i data-lucide="download" class="text-primary"></i> Kontakte prüfen
+                                </h3>
+                                <p class="text-xs text-muted" style="margin-top:5px;">${contacts.length} Kontakte gefunden. Wähle aus, welche du importieren möchtest.</p>
+                            </div>
+                            <button onclick="app.modals.close()" style="background:rgba(255,255,255,0.05); border:none; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="x" size="18"></i></button>
                         </div>
-                        <p class="text-muted text-sm" style="margin-bottom:20px;">
-                            Wähle aus, in welche Kategorie die Kontakte sortiert werden sollen.
-                        </p>
-                        <div style="flex:1; overflow-y:auto; margin-bottom:20px; padding-right:5px; -webkit-overflow-scrolling: touch;">
+                        
+                        <div style="flex:1; overflow-y:auto; margin-bottom:20px; padding-right:8px; -webkit-overflow-scrolling: touch;" id="importReviewList">
                             ${listHtml}
                         </div>
-                        <div style="display:flex; justify-content:end; gap:12px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
-                            <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" onclick="app.contacts.submitImportBatch()">
-                                <i data-lucide="check"></i> Alle Importieren
+                        
+                        <div style="display:flex; justify-content:end; gap:12px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1);">
+                            <button class="btn" style="flex:1;" onclick="app.modals.close()">Abbrechen</button>
+                            <button class="btn btn-primary" style="flex:2;" onclick="app.contacts.submitImportBatch()">
+                                <i data-lucide="check"></i> Alles Importieren
                             </button>
                         </div>
                     </div>`;
@@ -5823,41 +5900,72 @@ const app = {
             cards.forEach(card => {
                 if (!card.trim()) return;
                 const lines = card.split(/\r?\n/);
-                let fn = '', tel = '', email = '', adr = '';
+                let fn = '', tel = '', email = '', adr = '', org = '';
                 lines.forEach(line => {
-                    if (line.toUpperCase().startsWith('FN:')) fn = line.substring(3).trim();
-                    else if (line.toUpperCase().startsWith('TEL')) {
+                    const upper = line.toUpperCase();
+                    if (upper.startsWith('FN:')) fn = line.substring(3).trim();
+                    else if (upper.startsWith('TEL')) {
                         const pts = line.split(':');
                         if (pts[1]) tel = pts[1].trim();
                     }
-                    else if (line.toUpperCase().startsWith('EMAIL')) {
+                    else if (upper.startsWith('EMAIL')) {
                         const pts = line.split(':');
                         if (pts[1]) email = pts[1].trim();
                     }
-                    else if (line.toUpperCase().startsWith('ADR')) {
+                    else if (upper.startsWith('ADR')) {
                         const pts = line.split(':');
                         if (pts[1]) adr = pts[1].replace(/;/g, ' ').trim();
                     }
+                    else if (upper.startsWith('ORG')) {
+                        const pts = line.split(':');
+                        if (pts[1]) org = pts[1].replace(/;/g, ' ').trim();
+                    }
                 });
+
+                // If Full Name missing but Organization found, use ORG as name
+                if (!fn && org) fn = org;
+
                 if (fn) contacts.push({ name: [fn], tel: [tel], email: [email], address: [adr] });
             });
             if (contacts.length > 0) {
                 app.modals.open('importContactsReview', { rawContacts: contacts });
             } else {
-                alert("Keine gültigen Kontakte in der VCF-Datei gefunden.");
+                alert("Keine gültigen Kontakte in der vCard-Datei gefunden.");
             }
         },
         parseCSV(csv) {
-            // Very simple CSV parser (assuming Name, Phone, Email)
+            // Smarter CSV parser
             const lines = csv.split(/\r?\n/);
             const contacts = [];
+            let header = [];
+
             lines.forEach((line, i) => {
-                if (i === 0 || !line.trim()) return; // Skip header or empty
-                const [name, tel, email] = line.split(/[;,]/);
-                if (name) contacts.push({ name: [name.trim()], tel: [tel ? tel.trim() : ''], email: [email ? email.trim() : ''] });
+                const cols = line.split(/[;,]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+                if (i === 0) {
+                    header = cols.map(c => c.toLowerCase());
+                    return;
+                }
+                if (!line.trim()) return;
+
+                let name = cols[0], tel = '', email = '', adr = '';
+
+                // Try to find columns by header names if possible
+                const nameIdx = header.findIndex(h => h.includes('name') || h.includes('firma'));
+                const telIdx = header.findIndex(h => h.includes('tel') || h.includes('phone') || h.includes('mobil'));
+                const emailIdx = header.findIndex(h => h.includes('mail'));
+                const adrIdx = header.findIndex(h => h.includes('adr') || h.includes('statt') || h.includes('ort'));
+
+                if (nameIdx !== -1) name = cols[nameIdx];
+                if (telIdx !== -1) tel = cols[telIdx];
+                if (emailIdx !== -1) email = cols[emailIdx];
+                if (adrIdx !== -1) adr = cols[adrIdx];
+
+                if (name) contacts.push({ name: [name], tel: [tel], email: [email], address: [adr] });
             });
             if (contacts.length > 0) {
                 app.modals.open('importContactsReview', { rawContacts: contacts });
+            } else {
+                alert("Keine gültigen Kontakte in der CSV-Datei gefunden.");
             }
         },
         async importBrowser() {
@@ -5879,21 +5987,25 @@ const app = {
             const items = document.querySelectorAll('.import-review-item');
             let count = 0;
             items.forEach(item => {
+                const checked = item.querySelector('.import-check').checked;
+                if (!checked) return;
+
                 const name = item.dataset.name;
                 const phone = item.dataset.phone;
                 const email = item.dataset.email;
-                const type = item.querySelector('select').value;
-                const isShared = item.querySelector('input[type="checkbox"]').checked;
+                const address = item.dataset.address;
+                const type = item.querySelector('.import-type').value;
+                const isShared = item.querySelector('.import-shared').checked;
 
-                // Avoid duplicates
-                if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
+                // Avoid exact duplicates
+                if (phone && app.state.contacts.some(existing => existing.phone === phone && existing.name === name)) return;
 
                 app.state.contacts.push({
                     id: Date.now() + Math.random(),
                     name,
                     phone,
                     email,
-                    address: '',
+                    address,
                     homepage: '',
                     type,
                     shared: isShared
@@ -5905,7 +6017,11 @@ const app = {
             this.render();
             app.renderDashboard();
             app.modals.close();
-            alert(`${count} Kontakte erfolgreich hinzugefügt! ✨`);
+
+            if (count > 0) {
+                if (app.notifications) app.notifications.send("✅ Import erfolgreich", `${count} Kontakte wurden hinzugefügt.`);
+                else alert(`${count} Kontakte erfolgreich hinzugefügt! ✨`);
+            }
         },
         search(q) {
             const list = document.getElementById('contactsList');
@@ -6697,9 +6813,9 @@ const app = {
                         // UI aktualisieren
                         const btn = document.getElementById('timeTrackerToggle');
                         if (btn) {
-                            btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
-                            btn.style.background = 'rgba(239, 68, 68, 0.1)';
-                            btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                            btn.setAttribute('data-lucide', 'pause');
+                            btn.classList.add('active');
+                            btn.style.color = 'var(--danger)';
                         }
 
                         const taskEl = document.getElementById('timeTrackerTask');
@@ -6745,9 +6861,9 @@ const app = {
 
             const btn = document.getElementById('timeTrackerToggle');
             if (btn) {
-                btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
-                btn.style.background = 'rgba(239, 68, 68, 0.1)';
-                btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                btn.setAttribute('data-lucide', 'pause');
+                btn.classList.add('active');
+                btn.style.color = 'var(--danger)';
             }
 
             const taskEl = document.getElementById('timeTrackerTask');
@@ -6779,9 +6895,9 @@ const app = {
 
             const btn = document.getElementById('timeTrackerToggle');
             if (btn) {
-                btn.innerHTML = '<i data-lucide="play" size="14"></i>';
-                btn.style.background = 'rgba(16, 185, 129, 0.1)';
-                btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                btn.setAttribute('data-lucide', 'play');
+                btn.classList.remove('active');
+                btn.style.color = 'var(--success)';
             }
 
             const taskEl = document.getElementById('timeTrackerTask');

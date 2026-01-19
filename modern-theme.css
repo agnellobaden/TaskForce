@@ -492,7 +492,7 @@ h4 {
     background: linear-gradient(145deg, rgba(30, 30, 33, 0.95), rgba(15, 15, 17, 0.98));
 }
 
-/* Card Header */
+/* Card Header & Actions */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -500,6 +500,63 @@ h4 {
     margin-bottom: var(--spacing-sm);
     gap: var(--spacing-sm);
     flex-shrink: 0;
+    position: relative;
+    width: 100%;
+}
+
+.card-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    margin-right: 5px;
+}
+
+.card:hover .card-actions-bar {
+    opacity: 1;
+}
+
+.card-action-icon {
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+.card-action-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: scale(1.1);
+}
+
+.card-close-btn {
+    position: static !important;
+    /* Move into the action bar */
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.card-close-btn:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 4px;
+    opacity: 1;
 }
 
 .card-title {
