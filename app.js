@@ -89,7 +89,6 @@ const app = {
             this.team.render();
             this.calendar.init();
             this.gamification.updateUI();
-            this.household.render();
             this.renderDashboard();
             if (this.shortcuts) this.shortcuts.render();
             this.dashboard.initDragAndDrop();
@@ -268,14 +267,8 @@ const app = {
             const s = localStorage.getItem('taskforce_state');
             if (s) {
                 const parsed = JSON.parse(s);
-                // Nested merge for top-level objects to preserve defaults/new fields
-                for (const key in parsed) {
-                    if (parsed[key] && typeof parsed[key] === 'object' && !Array.isArray(parsed[key]) && this.state[key]) {
-                        this.state[key] = { ...this.state[key], ...parsed[key] };
-                    } else {
-                        this.state[key] = parsed[key];
-                    }
-                }
+                // Deep merge or fallback to avoid nulls
+                this.state = { ...this.state, ...parsed };
             }
         } catch (e) {
             console.error("State Load Error", e);
@@ -298,9 +291,7 @@ const app = {
         if (!this.state.archives) this.state.archives = [];
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
-        if (!this.state.shortcuts) this.state.shortcuts = [];
-        if (!this.state.household) this.state.household = [];
-        if (this.state.householdNotes === undefined) this.state.householdNotes = '';
+        if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
         if (!this.state.sync_deleted) this.state.sync_deleted = [];
         if (!this.state.user.savedTeams) {
             this.state.user.savedTeams = [
@@ -319,10 +310,6 @@ const app = {
         if (!this.state.household) this.state.household = [];
         if (!this.state.meals) this.state.meals = new Array(7).fill('');
         if (!this.state.journal) this.state.journal = [];
-        if (!this.state.quickNotes) this.state.quickNotes = [];
-        if (!this.state.projects) this.state.projects = [];
-        if (!this.state.lastChecks) this.state.lastChecks = {};
-        if (!this.state.timeTracking) this.state.timeTracking = [];
 
         // Firebase Default Config Migration
         if (!this.state.cloud) this.state.cloud = {};
@@ -443,27 +430,15 @@ const app = {
 
     saveState(skipSync = false) {
         try {
-            this.state.last_updated = new Date().toISOString();
             localStorage.setItem('taskforce_state', JSON.stringify(this.state));
             this.gamification.updateUI();
-
-            // Visual Feedback for Saving
-            const status = document.getElementById('syncStatus');
-            if (status && !this._syncTimer) {
-                status.innerHTML = `<span style="color:var(--accent)">💾 Speichern...</span>`;
-            }
 
             // Auto-Sync Push (Debounced)
             if (!skipSync && this.cloud && this.cloud.push) {
                 clearTimeout(this._syncTimer);
-                this._syncTimer = setTimeout(() => {
-                    this._syncTimer = null;
-                    this.cloud.push();
-                }, 2000);
+                this._syncTimer = setTimeout(() => this.cloud.push(), 2000);
             }
-        } catch (e) {
-            console.error("State Save Error", e);
-        }
+        } catch (e) { console.error("Save Error", e); }
     },
 
     // --- USER MOUDULE ---
@@ -1802,8 +1777,6 @@ const app = {
         if (this.quickNotes) this.quickNotes.render();
         if (this.projects) this.projects.render();
         if (this.meetings) this.meetings.render();
-        if (this.household) this.household.render();
-        if (this.journal) this.journal.render();
         if (this.dashboard) {
             this.dashboard.applyOrder();
             this.dashboard.applyMode(); // Ensure mode visibility is applied
@@ -3886,17 +3859,7 @@ const app = {
             }
         }
 
-        // 3.5 Household (Quick Add)
-        if (text.startsWith('h ') || text.startsWith('haushalt ')) {
-            const taskName = (text.startsWith('h ')) ? raw.substring(2).trim() : raw.substring(9).trim();
-            if (taskName) {
-                app.household.addQuick(taskName);
-                app.navigateTo('dashboard');
-                return true;
-            }
-        }
-
-        // 4. Tasks / Shopping / List
+        // 3. Tasks / Shopping / List
         if (app.voice.isTaskIntent(text) || text.startsWith('k ') || text.startsWith('a ')) {
             const isShop = text.includes('kaufen') || text.includes('einkauf') || text.includes('liste') || text.includes('shop');
             app.tasks.add(finalTitle, false, isShop ? 'shopping' : 'todo');
@@ -4078,42 +4041,19 @@ const app = {
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            // Data Integrity Guard: Don't merge if cloud data is older than local current state
-            if (cloudState.last_updated && app.state.last_updated) {
-                const cloudDate = new Date(cloudState.last_updated);
-                const localDate = new Date(app.state.last_updated);
-                if (cloudDate < localDate) {
-                    console.log("☁️ Cloud data is older than local state. Skipping merge.");
-                    return;
-                }
-            }
-
-            const collections = [
-                'lastChecks', 'tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts',
-                'quickNotes', 'household', 'householdNotes', 'meals', 'journal', 'meetings', 'projects', 'archives',
-                'timeTracking', 'sync_deleted', 'xp', 'level', 'dailyTaskGoal',
-                'hydrationGoal', 'hydrationReminderInterval', 'hydrationReminderMethod', 'hydrationReminderEnabled',
-                'weightReminderEnabled', 'weightReminderDay', 'last_updated'
-            ];
+            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts', 'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects'];
             let changed = false;
 
             collections.forEach(key => {
                 if (cloudState[key] !== undefined) {
-                    const merged = cloudState[key];
+                    const merged = cloudState[key] || [];
+
                     if (JSON.stringify(app.state[key]) !== JSON.stringify(merged)) {
                         app.state[key] = merged;
                         changed = true;
                     }
                 }
             });
-
-            // Special handling for nested user.team
-            if (cloudState.teamMembers && Array.isArray(cloudState.teamMembers)) {
-                if (JSON.stringify(app.state.user.team) !== JSON.stringify(cloudState.teamMembers)) {
-                    app.state.user.team = cloudState.teamMembers;
-                    changed = true;
-                }
-            }
 
             if (cloudState.xp !== undefined && cloudState.xp > app.state.xp) {
                 app.state.xp = cloudState.xp;
@@ -4134,65 +4074,40 @@ const app = {
                 if (app.journal) app.journal.render();
                 if (app.meetings) app.meetings.render();
                 if (app.projects) app.projects.render();
-
-                // Auto-Refresh Daily Status Modal if open
-                if (document.getElementById('teamPresenceStatus')) {
-                    app.modals.open('dailyStatus');
-                }
                 console.log("☁️ Data Synchronized from Cloud (Mirror)");
             }
 
             this.updateIndicator(true);
         },
-        updateIndicator(state) {
+        updateIndicator(active) {
             const el = document.getElementById('headerSyncIndicator');
             const teamName = app.state.user.teamName;
-            const active = (state === true || state === 'syncing');
             const isActiveTeam = active && teamName;
 
             if (el) {
                 el.style.opacity = isActiveTeam ? '1' : '0.4';
+                el.title = isActiveTeam ? 'Team Verbindung aktiv: ' + teamName : 'Verbindung getrennt';
 
                 // Dot color
                 const dot = el.querySelector('div');
-                if (dot) {
-                    if (state === 'syncing') {
-                        dot.style.background = 'var(--accent)'; // Orange/Yellow for syncing
-                        el.classList.add('pulse-sync');
-                        el.title = 'Synchronisiere...';
-                    } else if (state === true) {
-                        dot.style.background = 'var(--success)';
-                        el.classList.remove('pulse-sync');
-                        el.title = 'Team Verbindung aktiv: ' + teamName;
-                    } else {
-                        dot.style.background = '#666';
-                        el.classList.remove('pulse-sync');
-                        el.title = 'Verbindung getrennt';
-                    }
-                }
+                if (dot) dot.style.background = isActiveTeam ? 'var(--success)' : '#666';
+
+                if (isActiveTeam) el.classList.add('pulse-sync');
+                else el.classList.remove('pulse-sync');
             }
             const statusLabel = document.getElementById('syncStatusHeader');
-            if (statusLabel) {
-                if (state === 'syncing') statusLabel.textContent = 'Sync...';
-                else statusLabel.textContent = isActiveTeam ? teamName : 'Offline';
-            }
+            if (statusLabel) statusLabel.textContent = isActiveTeam ? teamName : 'Offline';
 
             const syncStatusCard = document.getElementById('syncStatus');
             if (syncStatusCard) {
-                if (state === 'syncing') {
-                    syncStatusCard.innerHTML = `<span style="color:var(--accent)">🔄 Synchronisiere...</span>`;
-                } else {
-                    syncStatusCard.innerHTML = isActiveTeam
-                        ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
-                        : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
-                }
+                syncStatusCard.innerHTML = isActiveTeam
+                    ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
+                    : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
             }
         },
         async push() {
             if (!this.db || !app.state.user.teamName) { this.updateIndicator(false); return; }
             const team = app.state.user.teamName;
-
-            this.updateIndicator('syncing');
 
             const payload = {
                 data: {
@@ -4206,39 +4121,20 @@ const app = {
                     shortcuts: app.state.shortcuts || [],
                     quickNotes: app.state.quickNotes || [],
                     household: app.state.household || [],
-                    householdNotes: app.state.householdNotes || '',
                     meals: app.state.meals || [],
                     journal: app.state.journal || [],
                     meetings: app.state.meetings || [],
                     projects: app.state.projects || [],
-                    archives: app.state.archives || [],
-                    timeTracking: app.state.timeTracking || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
-                    dailyTaskGoal: app.state.dailyTaskGoal || 5,
-                    hydrationGoal: app.state.hydrationGoal || 2.5,
-                    hydrationReminderInterval: app.state.hydrationReminderInterval || 120,
-                    hydrationReminderMethod: app.state.hydrationReminderMethod || 'push',
-                    hydrationReminderEnabled: app.state.hydrationReminderEnabled || false,
-                    weightReminderEnabled: app.state.weightReminderEnabled || false,
-                    weightReminderDay: app.state.weightReminderDay || 1,
-                    teamMembers: app.state.user.team || [],
                     sync_deleted: app.state.sync_deleted || [],
-                    last_updated: app.state.last_updated || new Date().toISOString(),
-                    lastChecks: app.state.lastChecks || {},
+                    last_updated: new Date().toISOString()
                 },
-                updated_at: app.state.last_updated || new Date().toISOString()
+                updated_at: new Date().toISOString()
             };
 
-            // Granular Push to avoid overwriting different categories (Save from both sides)
-            const granularPayload = {};
-            for (const key in payload.data) {
-                granularPayload[`data.${key}`] = payload.data[key];
-            }
-            granularPayload.updated_at = payload.updated_at;
-
             try {
-                await this.db.collection('taskforce_sync').doc(team).set(granularPayload, { merge: true });
+                await this.db.collection('taskforce_sync').doc(team).set(payload, { merge: true });
                 const status = document.getElementById('syncStatus');
                 if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gesendet (${new Date().toLocaleTimeString()})</span>`;
                 this.updateIndicator(true);
@@ -5372,15 +5268,6 @@ const app = {
                     <div style="text-align: center; margin-bottom: 25px;">
                         <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Team & Tages-Check</h2>
                         <div class="text-muted">${dateDisplay}</div>
-                        <div id="teamPresenceStatus" style="font-size:0.75rem; color:var(--success); margin-top:5px; opacity:0.8;">
-                            ${(() => {
-                        if (!app.state.lastChecks) return '';
-                        const entries = Object.entries(app.state.lastChecks)
-                            .filter(([name]) => name !== app.state.user.name)
-                            .map(([name, time]) => `${name} hat um ${new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} Uhr gecheckt`);
-                        return entries.length > 0 ? `<i data-lucide="check-circle-2" size="12" style="vertical-align:middle; margin-right:4px;"></i> ` + entries.join(', ') : '';
-                    })()}
-                        </div>
                     </div>
 
                     ${tasksUrgent.length > 0 ? `
@@ -5398,9 +5285,9 @@ const app = {
                         ${events.length > 0 ? `
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                                 ${events.map(e => {
-                        const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const isPast = new Date(e.start) < now;
-                        return `
+                    const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const isPast = new Date(e.start) < now;
+                    return `
                                     <div style="display: flex; align-items: center; gap: 15px; opacity: ${isPast ? 0.5 : 1}; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px;">
                                         <div style="background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; min-width: 60px; text-align: center;">${time}</div>
                                         <div>
@@ -5409,7 +5296,7 @@ const app = {
                                             ${e.location ? `<div class="text-xs text-muted">📍 ${e.location}</div>` : ''}
                                         </div>
                                     </div>`;
-                    }).join('')}
+                }).join('')}
                             </div>
                         ` : `<div class="text-muted text-sm" style="padding:10px; text-align:center; background:rgba(255,255,255,0.03); border-radius:10px;">Heute keine Termine mehr.</div>`}
                     </div>
@@ -5483,7 +5370,7 @@ const app = {
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size:1.1rem;" onclick="app.modals.submitDailyCheck()">
+                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size:1.1rem;" onclick="app.modals.close()">
                         Alles Klar ✅
                     </button>
                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
@@ -5848,18 +5735,6 @@ const app = {
                     app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
                 }
             }
-        },
-        submitDailyCheck() {
-            if (!app.state.lastChecks) app.state.lastChecks = {};
-            app.state.lastChecks[app.state.user.name || 'Partner'] = new Date().toISOString();
-            app.saveState();
-            this.close();
-            if (window.confetti) confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#3b82f6', '#8b5cf6', '#10b981']
-            });
         },
         submitMeeting() {
             const title = document.getElementById('meetTitle').value;
@@ -7281,22 +7156,6 @@ const app = {
             app.gamification.addXP(10);
         },
 
-        addQuick(name) {
-            if (!name || !name.trim()) return;
-            if (!app.state.household) app.state.household = [];
-            app.state.household.push({
-                id: Date.now(),
-                name: name.trim(),
-                frequency: 'keine',
-                lastDone: null,
-                createdAt: new Date().toISOString()
-            });
-            app.saveState();
-            this.render();
-            app.renderDashboard();
-            app.gamification.addXP(5);
-        },
-
         toggleDone(id) {
             const item = app.state.household.find(h => h.id === id);
             if (item) {
@@ -7307,11 +7166,6 @@ const app = {
                 app.gamification.addXP(20);
                 if (window.confetti) confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
             }
-        },
-
-        saveNotes(text) {
-            app.state.householdNotes = text;
-            app.saveState();
         },
 
         delete(id) {
@@ -7351,32 +7205,17 @@ const app = {
             // Dashboard Preview
             const preview = document.getElementById('dashboardHouseholdPreview');
             if (preview) {
-                const items = (app.state.household || []).slice(0, 5);
-                const notes = app.state.householdNotes || '';
-
-                let html = `
-                    <div style="margin-bottom:12px;">
-                        <textarea placeholder="Wichtige Haushalts-Info..." 
-                                  style="width:100%; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.1); border-radius:8px; padding:10px; color:white; font-size:0.85rem; resize:none; min-height:60px; outline:none;"
-                                  oninput="app.household.saveNotes(this.value)">${notes}</textarea>
-                    </div>
-                `;
-
+                const items = (app.state.household || []).slice(0, 3);
                 if (items.length === 0) {
-                    html += '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
+                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
                 } else {
-                    html += items.map(h => `
-                        <div style="font-size:0.85rem; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:4px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="checkbox-circle" onclick="event.stopPropagation(); app.household.toggleDone(${h.id})" style="width:16px; height:16px;"></div>
-                                <span>${h.name}</span>
-                            </div>
+                    preview.innerHTML = items.map(h => `
+                        <div style="font-size:0.85rem; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                            <span>${h.name}</span>
                             <span class="text-xs text-muted">${h.frequency === 'keine' ? '' : h.frequency}</span>
                         </div>
                     `).join('');
                 }
-
-                preview.innerHTML = html;
             }
             if (window.lucide) lucide.createIcons();
         }
