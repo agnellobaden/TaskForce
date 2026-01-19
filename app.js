@@ -89,6 +89,7 @@ const app = {
             this.team.render();
             this.calendar.init();
             this.gamification.updateUI();
+            this.household.render();
             this.renderDashboard();
             if (this.shortcuts) this.shortcuts.render();
             this.dashboard.initDragAndDrop();
@@ -297,7 +298,9 @@ const app = {
         if (!this.state.archives) this.state.archives = [];
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
-        if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
+        if (!this.state.shortcuts) this.state.shortcuts = [];
+        if (!this.state.household) this.state.household = [];
+        if (this.state.householdNotes === undefined) this.state.householdNotes = '';
         if (!this.state.sync_deleted) this.state.sync_deleted = [];
         if (!this.state.user.savedTeams) {
             this.state.user.savedTeams = [
@@ -440,15 +443,27 @@ const app = {
 
     saveState(skipSync = false) {
         try {
+            this.state.last_updated = new Date().toISOString();
             localStorage.setItem('taskforce_state', JSON.stringify(this.state));
             this.gamification.updateUI();
+
+            // Visual Feedback for Saving
+            const status = document.getElementById('syncStatus');
+            if (status && !this._syncTimer) {
+                status.innerHTML = `<span style="color:var(--accent)">💾 Speichern...</span>`;
+            }
 
             // Auto-Sync Push (Debounced)
             if (!skipSync && this.cloud && this.cloud.push) {
                 clearTimeout(this._syncTimer);
-                this._syncTimer = setTimeout(() => this.cloud.push(), 2000);
+                this._syncTimer = setTimeout(() => {
+                    this._syncTimer = null;
+                    this.cloud.push();
+                }, 2000);
             }
-        } catch (e) { console.error("Save Error", e); }
+        } catch (e) {
+            console.error("State Save Error", e);
+        }
     },
 
     // --- USER MOUDULE ---
@@ -1787,6 +1802,8 @@ const app = {
         if (this.quickNotes) this.quickNotes.render();
         if (this.projects) this.projects.render();
         if (this.meetings) this.meetings.render();
+        if (this.household) this.household.render();
+        if (this.journal) this.journal.render();
         if (this.dashboard) {
             this.dashboard.applyOrder();
             this.dashboard.applyMode(); // Ensure mode visibility is applied
@@ -3869,7 +3886,17 @@ const app = {
             }
         }
 
-        // 3. Tasks / Shopping / List
+        // 3.5 Household (Quick Add)
+        if (text.startsWith('h ') || text.startsWith('haushalt ')) {
+            const taskName = (text.startsWith('h ')) ? raw.substring(2).trim() : raw.substring(9).trim();
+            if (taskName) {
+                app.household.addQuick(taskName);
+                app.navigateTo('dashboard');
+                return true;
+            }
+        }
+
+        // 4. Tasks / Shopping / List
         if (app.voice.isTaskIntent(text) || text.startsWith('k ') || text.startsWith('a ')) {
             const isShop = text.includes('kaufen') || text.includes('einkauf') || text.includes('liste') || text.includes('shop');
             app.tasks.add(finalTitle, false, isShop ? 'shopping' : 'todo');
@@ -4051,12 +4078,22 @@ const app = {
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
+            // Data Integrity Guard: Don't merge if cloud data is older than local current state
+            if (cloudState.last_updated && app.state.last_updated) {
+                const cloudDate = new Date(cloudState.last_updated);
+                const localDate = new Date(app.state.last_updated);
+                if (cloudDate < localDate) {
+                    console.log("☁️ Cloud data is older than local state. Skipping merge.");
+                    return;
+                }
+            }
+
             const collections = [
                 'lastChecks', 'tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts',
-                'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects', 'archives',
+                'quickNotes', 'household', 'householdNotes', 'meals', 'journal', 'meetings', 'projects', 'archives',
                 'timeTracking', 'sync_deleted', 'xp', 'level', 'dailyTaskGoal',
                 'hydrationGoal', 'hydrationReminderInterval', 'hydrationReminderMethod', 'hydrationReminderEnabled',
-                'weightReminderEnabled', 'weightReminderDay'
+                'weightReminderEnabled', 'weightReminderDay', 'last_updated'
             ];
             let changed = false;
 
@@ -4097,40 +4134,65 @@ const app = {
                 if (app.journal) app.journal.render();
                 if (app.meetings) app.meetings.render();
                 if (app.projects) app.projects.render();
+
+                // Auto-Refresh Daily Status Modal if open
+                if (document.getElementById('teamPresenceStatus')) {
+                    app.modals.open('dailyStatus');
+                }
                 console.log("☁️ Data Synchronized from Cloud (Mirror)");
             }
 
             this.updateIndicator(true);
         },
-        updateIndicator(active) {
+        updateIndicator(state) {
             const el = document.getElementById('headerSyncIndicator');
             const teamName = app.state.user.teamName;
+            const active = (state === true || state === 'syncing');
             const isActiveTeam = active && teamName;
 
             if (el) {
                 el.style.opacity = isActiveTeam ? '1' : '0.4';
-                el.title = isActiveTeam ? 'Team Verbindung aktiv: ' + teamName : 'Verbindung getrennt';
 
                 // Dot color
                 const dot = el.querySelector('div');
-                if (dot) dot.style.background = isActiveTeam ? 'var(--success)' : '#666';
-
-                if (isActiveTeam) el.classList.add('pulse-sync');
-                else el.classList.remove('pulse-sync');
+                if (dot) {
+                    if (state === 'syncing') {
+                        dot.style.background = 'var(--accent)'; // Orange/Yellow for syncing
+                        el.classList.add('pulse-sync');
+                        el.title = 'Synchronisiere...';
+                    } else if (state === true) {
+                        dot.style.background = 'var(--success)';
+                        el.classList.remove('pulse-sync');
+                        el.title = 'Team Verbindung aktiv: ' + teamName;
+                    } else {
+                        dot.style.background = '#666';
+                        el.classList.remove('pulse-sync');
+                        el.title = 'Verbindung getrennt';
+                    }
+                }
             }
             const statusLabel = document.getElementById('syncStatusHeader');
-            if (statusLabel) statusLabel.textContent = isActiveTeam ? teamName : 'Offline';
+            if (statusLabel) {
+                if (state === 'syncing') statusLabel.textContent = 'Sync...';
+                else statusLabel.textContent = isActiveTeam ? teamName : 'Offline';
+            }
 
             const syncStatusCard = document.getElementById('syncStatus');
             if (syncStatusCard) {
-                syncStatusCard.innerHTML = isActiveTeam
-                    ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
-                    : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
+                if (state === 'syncing') {
+                    syncStatusCard.innerHTML = `<span style="color:var(--accent)">🔄 Synchronisiere...</span>`;
+                } else {
+                    syncStatusCard.innerHTML = isActiveTeam
+                        ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
+                        : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
+                }
             }
         },
         async push() {
             if (!this.db || !app.state.user.teamName) { this.updateIndicator(false); return; }
             const team = app.state.user.teamName;
+
+            this.updateIndicator('syncing');
 
             const payload = {
                 data: {
@@ -4144,6 +4206,7 @@ const app = {
                     shortcuts: app.state.shortcuts || [],
                     quickNotes: app.state.quickNotes || [],
                     household: app.state.household || [],
+                    householdNotes: app.state.householdNotes || '',
                     meals: app.state.meals || [],
                     journal: app.state.journal || [],
                     meetings: app.state.meetings || [],
@@ -4161,10 +4224,10 @@ const app = {
                     weightReminderDay: app.state.weightReminderDay || 1,
                     teamMembers: app.state.user.team || [],
                     sync_deleted: app.state.sync_deleted || [],
-                    last_updated: new Date().toISOString(),
+                    last_updated: app.state.last_updated || new Date().toISOString(),
                     lastChecks: app.state.lastChecks || {},
                 },
-                updated_at: new Date().toISOString()
+                updated_at: app.state.last_updated || new Date().toISOString()
             };
 
             // Granular Push to avoid overwriting different categories (Save from both sides)
@@ -7218,6 +7281,22 @@ const app = {
             app.gamification.addXP(10);
         },
 
+        addQuick(name) {
+            if (!name || !name.trim()) return;
+            if (!app.state.household) app.state.household = [];
+            app.state.household.push({
+                id: Date.now(),
+                name: name.trim(),
+                frequency: 'keine',
+                lastDone: null,
+                createdAt: new Date().toISOString()
+            });
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+            app.gamification.addXP(5);
+        },
+
         toggleDone(id) {
             const item = app.state.household.find(h => h.id === id);
             if (item) {
@@ -7228,6 +7307,11 @@ const app = {
                 app.gamification.addXP(20);
                 if (window.confetti) confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
             }
+        },
+
+        saveNotes(text) {
+            app.state.householdNotes = text;
+            app.saveState();
         },
 
         delete(id) {
@@ -7267,17 +7351,32 @@ const app = {
             // Dashboard Preview
             const preview = document.getElementById('dashboardHouseholdPreview');
             if (preview) {
-                const items = (app.state.household || []).slice(0, 3);
+                const items = (app.state.household || []).slice(0, 5);
+                const notes = app.state.householdNotes || '';
+
+                let html = `
+                    <div style="margin-bottom:12px;">
+                        <textarea placeholder="Wichtige Haushalts-Info..." 
+                                  style="width:100%; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.1); border-radius:8px; padding:10px; color:white; font-size:0.85rem; resize:none; min-height:60px; outline:none;"
+                                  oninput="app.household.saveNotes(this.value)">${notes}</textarea>
+                    </div>
+                `;
+
                 if (items.length === 0) {
-                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
+                    html += '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
                 } else {
-                    preview.innerHTML = items.map(h => `
-                        <div style="font-size:0.85rem; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                            <span>${h.name}</span>
+                    html += items.map(h => `
+                        <div style="font-size:0.85rem; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:4px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="checkbox-circle" onclick="event.stopPropagation(); app.household.toggleDone(${h.id})" style="width:16px; height:16px;"></div>
+                                <span>${h.name}</span>
+                            </div>
                             <span class="text-xs text-muted">${h.frequency === 'keine' ? '' : h.frequency}</span>
                         </div>
                     `).join('');
                 }
+
+                preview.innerHTML = html;
             }
             if (window.lucide) lucide.createIcons();
         }
