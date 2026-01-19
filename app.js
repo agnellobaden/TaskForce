@@ -4041,19 +4041,32 @@ const app = {
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts', 'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects'];
+            const collections = [
+                'lastChecks', 'tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts',
+                'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects', 'archives',
+                'timeTracking', 'sync_deleted', 'xp', 'level', 'dailyTaskGoal',
+                'hydrationGoal', 'hydrationReminderInterval', 'hydrationReminderMethod', 'hydrationReminderEnabled',
+                'weightReminderEnabled', 'weightReminderDay'
+            ];
             let changed = false;
 
             collections.forEach(key => {
                 if (cloudState[key] !== undefined) {
-                    const merged = cloudState[key] || [];
-
+                    const merged = cloudState[key];
                     if (JSON.stringify(app.state[key]) !== JSON.stringify(merged)) {
                         app.state[key] = merged;
                         changed = true;
                     }
                 }
             });
+
+            // Special handling for nested user.team
+            if (cloudState.teamMembers && Array.isArray(cloudState.teamMembers)) {
+                if (JSON.stringify(app.state.user.team) !== JSON.stringify(cloudState.teamMembers)) {
+                    app.state.user.team = cloudState.teamMembers;
+                    changed = true;
+                }
+            }
 
             if (cloudState.xp !== undefined && cloudState.xp > app.state.xp) {
                 app.state.xp = cloudState.xp;
@@ -4125,16 +4138,34 @@ const app = {
                     journal: app.state.journal || [],
                     meetings: app.state.meetings || [],
                     projects: app.state.projects || [],
+                    archives: app.state.archives || [],
+                    timeTracking: app.state.timeTracking || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
+                    dailyTaskGoal: app.state.dailyTaskGoal || 5,
+                    hydrationGoal: app.state.hydrationGoal || 2.5,
+                    hydrationReminderInterval: app.state.hydrationReminderInterval || 120,
+                    hydrationReminderMethod: app.state.hydrationReminderMethod || 'push',
+                    hydrationReminderEnabled: app.state.hydrationReminderEnabled || false,
+                    weightReminderEnabled: app.state.weightReminderEnabled || false,
+                    weightReminderDay: app.state.weightReminderDay || 1,
+                    teamMembers: app.state.user.team || [],
                     sync_deleted: app.state.sync_deleted || [],
-                    last_updated: new Date().toISOString()
+                    last_updated: new Date().toISOString(),
+                    lastChecks: app.state.lastChecks || {},
                 },
                 updated_at: new Date().toISOString()
             };
 
+            // Granular Push to avoid overwriting different categories (Save from both sides)
+            const granularPayload = {};
+            for (const key in payload.data) {
+                granularPayload[`data.${key}`] = payload.data[key];
+            }
+            granularPayload.updated_at = payload.updated_at;
+
             try {
-                await this.db.collection('taskforce_sync').doc(team).set(payload, { merge: true });
+                await this.db.collection('taskforce_sync').doc(team).set(granularPayload, { merge: true });
                 const status = document.getElementById('syncStatus');
                 if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gesendet (${new Date().toLocaleTimeString()})</span>`;
                 this.updateIndicator(true);
@@ -5268,6 +5299,15 @@ const app = {
                     <div style="text-align: center; margin-bottom: 25px;">
                         <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Team & Tages-Check</h2>
                         <div class="text-muted">${dateDisplay}</div>
+                        <div id="teamPresenceStatus" style="font-size:0.75rem; color:var(--success); margin-top:5px; opacity:0.8;">
+                            ${(() => {
+                        if (!app.state.lastChecks) return '';
+                        const entries = Object.entries(app.state.lastChecks)
+                            .filter(([name]) => name !== app.state.user.name)
+                            .map(([name, time]) => `${name} hat um ${new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} Uhr gecheckt`);
+                        return entries.length > 0 ? `<i data-lucide="check-circle-2" size="12" style="vertical-align:middle; margin-right:4px;"></i> ` + entries.join(', ') : '';
+                    })()}
+                        </div>
                     </div>
 
                     ${tasksUrgent.length > 0 ? `
@@ -5285,9 +5325,9 @@ const app = {
                         ${events.length > 0 ? `
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                                 ${events.map(e => {
-                    const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const isPast = new Date(e.start) < now;
-                    return `
+                        const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const isPast = new Date(e.start) < now;
+                        return `
                                     <div style="display: flex; align-items: center; gap: 15px; opacity: ${isPast ? 0.5 : 1}; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px;">
                                         <div style="background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; min-width: 60px; text-align: center;">${time}</div>
                                         <div>
@@ -5296,7 +5336,7 @@ const app = {
                                             ${e.location ? `<div class="text-xs text-muted">📍 ${e.location}</div>` : ''}
                                         </div>
                                     </div>`;
-                }).join('')}
+                    }).join('')}
                             </div>
                         ` : `<div class="text-muted text-sm" style="padding:10px; text-align:center; background:rgba(255,255,255,0.03); border-radius:10px;">Heute keine Termine mehr.</div>`}
                     </div>
@@ -5370,7 +5410,7 @@ const app = {
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size:1.1rem;" onclick="app.modals.close()">
+                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size:1.1rem;" onclick="app.modals.submitDailyCheck()">
                         Alles Klar ✅
                     </button>
                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
@@ -5735,6 +5775,18 @@ const app = {
                     app.dashboard.scrollToCard(cat === 'shopping' ? 'dashboardShoppingCard' : 'dashboardTasksCard');
                 }
             }
+        },
+        submitDailyCheck() {
+            if (!app.state.lastChecks) app.state.lastChecks = {};
+            app.state.lastChecks[app.state.user.name || 'Partner'] = new Date().toISOString();
+            app.saveState();
+            this.close();
+            if (window.confetti) confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#3b82f6', '#8b5cf6', '#10b981']
+            });
         },
         submitMeeting() {
             const title = document.getElementById('meetTitle').value;
