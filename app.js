@@ -129,9 +129,28 @@ const app = {
             // Apply Pro status to UI
             this.user.applyProStatus();
 
+            // Mobile optimization: Hide top bar when keyboard is up to prevent "jumping"
+            const handleFocus = (e) => {
+                if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    // Don't hide if we're typing specifically in the smartInput itself
+                    if (e.target.id !== 'smartInput') {
+                        const topBar = document.querySelector('.top-bar');
+                        if (topBar) topBar.classList.add('mobile-hide');
+                    }
+                }
+            };
+            const handleBlur = (e) => {
+                const topBar = document.querySelector('.top-bar');
+                if (topBar) topBar.classList.remove('mobile-hide');
+            };
+            document.addEventListener('focus', handleFocus, true);
+            document.addEventListener('blur', handleBlur, true);
+
             // Create Icons safely
             if (window.lucide) lucide.createIcons();
 
+            // Initial Layout / Visibility Check - Always return to dashboard on refresh
+            this.navigateTo('dashboard', true);
         } catch (e) {
             console.error("Critical Init Error:", e);
             alert("Fehler beim Starten der App: " + e.message);
@@ -552,6 +571,7 @@ const app = {
             document.getElementById('loginOverlay').classList.add('hidden');
             app.user.updateHeader();
             app.dashboard.applyMode(); // Refresh UI to respect persona
+            app.navigateTo('dashboard'); // Ensure dashboard is prominent after login
         }
     },
 
@@ -777,6 +797,13 @@ const app = {
 
     navigateTo(page, skipHistory = false) {
         this.state.currentPage = page;
+
+        // User Request: Top bar should only be visible on dashboard
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) {
+            topBar.style.display = (page === 'dashboard') ? 'flex' : 'none';
+        }
+
         document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
 
         const target = document.getElementById(`view-${page}`);
@@ -805,6 +832,7 @@ const app = {
         if (page === 'shopping') app.shopping.render();
         if (page === 'household') app.household.render();
         if (page === 'journal') app.journal.render();
+        if (page === 'drive') app.drive.init();
         if (page === 'settings') {
             app.settings.render();
             app.settings.initPayPal();
@@ -1647,11 +1675,89 @@ const app = {
         }
         toggleCardBlink('dashboardAlarmsCard', (app.state.alarms || []).some(a => a.active));
 
+        // 7. Meal Plan Preview
+        const mealPreview = document.getElementById('dashboardMealPlanPreview');
+        const todayText = document.getElementById('todayMealText');
+        if (mealPreview) {
+            const todayIdx = (new Date().getDay() + 6) % 7; // 0=Mon
+            const todayMeal = app.meals.get(todayIdx);
+            if (todayText) todayText.textContent = todayMeal ? `Heute: ${todayMeal}` : 'Heute: Kein Plan eingetragen';
+
+            // Show next few days for preview
+            const daysNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+            let previewHtml = `<div id="todayMealText" style="font-weight: 700; text-align: center; margin-bottom: 8px; font-size:1.1rem; color:var(--accent);">${todayMeal || 'Nichts geplant'}</div>`;
+            previewHtml += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;">';
+            for (let i = 1; i <= 2; i++) {
+                const nextIdx = (todayIdx + i) % 7;
+                const nextMeal = app.meals.get(nextIdx);
+                previewHtml += `
+                    <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                        <div class="text-xs text-muted" style="text-transform:uppercase;">${daysNames[nextIdx]}</div>
+                        <div style="font-weight:600; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nextMeal || '--'}</div>
+                    </div>
+                `;
+            }
+            previewHtml += '</div>';
+            mealPreview.innerHTML = previewHtml;
+        }
+
         // Update layout toggle button text
         const layoutBtnText = document.getElementById('layoutToggleText');
         if (layoutBtnText) {
             const currentLayout = app.state.dashboardLayout || 'double';
             layoutBtnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
+        }
+
+        // 8. Drive Mode Card Update (Dynamic)
+        const driveCard = document.getElementById('dashboardDriveCard');
+        if (driveCard) {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const nextDriveEvent = app.state.events
+                .filter(e => e.start.startsWith(todayStr) && e.location && new Date(e.start) > now)
+                .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+            const drivePreview = document.getElementById('dashboardDrivePreview');
+            if (drivePreview) {
+                if (nextDriveEvent) {
+                    const eventStart = new Date(nextDriveEvent.start);
+                    const diffMs = eventStart - now;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const timeStr = eventStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                    let timeDisplay = '';
+                    if (diffMins < 60) timeDisplay = `in ${diffMins}m`;
+                    else timeDisplay = `in ${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
+
+                    drivePreview.innerHTML = `
+                       <div class="card-header" style="margin-bottom:8px;">
+                            <span class="card-title"><i data-lucide="car" class="text-primary"></i> Drive Mode</span>
+                            <div class="text-xs" style="background:rgba(59,130,246,0.2); color:#3b82f6; padding:2px 6px; border-radius:4px; font-weight:bold;">${timeDisplay}</div>
+                       </div>
+                       <div style="display:flex; align-items:center; gap:12px;">
+                           <div style="background:rgba(255,255,255,0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                               <i data-lucide="navigation" size="20"></i>
+                           </div>
+                           <div style="overflow:hidden;">
+                               <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nextDriveEvent.location}</div>
+                               <div class="text-muted text-xs">Ziel um ${timeStr} • ${nextDriveEvent.title}</div>
+                           </div>
+                       </div>
+                    `;
+                } else {
+                    // Default State
+                    drivePreview.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <i data-lucide="navigation" size="20"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:700;">Drive Mode</div>
+                                <div class="text-muted text-xs">Fahr-Assistent starten</div>
+                            </div>
+                        </div>
+                     `;
+                }
+            }
         }
 
         if (this.shortcuts) this.shortcuts.render();
@@ -1907,158 +2013,6 @@ const app = {
         }
     },
 
-    // --- DRIVE ASSISTANT MODULE ---
-    drive: {
-        currentLocation: null,
-
-        init() {
-            this.renderRoute();
-            this.getLocation();
-        },
-
-        refresh() {
-            this.getLocation();
-            this.renderRoute();
-        },
-
-        getLocation() {
-            const statusEl = document.getElementById('currentLocationText');
-            if (statusEl) statusEl.textContent = "Suche GPS...";
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        this.currentLocation = `${position.coords.latitude},${position.coords.longitude}`;
-                        if (statusEl) statusEl.textContent = "GPS Gefunden ✅";
-                    },
-                    (error) => {
-                        console.error("GPS Error", error);
-                        if (statusEl) statusEl.textContent = "Kein GPS. Bitte eingeben.";
-                        this.askLocation();
-                    }
-                );
-            } else {
-                if (statusEl) statusEl.textContent = "GPS nicht verfügbar.";
-                this.askLocation();
-            }
-        },
-
-        askLocation() {
-            const loc = prompt("Wo befindest du dich gerade? (Ort/Straße)", this.currentLocation || "");
-            if (loc) {
-                this.currentLocation = loc;
-                const statusEl = document.getElementById('currentLocationText');
-                if (statusEl) statusEl.textContent = "📍 " + loc;
-                this.renderRoute();
-            }
-        },
-
-        renderRoute() {
-            const list = document.getElementById('driveRouteList');
-            if (!list) return;
-
-            const today = new Date().setHours(0, 0, 0, 0);
-            const nowTime = new Date().getTime();
-
-            const routeEvents = app.state.events.filter(e => {
-                const eventDate = new Date(e.start);
-                const ed = new Date(e.start).setHours(0, 0, 0, 0);
-
-                // Only show events for today that haven't started yet
-                // This excludes all past/expired events from the drive mode route
-                return ed === today &&
-                    eventDate.getTime() > nowTime && // Event is in the future
-                    e.location && e.location.trim().length > 0;
-            });
-            routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-
-            if (routeEvents.length === 0) {
-                list.innerHTML = `<div class="card" style="background:rgba(255,255,255,0.05); text-align:center; padding:20px;">
-                    <i data-lucide="calendar-off" size="32" class="text-muted"></i>
-                    <p class="text-muted">Keine auswärtigen Termine für heute.</p>
-                </div>`;
-            } else {
-                let html = '';
-
-                // Start Point
-                html += `
-                <div style="display:flex; gap:15px; ">
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div style="width:12px; height:12px; background:var(--success); border-radius:50%; margin-top:5px;"></div>
-                        <div style="width:2px; flex:1; background:rgba(255,255,255,0.1);"></div>
-                    </div>
-                    <div style="padding-bottom:15px;">
-                        <div class="text-sm text-muted">Start</div>
-                        <div style="font-weight:bold;">${this.currentLocation || "Standort ermitteln..."}</div>
-                    </div>
-                </div>`;
-
-                // Stops
-                routeEvents.forEach((e, idx) => {
-                    const isLast = idx === routeEvents.length - 1;
-                    const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    html += `
-                    <div style="display:flex; gap:15px;">
-                        <div style="display:flex; flex-direction:column; align-items:center;">
-                            <div style="width:12px; height:12px; border: 2px solid var(--primary); background:#000; border-radius:50%; margin-top:5px;"></div>
-                            ${!isLast ? '<div style="width:2px; flex:1; background:rgba(255,255,255,0.1);"></div>' : ''}
-                        </div>
-                        <div style="padding-bottom: ${isLast ? '0' : '20px'}; flex:1;">
-                            <div class="card" style="margin:0 0 15px 0; padding:20px; border-left: 4px solid var(--primary); background: rgba(255,255,255,0.05); border-radius: 16px;">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                    <span style="font-weight:800; font-size:1.1rem; color:#fff;">${e.title}</span>
-                                    <span style="color: var(--primary); font-weight:bold; font-size:1rem;">${time} Uhr</span>
-                                </div>
-                                <div class="text-sm text-muted" style="display:flex; align-items:center; gap:8px;">
-                                    <i data-lucide="map-pin" size="14"></i> <span style="font-size: 0.95rem;">${e.location}</span>
-                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" style="color: var(--primary); display:flex; align-items:center; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px;" title="In Google Maps öffnen">
-                                        <i data-lucide="external-link" size="14"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-
-                list.innerHTML = html;
-            }
-            if (window.lucide) lucide.createIcons();
-        },
-
-        openNavigation() {
-            if (!this.currentLocation) {
-                alert("Bitte erst Standort festlegen!");
-                this.askLocation();
-                return;
-            }
-
-            const today = new Date().setHours(0, 0, 0, 0);
-            const nowTime = new Date().getTime();
-
-            const routeEvents = app.state.events.filter(e => {
-                const eventDate = new Date(e.start);
-                const ed = new Date(e.start).setHours(0, 0, 0, 0);
-
-                // Only include future events for today with a location
-                return ed === today &&
-                    eventDate.getTime() > nowTime && // Event is in the future
-                    e.location && e.location.trim().length > 0;
-            });
-            routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
-
-            if (routeEvents.length === 0) {
-                alert("Keine Ziele für heute gefunden.");
-                return;
-            }
-
-            // Construct Google Maps URL
-            // Format: https://www.google.com/maps/dir/Start/Stop1/Stop2/...
-            const origin = encodeURIComponent(this.currentLocation);
-            const destinations = routeEvents.map(e => encodeURIComponent(e.location)).join('/');
-
-            window.open(`https://www.google.com/maps/dir/${origin}/${destinations}`, '_blank');
-        }
-    },
 
     // --- AI MODULE ---
     ai: {
@@ -4393,8 +4347,22 @@ const app = {
 
     // --- DRIVE MODE MODULE ---
     drive: {
+        currentLocation: null,
         init() {
+            this.getLocation();
             this.render();
+        },
+        getLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (p) => { this.currentLocation = `${p.coords.latitude},${p.coords.longitude}`; this.render(); },
+                    (e) => { console.error("GPS Error", e); }
+                );
+            }
+        },
+        askLocation() {
+            const loc = prompt("Aktuellen Standort eingeben (Adresse oder Ort):", this.currentLocation || "");
+            if (loc) { this.currentLocation = loc; this.render(); }
         },
         render() {
             let container = document.getElementById('view-drive');
@@ -4404,55 +4372,207 @@ const app = {
                 container.className = 'hidden';
                 container.style.position = 'fixed';
                 container.style.inset = '0';
-                container.style.background = '#0d0d0d'; // Dark background
+                container.style.background = '#0d0d0d';
                 container.style.zIndex = '5000';
                 container.style.display = 'flex';
                 container.style.flexDirection = 'column';
-                document.body.appendChild(container); // Append to body
+                document.body.appendChild(container);
             }
 
-            // Fullscreen Drive UI
+            const todayIdx = (new Date().getDay() + 6) % 7;
+            const todayMeal = app.meals.get(todayIdx);
+
+            // Calculate Route Info
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const nextEvent = app.state.events
+                .filter(e => e.start.startsWith(todayStr) && e.location && new Date(e.start) > now)
+                .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+
+            let mapHtml = '';
+            let nextStopInfo = '';
+
+            if (nextEvent) {
+                const start = new Date(nextEvent.start);
+                const diffMins = Math.floor((start - now) / 1000 / 60);
+                const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+
+
+                // Map Embed
+                // Using simple iframe embed for location
+                let locEncoded = encodeURIComponent(nextEvent.location);
+                let originParam = "";
+                if (this.currentLocation) {
+                    originParam = `&origin=${encodeURIComponent(this.currentLocation)}`;
+                }
+
+                // Calculate time display with hours
+                let timeDisplayHtml = "";
+                if (diffMins < 60) {
+                    timeDisplayHtml = `${diffMins} <span style="font-size:1rem; font-weight:600; opacity:0.7;">min</span>`;
+                } else {
+                    const h = Math.floor(diffMins / 60);
+                    const m = diffMins % 60;
+                    timeDisplayHtml = `${h} <span style="font-size:1rem; font-weight:600; opacity:0.7;">Std</span> ${m} <span style="font-size:1rem; font-weight:600; opacity:0.7;">min</span>`;
+                }
+
+                mapHtml = `
+                    <div style="height:200px; width:100%; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); margin-bottom:15px; position:relative;">
+                        <iframe width="100%" height="100%" style="border:0; opacity:0.8; filter: invert(90%) hue-rotate(180deg) contrast(90%);" loading="lazy" allowfullscreen src="https://maps.google.com/maps?q=${locEncoded}${originParam}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
+                        <div style="position:absolute; bottom:10px; right:10px; background:var(--primary); color:white; padding:8px 12px; border-radius:10px; font-weight:bold; font-size:0.8rem; box-shadow:0 5px 15px rgba(0,0,0,0.5); pointer-events:none;">
+                            <i data-lucide="map-pin" size="12"></i> Zielgebiet
+                        </div>
+                    </div>
+                `;
+
+                nextStopInfo = `
+                    <div style="margin-bottom:15px; background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05)); border:1px solid rgba(59,130,246,0.3); padding:15px; border-radius:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                            <div>
+                                <div class="text-xs text-primary" style="font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">NÄCHSTES ZIEL</div>
+                                <div style="font-size:1.4rem; font-weight:bold; line-height:1.2;">${nextEvent.location}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:2rem; font-weight:800; color:white;">${timeDisplayHtml}</div>
+                                <div class="text-xs text-muted">bis Start (${timeStr})</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                             <div style="background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:10px; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                                <i data-lucide="calendar" size="14" style="opacity:0.7"></i> ${nextEvent.title}
+                             </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                nextStopInfo = `
+                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:20px; border-radius:20px; text-align:center;">
+                        <i data-lucide="check-circle" size="32" class="text-success" style="margin-bottom:10px;"></i>
+                        <div style="font-weight:bold; font-size:1.2rem;">Alles erledigt!</div>
+                        <div class="text-muted text-sm">Keine weiteren Termine mit Fahrt heute.</div>
+                    </div>
+                `;
+            }
+
             container.innerHTML = `
-                <div style="flex:1; padding:20px; display:flex; flex-direction:column; gap:20px; max-width:600px; margin:0 auto; width:100%;">
+                <div style="flex:1; padding:20px; display:flex; flex-direction:column; gap:10px; max-width:600px; margin:0 auto; width:100%; overflow-y:auto;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <i data-lucide="car" size="32" class="text-primary"></i>
-                            <h1 style="margin:0; font-size:2rem; font-weight:800;">Drive</h1>
+                            <button onclick="app.drive.close()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <i data-lucide="arrow-left"></i>
+                            </button>
+                            <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Cockpit</h2>
                         </div>
-                        <div style="font-size:2rem; font-weight:bold; font-family:monospace;">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div style="font-size:1.5rem; font-weight:bold; font-family:monospace; color:var(--primary);">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                     
-                    <button class="btn-primary" style="flex:1; font-size:1.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px; border-radius:24px; box-shadow:0 10px 30px rgba(59,130,246,0.3);" onclick="app.voice.start()">
-                        <div style="background:white; color:var(--primary); width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                            <i data-lucide="mic" size="32"></i>
-                        </div>
-                        <span>Sprachbefehl</span>
-                    </button>
-                    
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; height:180px;">
-                        <button class="btn" style="background:rgba(255,255,255,0.1); font-size:1.2rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:24px; gap:10px;" onclick="window.open('https://maps.google.com', '_blank')">
-                            <i data-lucide="map" size="32" class="text-accent"></i> 
-                            <span>Maps</span>
+                    ${nextStopInfo}
+                    ${mapHtml}
+
+                    <div style="display:flex; gap:10px; align-items:stretch;">
+                        <button class="btn" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:18px; text-align:left; display:flex; flex-direction:column; justify-content:center;" onclick="app.drive.askLocation()">
+                            <span class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:1px;">Start-Standort</span>
+                            <div style="font-size:0.9rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:${this.currentLocation ? 'white' : 'var(--accent)'};">📍 ${this.currentLocation || 'Bitte festlegen...'}</div>
                         </button>
-                         <button class="btn" style="background:rgba(255,255,255,0.1); font-size:1.2rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:24px; gap:10px;" onclick="app.modals.open('addEvent', {voice:true})">
-                            <i data-lucide="plus" size="32" class="text-success"></i>
-                            <span>Termin</span>
+                        <button class="btn-primary" style="width:70px; border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px rgba(59,130,246,0.2); background: linear-gradient(135deg, #2563eb, #1d4ed8);" onclick="app.drive.openNavigation()" title="Google Maps starten">
+                            <i data-lucide="navigation" size="28"></i>
                         </button>
                     </div>
-                    
-                    <button class="btn-danger" style="padding:20px; font-size:1.2rem; border-radius:18px; margin-top:auto;" onclick="app.drive.close()">
-                        <i data-lucide="x-circle"></i> Beenden
-                    </button>
+
+                    <div style="margin-top:10px;">
+                        <h4 style="margin:0 0 10px 0; font-size:0.9rem; text-transform:uppercase; opacity:0.6; padding-left:5px;">Heutige Route</h4>
+                        <div id="driveRouteList"></div>
+                    </div>
+
+                    <!-- Meal Plan Mini -->
+                    <div style="margin-top:20px; background:linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(234, 179, 8, 0.05)); border:1px solid rgba(234, 179, 8, 0.2); padding:15px; border-radius:20px; display:flex; align-items:center; gap:15px;">
+                        <div style="background:rgba(234, 179, 8, 0.2); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                            <i data-lucide="utensils" class="text-accent" size="20"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted" style="text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Essen heute</div>
+                            <div style="font-weight:700; font-size:1rem; color:#fff;">${todayMeal || 'Nichts eingetragen'}</div>
+                        </div>
+                    </div>
+
+                    <div style="height:80px;"></div> <!-- Spacer -->
                 </div>
+                
+                <!-- Floating Bottom Bar -->
+                 <div style="position:fixed; bottom:20px; left:20px; right:20px; display:flex; gap:10px; max-width:560px; margin:0 auto; z-index:5001;">
+                        <button class="btn" style="flex:1; background:rgba(30,30,30,0.9); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); padding:16px; border-radius:20px; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:10px; color:white; box-shadow:0 10px 20px rgba(0,0,0,0.5);" onclick="app.voice.startGlobal()">
+                            <i data-lucide="mic" size="20" class="text-primary"></i> <span>Sprachbefehl</span>
+                        </button>
+                 </div>
             `;
 
             container.classList.remove('hidden');
+            this.renderRoute();
             if (window.lucide) lucide.createIcons();
             if (app.requestWakeLock) app.requestWakeLock();
         },
+        renderRoute() {
+            const list = document.getElementById('driveRouteList');
+            if (!list) return;
+
+            const today = new Date().setHours(0, 0, 0, 0);
+            const now = new Date();
+
+            const routeEvents = app.state.events.filter(e => {
+                const ed = new Date(e.start).setHours(0, 0, 0, 0);
+                return ed === today && e.location && e.location.trim().length > 0;
+            }).sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (routeEvents.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.3; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
+                    <i data-lucide="calendar-off" size="48" style="margin-bottom:12px;"></i>
+                    <div style="font-size:0.9rem;">Keine Termine mit Standort für heute.</div>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = routeEvents.map((e, i) => {
+                const eventTime = new Date(e.start);
+                const isPast = eventTime < now;
+                const timeStr = eventTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isLast = i === routeEvents.length - 1;
+
+                return `
+                <div style="display:flex; gap:15px; opacity: ${isPast ? 0.4 : 1}; position:relative;">
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <div style="width:14px; height:14px; border-radius:50%; background: ${isPast ? 'rgba(255,255,255,0.2)' : 'var(--primary)'}; border: 3px solid #0d0d0d; box-shadow: 0 0 0 2px ${isPast ? 'transparent' : 'rgba(59,130,246,0.3)'}; margin-top:6px; z-index:2;"></div>
+                        ${!isLast ? `<div style="position:absolute; top:20px; bottom:0; width:2px; background:rgba(255,255,255,0.1); left:6px; z-index:1;"></div>` : ''}
+                    </div>
+                    <div style="flex:1; padding-bottom:20px;">
+                        <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:18px; transition:all 0.3s; ${!isPast ? 'border-left:4px solid var(--primary);' : ''}">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px;">
+                                <div style="font-weight:800; font-size:1.1rem; color:#fff;">${e.title}</div>
+                                <div style="font-weight:800; color:var(--primary); font-size:1rem;">${timeStr}</div>
+                            </div>
+                            <div class="text-sm text-muted" style="display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="map-pin" size="14"></i> <span>${e.location}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        },
+        openNavigation() {
+            const today = new Date().setHours(0, 0, 0, 0);
+            const routeEvents = app.state.events.filter(e => {
+                const ed = new Date(e.start).setHours(0, 0, 0, 0);
+                return ed === today && e.location && e.location.trim().length > 0;
+            }).sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (routeEvents.length === 0) { alert("Keine Ziele für heute!"); return; }
+            const origin = encodeURIComponent(this.currentLocation || "");
+            const destinations = routeEvents.map(e => encodeURIComponent(e.location)).join('/');
+            window.open(`https://www.google.com/maps/dir/${origin}/${destinations}`, '_blank');
+        },
         close() {
-            const container = document.getElementById('view-drive');
-            if (container) container.classList.add('hidden');
+            const c = document.getElementById('view-drive');
+            if (c) c.classList.add('hidden');
             if (app.releaseWakeLock) app.releaseWakeLock();
             app.navigateTo('dashboard');
         }
@@ -4465,6 +4585,10 @@ const app = {
             const c = document.getElementById('modalContent');
             if (!o || !c) return;
             o.classList.remove('hidden');
+
+            // Hide top bar while modal is open to keep view clean
+            const topBar = document.querySelector('.top-bar');
+            if (topBar) topBar.style.visibility = 'hidden';
 
             // Push history state so back button closes modal
             window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
@@ -4845,7 +4969,7 @@ const app = {
                 const amount = data.amount || '';
                 c.innerHTML = `
                 <div style="padding:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; position:sticky; top:0; background:var(--bg-card); z-index:10; padding:10px 0; border-bottom:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:var(--bg-card); padding:10px 0; border-bottom:1px solid var(--border);">
                         <h3 style="margin:0;">Ausgabe erfassen</h3>
                         <button class="btn btn-primary btn-small" onclick="app.modals.submitExpense()">▼ Speichern</button>
                     </div>
@@ -4877,7 +5001,7 @@ const app = {
                     <div class="form-group">
                         <label><input type="checkbox" id="expUrgent"> 🔥 Wichtig / Dringend</label>
                     </div>
-                    <div style="position: sticky; bottom: -20px; background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px; margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px;">
+                    <div style="background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px;">
                          <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="width:100%;">Speichern</button>
                     </div>
 
@@ -5326,6 +5450,7 @@ const app = {
                 const cards = [
                     { id: 'dashboardAiCard', name: 'AI Assistant', icon: 'sparkles' },
                     { id: 'dashboardCommunicationCard', name: 'Kommunikation', icon: 'message-square' },
+                    { id: 'dashboardPrivateCommCard', name: 'Privat-Chat & Familie', icon: 'heart' },
                     { id: 'dashboardStatusCard', name: 'Tages-Check', icon: 'clipboard-check' },
                     { id: 'dashboardEventsCard', name: 'Zeitplan / Termine', icon: 'calendar' },
                     { id: 'dashboardTasksCard', name: 'Aufgaben (To-Do)', icon: 'check-square' },
@@ -5336,29 +5461,41 @@ const app = {
                     { id: 'dashboardAlarmsCard', name: 'Wecker', icon: 'alarm-clock' },
                     { id: 'dashboardDriveCard', name: 'Drive / Fahrt-Modus', icon: 'navigation' },
                     { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' },
-                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' }
+                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' },
+                    { id: 'dashboardTimeTrackerCard', name: 'Zeit-Tracker', icon: 'clock' },
+                    { id: 'dashboardNotesCard', name: 'Schnell-Notizen', icon: 'sticky-note' },
+                    { id: 'dashboardProjectsCard', name: 'Projekte', icon: 'briefcase' },
+                    { id: 'dashboardMeetingsCard', name: 'Meeting Protokolle', icon: 'users-2' },
+                    { id: 'dashboardHouseholdCard', name: 'Haushalt', icon: 'home' },
+                    { id: 'dashboardMealPlanCard', name: 'Wochenmenü', icon: 'utensils' },
+                    { id: 'dashboardJournalCard', name: 'Journal', icon: 'book-open' }
                 ];
 
                 c.innerHTML = `
-                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
-                    <h3><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
+                <div style="padding:20px; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;"><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
+                        <button onclick="app.modals.close()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x"></i></button>
+                    </div>
                     <p class="text-muted text-sm mb-4">Wähle aus, welche Karten angezeigt werden sollen.</p>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; flex-direction:column; gap:12px;">
                         ${cards.map(card => {
                     const isVisible = !hidden.includes(card.id);
                     return `
-                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:15px; margin:0; cursor:pointer;" onclick="app.dashboard.toggleCardVisibility('${card.id}')">
-                                <div style="display:flex; align-items:center; gap:15px;">
-                                    <i data-lucide="${card.icon}" class="text-muted"></i>
-                                    <span style="font-weight:600; ${!isVisible ? 'opacity:0.5' : ''}">${card.name}</span>
+                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:18px; margin:0; cursor:pointer; background:rgba(255,255,255,0.03); border:1px solid ${isVisible ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.05)'}; transition:all 0.2s;" onclick="app.dashboard.toggleCardVisibility('${card.id}')">
+                                <div style="display:flex; align-items:center; gap:15px; flex:1;">
+                                    <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                        <i data-lucide="${card.icon}" class="${isVisible ? 'text-primary' : 'text-muted'}" size="20"></i>
+                                    </div>
+                                    <span style="font-weight:600; font-size:1rem; ${!isVisible ? 'opacity:0.5' : ''}">${card.name}</span>
                                 </div>
-                                <div class="checkbox-circle ${isVisible ? 'checked' : ''}" style="width:24px; height:24px;"></div>
+                                <div class="checkbox-circle ${isVisible ? 'checked' : ''}" style="width:28px; height:28px; flex-shrink:0;"></div>
                             </div>
                             `;
                 }).join('')}
                     </div>
-                     <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:20px;width:100%;">Fertig</button>
-                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                    <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:30px; width:100%; height:52px; font-weight:700; font-size:1.1rem; border-radius:14px;">Fertig</button>
+                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
                 </div>`;
             } else if (type === 'aiBriefing') {
                 c.innerHTML = `
@@ -5367,104 +5504,12 @@ const app = {
                     ${data.html}
                     <button class="btn btn-primary" style="width:100%; margin-top:15px; padding:12px;" onclick="app.modals.close(); window.speechSynthesis.cancel();">Danke, Verstanden</button>
                 </div>`;
-            } else if (type === 'importBusiness') {
-                c.innerHTML = `
-                <div style="padding:28px; max-width: 550px; background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(0, 0, 0, 0.98)); border-radius: 28px;">
-                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
-                        <div style="width:52px; height:52px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 20px rgba(255,255,255,0.1);">
-                            <i data-lucide="sparkles" color="white" size="24"></i>
-                        </div>
-                        <div>
-                            <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Smart Business Import</h2>
-                            <p class="text-muted text-sm">Präzise Datenextraktion mit AI</p>
-                        </div>
-                    </div>
-                    
-                    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
-                        <div class="form-group" style="margin-bottom:15px;">
-                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 1: Website Link</label>
-                            <input id="importUrl" class="form-input" placeholder="https://www.firma.de" style="border-radius:12px; background:rgba(0,0,0,0.5);">
-                        </div>
-
-                        <div class="form-group" style="margin:0;">
-                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 2: Deep Analysis (Empfohlen)</label>
-                            <p class="text-xs text-muted" style="margin-bottom:8px;">Kopiere den Text aus dem <strong>Impressum</strong> oder <strong>Footer</strong> hier hinein für 100% Genauigkeit:</p>
-                            <textarea id="importManualText" class="form-input" rows="4" placeholder="Kopierte Daten hier einfügen..." style="background:rgba(0,0,0,0.5); border-radius:12px; font-size:0.85rem;"></textarea>
-                        </div>
-                        
-                        <button class="btn btn-primary" onclick="app.businessSearch.importFromUrl()" style="width:100%; margin-top:20px; height:48px; border-radius:12px; border-width:2px; font-weight:bold;">
-                            <i data-lucide="scan-search"></i> Daten jetzt analysieren
-                        </button>
-                    </div>
-                    
-                    <div id="importResults" class="hidden" style="animation: fadeIn 0.4s ease-out;">
-                        <div style="display:flex; flex-direction:column; gap:14px; background: rgba(59, 130, 246, 0.05); padding: 20px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.2);">
-                            <div class="form-group" style="margin:0;">
-                                <label class="form-label">Name / Firma</label>
-                                <input id="impName" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                                <div class="form-group" style="margin:0;">
-                                    <label class="form-label">Telefon</label>
-                                    <input id="impPhone" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
-                                </div>
-                                <div class="form-group" style="margin:0;">
-                                    <label class="form-label">Email</label>
-                                    <input id="impEmail" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
-                                </div>
-                            </div>
-                            <div class="form-group" style="margin:0;">
-                                <label class="form-label">Adresse / Standort</label>
-                                <input id="impAddress" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
-                            </div>
-                            <div class="form-group" style="margin:0;">
-                                <label class="form-label">Website</label>
-                                <input id="impUrl" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
-                            </div>
-                            
-                            <!-- CLASSIFICATION -->
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:5px;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
-                                    <input type="radio" name="impType" value="business" checked> 
-                                    <span style="font-size:0.85rem;">Business</span>
-                                </label>
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
-                                    <input type="radio" name="impType" value="private"> 
-                                    <span style="font-size:0.85rem;">Privat</span>
-                                </label>
-                            </div>
-                            <div class="form-group" style="margin:0; padding-top:5px;">
-                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                    <input type="checkbox" id="impShared" style="width:16px; height:16px;">
-                                    <span style="font-size:0.85rem; color:var(--text-muted);">In beiden Dashboards anzeigen</span>
-                                </label>
-                            </div>
-
-                            <button class="btn btn-primary" style="width:100%; margin-top:15px; height:52px; font-size:1.1rem; border-radius:14px;" onclick="app.businessSearch.saveImported()">
-                                <i data-lucide="check-circle"></i> In Adressbuch speichern
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div id="importLoading" class="hidden" style="text-align:center; padding:40px;">
-                        <div style="display:inline-block; margin-bottom:20px; position:relative;">
-                             <div class="spinner" style="width:60px; height:60px; border-width:4px;"></div>
-                             <i data-lucide="bot" size="24" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.8;" class="text-primary"></i>
-                        </div>
-                        <h4 style="margin-bottom:8px;">Extrahiere Business-Daten...</h4>
-                        <p class="text-muted text-sm">Die AI analysiert den Text auf Firmennamen, Nummern und Adressen.</p>
-                    </div>
-
-                    <div style="margin-top:24px; text-align:center; padding-top:20px; border-top: 1px solid rgba(255,255,255,0.05);">
-                         <button class="btn" style="background:transparent; border:none; color:var(--text-muted);" onclick="app.modals.close()">Abbrechen</button>
-                    </div>
-                </div>`;
             } else if (type === 'switchTeams') {
                 const teams = app.state.user.savedTeams || [];
                 const currentKey = app.state.user.teamName;
 
                 c.innerHTML = `
-                <div style="padding:24px; width:100%; max-width:450px;">
+                    <div style="padding:24px; width:100%; max-width:450px;">
                     <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="users" class="text-primary"></i> Team Manager</h3>
                     <p class="text-muted text-sm mb-4">Umschalten zwischen deinen verbundenen Teams oder Familien-Bündnissen.</p>
                     
@@ -5509,8 +5554,6 @@ const app = {
                         <button class="btn btn-primary" onclick="app.teams.add()" style="width:100%; margin-top:10px;">Verbindung herstellen</button>
                     </div>
 
-                    <div style="display:flex; justify-content:center; margin-top:20px;">
-                        <button class="btn" onclick="app.modals.close()">Schließen</button>
                     </div>
                 </div>`;
             }
@@ -5543,8 +5586,8 @@ const app = {
                             <div class="text-xs text-muted" style="margin-top:8px; opacity:0.6;">
                                 ${phone} ${email ? ' • ' + email : ''}
                             </div>
-                        </div>
-                    `;
+                        </div >
+    `;
                 }).join('');
 
                 c.innerHTML = `
@@ -5567,14 +5610,20 @@ const app = {
                                 <i data-lucide="check"></i> Alle Importieren
                             </button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
             if (window.lucide) lucide.createIcons();
         },
         close(fromHistory = false) {
             const o = document.getElementById('modalOverlay');
             if (o) o.classList.add('hidden');
+
+            // Restore top bar visibility (only if on dashboard)
+            const topBar = document.querySelector('.top-bar');
+            if (topBar && app.state.currentPage === 'dashboard') {
+                topBar.style.visibility = 'visible';
+                topBar.style.display = 'flex';
+            }
             app.editingId = null;
 
             // Create loop breaker
@@ -5750,9 +5799,67 @@ const app = {
             this.render();
             app.renderDashboard();
         },
-        call(num) { if (num) window.location.href = `tel:${num}`; },
+        call(num) { if (num) window.location.href = `tel:${num} `; },
         whatsapp(num) { if (num) window.open(`https://wa.me/${num.replace(/\D/g, '')}`, '_blank'); },
         mail(email) { if (email) window.location.href = `mailto:${email}`; },
+        handleFileImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                if (file.name.toLowerCase().endsWith('.vcf')) {
+                    this.parseVCF(content);
+                } else if (file.name.toLowerCase().endsWith('.csv')) {
+                    this.parseCSV(content);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // Reset
+        },
+        parseVCF(vcf) {
+            const cards = vcf.split('BEGIN:VCARD');
+            const contacts = [];
+            cards.forEach(card => {
+                if (!card.trim()) return;
+                const lines = card.split(/\r?\n/);
+                let fn = '', tel = '', email = '', adr = '';
+                lines.forEach(line => {
+                    if (line.toUpperCase().startsWith('FN:')) fn = line.substring(3).trim();
+                    else if (line.toUpperCase().startsWith('TEL')) {
+                        const pts = line.split(':');
+                        if (pts[1]) tel = pts[1].trim();
+                    }
+                    else if (line.toUpperCase().startsWith('EMAIL')) {
+                        const pts = line.split(':');
+                        if (pts[1]) email = pts[1].trim();
+                    }
+                    else if (line.toUpperCase().startsWith('ADR')) {
+                        const pts = line.split(':');
+                        if (pts[1]) adr = pts[1].replace(/;/g, ' ').trim();
+                    }
+                });
+                if (fn) contacts.push({ name: [fn], tel: [tel], email: [email], address: [adr] });
+            });
+            if (contacts.length > 0) {
+                app.modals.open('importContactsReview', { rawContacts: contacts });
+            } else {
+                alert("Keine gültigen Kontakte in der VCF-Datei gefunden.");
+            }
+        },
+        parseCSV(csv) {
+            // Very simple CSV parser (assuming Name, Phone, Email)
+            const lines = csv.split(/\r?\n/);
+            const contacts = [];
+            lines.forEach((line, i) => {
+                if (i === 0 || !line.trim()) return; // Skip header or empty
+                const [name, tel, email] = line.split(/[;,]/);
+                if (name) contacts.push({ name: [name.trim()], tel: [tel ? tel.trim() : ''], email: [email ? email.trim() : ''] });
+            });
+            if (contacts.length > 0) {
+                app.modals.open('importContactsReview', { rawContacts: contacts });
+            }
+        },
         async importBrowser() {
             try {
                 if ('contacts' in navigator && 'ContactsManager' in window) {
@@ -5762,7 +5869,7 @@ const app = {
                         app.modals.open('importContactsReview', { rawContacts: contacts });
                     }
                 } else {
-                    alert("Dein Browser unterstützt den Kontakt-Import leider nicht (funktioniert primär auf Android mit Chrome).");
+                    alert("Handy-Import wird von diesem Browser nicht unterstützt. Bitte nutze den Datei-Import (.vcf).");
                 }
             } catch (err) {
                 console.error("Contact Import Error:", err);
@@ -6007,9 +6114,7 @@ const app = {
                 document.head.appendChild(style);
             }
 
-            if (importBtn) {
-                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
-            }
+
         },
         renderQuick() {
             const container = document.getElementById('dashboardQuickContacts');
@@ -6373,7 +6478,6 @@ const app = {
             // Define which cards belong to which mode
             const businessItems = [
                 'dashboardProjectsCard',
-                'dashboardCommunicationCard',
                 'dashboardFinanceCard',
                 'dashboardMeetingsCard',
                 'dashboardDriveCard',
@@ -6397,7 +6501,6 @@ const app = {
                 'dashboardMealPlanCard',
                 'dashboardHouseholdCard',
                 'dashboardJournalCard',
-                'dashboardPrivateCommCard',
                 'dashboardShortcutsCard',
                 'dashboardNotesCard',
                 'dashboardAlarmsCard',
@@ -6413,11 +6516,13 @@ const app = {
                 'nav-tools'
             ];
 
-            // Always visible
+            // Always visible (or user controlled)
             const sharedItems = [
                 'dashboardEventsCard',
                 'dashboardStatusCard',
                 'dashboardAiCard',
+                'dashboardCommunicationCard', // Now shared
+                'dashboardPrivateCommCard',   // Now shared
                 'cat-general',
                 'nav-dashboard',
                 'nav-calendar'
@@ -6510,31 +6615,41 @@ const app = {
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
                 'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
-                'dashboardHouseholdCard', 'dashboardJournalCard', 'dashboardPrivateCommCard'
+                'dashboardHouseholdCard', 'dashboardJournalCard', 'dashboardPrivateCommCard', 'dashboardMealPlanCard'
             ];
 
             allCards.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    if (hidden.includes(id)) el.classList.add('hidden');
-                    else el.classList.remove('hidden');
+                    if (hidden.includes(id)) {
+                        el.classList.add('hidden');
+                    } else {
+                        el.classList.remove('hidden');
+                    }
                 }
             });
         },
-        toggleCardVisibility(id) {
+        toggleCardVisibility(id, silent = false) {
+            console.log("Toggle visibility for:", id);
             if (!app.state.ui) app.state.ui = {};
             if (!app.state.ui.hiddenCards) app.state.ui.hiddenCards = [];
 
             const index = app.state.ui.hiddenCards.indexOf(id);
             if (index > -1) {
-                app.state.ui.hiddenCards.splice(index, 1); // Remove from hidden (Show it)
+                app.state.ui.hiddenCards.splice(index, 1);
+                console.log("Showing card:", id);
             } else {
-                app.state.ui.hiddenCards.push(id); // Add to hidden
+                app.state.ui.hiddenCards.push(id);
+                console.log("Hiding card:", id);
             }
+
             app.saveState();
             this.applyVisibility();
-            // Re-render modal to update switch state
-            app.modals.open('configureWidgets');
+
+            // Re-render modal to update switch state (if not silent)
+            if (!silent) {
+                app.modals.open('configureWidgets');
+            }
         },
         scrollToCard(id) {
             setTimeout(() => {
@@ -7052,7 +7167,14 @@ const app = {
             if (preview) {
                 const entries = (app.state.journal || []).slice(0, 1);
                 if (entries.length === 0) {
-                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Halte deine Gedanken fest...</div>';
+                    preview.innerHTML = `
+                        <div class="text-muted text-sm" style="text-align:center; padding:15px;">
+                            <i data-lucide="coffee" size="24" style="margin-bottom:8px; opacity:0.5;"></i>
+                            <div>Nimm dir Zeit für dich.</div>
+                            <button class="btn-small" style="margin-top:8px; background:rgba(255,255,255,0.1);" onclick="event.stopPropagation(); app.journal.add()">
+                                Eintrag erstellen
+                            </button>
+                        </div>`;
                 } else {
                     preview.innerHTML = entries.map(j => `
                         <div style="padding:5px;">

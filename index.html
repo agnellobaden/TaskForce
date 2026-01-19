@@ -138,11 +138,12 @@
                 <div id="clockDateSidebar">Wird geladen...</div>
             </div>
 
-            <div class="logo-area" style="margin-bottom: 20px;">
+            <div class="logo-area" style="margin-bottom: 20px; cursor: pointer;" onclick="app.navigateTo('dashboard')">
                 <i data-lucide="zap" class="logo-icon" size="24"></i>
                 <h2 style="font-size: 1.2rem;">TaskForce</h2>
-                <button class="icon-btn" style="margin-left:auto; display:none;" onclick="app.toggleSidebar()"
-                    id="sidebarCloseBtn"><i data-lucide="x"></i></button>
+                <button class="icon-btn" style="margin-left:auto; display:none;"
+                    onclick="event.stopPropagation(); app.toggleSidebar()" id="sidebarCloseBtn"><i
+                        data-lucide="x"></i></button>
             </div>
 
             <!-- Gamification Profile Tiny -->
@@ -226,7 +227,7 @@
 
                 <!-- Top Smart Command Bar -->
                 <div class="top-command-field"
-                    style="flex: 1; max-width: 450px; position: relative; display: flex; align-items: center; margin: 0 15px;">
+                    style="flex: 1; max-width: 450px; position: relative; display: flex; align-items: center;">
                     <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
                     <input type="text" id="smartInput" placeholder="Was tun?"
                         onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
@@ -326,6 +327,9 @@
 
                         <div id="dashboardCommunicationCard" class="card dash-card card-communication card-medium"
                             style="grid-column: span 2; order: 10;" draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardCommunicationCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
@@ -358,6 +362,9 @@
                         <div id="dashboardStatusCard" class="card dash-card card-medium"
                             style="grid-column: span 2; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer; order: 20;"
                             onclick="app.modals.open('dailyStatus')" draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardStatusCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div
                                 style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                                 <i data-lucide="clipboard-check" size="24"></i>
@@ -372,6 +379,9 @@
                         <div id="dashboardAiCard" class="card dash-card card-medium"
                             style="grid-column: span 2; padding: 15px; order: 25; border-left: 2px solid var(--accent); background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(255,255,255,0.02) 100%);"
                             draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardAiCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div class="card-header" style="margin-bottom: 10px;">
                                 <span class="card-title" style="display:flex; align-items:center; gap:8px;">
                                     <i data-lucide="sparkles" class="text-accent" size="18"></i>
@@ -391,6 +401,9 @@
                         <!-- 3. HERO: Termine (Consolidated Window) -->
                         <div class="card dash-card card-medium" id="dashboardEventsCard"
                             style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardEventsCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div class="card-header"
                                 style="margin-bottom: 12px; display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
                                 <div
@@ -426,6 +439,9 @@
                         <div id="dashboardTasksCard" class="card dash-card card-mini"
                             style="grid-column: span 1; order: 100;"
                             onclick="app.tasks.filter('todo'); app.navigateTo('tasks')" draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardTasksCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
                                     To-Do</span>
@@ -439,6 +455,9 @@
                         <div id="dashboardShoppingCard" class="card dash-card card-mini"
                             style="grid-column: span 1; order: 101;"
                             onclick="app.tasks.filter('shopping'); app.navigateTo('tasks')" draggable="true">
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardShoppingCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
                                     Einkauf</span>
@@ -452,6 +471,9 @@
                         <!-- 5. GESUNDHEIT & HABITS (Tracking) -->
                         <div class="card dash-card card-mini" style="grid-column: span 1; order: 37;"
                             id="dashboardHealthCard" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHealthCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="heart"></i> Vitalität</span>
                                 <button onclick="event.stopPropagation(); app.navigateTo('health');"
@@ -463,6 +485,9 @@
 
                         <div id="dashboardHabitsCard" class="card dash-card card-mini"
                             style="grid-column: span 1; order: 38;" onclick="app.navigateTo('habits')" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHabitsCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="flame"></i> Routinen</span>
                             </div>
@@ -473,6 +498,9 @@
                         <div id="dashboardFinanceCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 39;" onclick="app.navigateTo('finance')"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardFinanceCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
@@ -496,6 +524,9 @@
 
                         <div class="card dash-card card-medium" style="grid-column: span 2; order: 104;"
                             id="dashboardAlarmsCard" onclick="app.modals.open('setAlarm')" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardAlarmsCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="alarm-clock" class="text-secondary"></i>
                                     Wecker</span>
@@ -510,20 +541,28 @@
                         <div id="dashboardDriveCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 51;" onclick="app.actions.toggleDriveMode()"
                             draggable="true">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div
-                                    style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                    <i data-lucide="navigation" size="20"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight:700;">Drive Mode</div>
-                                    <div class="text-muted text-xs">Fahr-Assistent</div>
+                            <button class="card-close-btn" draggable="false"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardDriveCard', true)"
+                                title="Widget ausblenden">×<i data-lucide="x" size="14"></i></button>
+                            <div id="dashboardDrivePreview">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div
+                                        style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                        <i data-lucide="navigation" size="20"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:700;">Drive Mode</div>
+                                        <div class="text-muted text-xs">Fahr-Assistent</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div id="dashboardShortcutsCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 180;" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardShortcutsCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="layers" class="text-primary"></i> Apps &
                                     Links</span>
@@ -542,6 +581,9 @@
                         <div id="dashboardTimeTrackerCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 21; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02));"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardTimeTrackerCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="clock" class="text-success"></i>
                                     Zeit-Tracker</span>
@@ -564,6 +606,9 @@
                         <div id="dashboardNotesCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 105; background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardNotesCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="sticky-note" class="text-accent"></i>
                                     Notizen</span>
@@ -581,6 +626,9 @@
                         <div id="dashboardProjectsCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 40; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.03)); border-left: 3px solid #8b5cf6;"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardProjectsCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div
@@ -620,6 +668,9 @@
                         <div id="dashboardMeetingsCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 60; background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(219, 39, 119, 0.03)); border-left: 3px solid #ec4899;"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardMeetingsCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div
@@ -660,6 +711,9 @@
                         <div id="dashboardPrivateCommCard" class="card dash-card card-communication card-medium"
                             style="grid-column: span 2; order: 12; background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.03)); border-left: 3px solid #a855f7;"
                             draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardPrivateCommCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header" onclick="app.navigateTo('contacts')"
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="heart" style="color: #a855f7;"></i>
@@ -702,6 +756,9 @@
                         <div id="dashboardHouseholdCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02));"
                             onclick="app.navigateTo('household')" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHouseholdCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="home" class="text-success"></i> Haushalt</span>
                                 <button class="btn-small" onclick="event.stopPropagation(); app.household.add()">
@@ -718,6 +775,9 @@
                         <div id="dashboardJournalCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.02));"
                             onclick="app.navigateTo('journal')" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardJournalCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="book-open" class="text-accent"></i> Journal &
                                     Me-Time</span>
@@ -735,6 +795,9 @@
                         <div id="dashboardMealPlanCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02));"
                             onclick="app.modals.open('viewMealPlan')" draggable="true">
+                            <button class="card-close-btn"
+                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardMealPlanCard', true)"
+                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="utensils" class="text-accent"></i>
                                     Wochenmenü</span>
@@ -1184,11 +1247,11 @@
                                         Partner & Firmen.</p>
                                 </div>
                                 <div style="display:flex; gap:10px;">
-                                    <button id="importContactsBtn" class="btn btn-secondary"
-                                        onclick="app.contacts.importBrowser()" style="display:none;"><i
-                                            data-lucide="download"></i> Handy Import</button>
-                                    <button class="btn btn-secondary" onclick="app.modals.open('importBusiness')"><i
-                                            data-lucide="sparkles"></i> KI Import</button>
+                                    <input type="file" id="contactFileInput" accept=".vcf,.csv" style="display:none;"
+                                        onchange="app.contacts.handleFileImport(this)">
+                                    <button class="btn btn-secondary"
+                                        onclick="document.getElementById('contactFileInput').click()"><i
+                                            data-lucide="download"></i> Import</button>
                                     <button class="btn btn-primary" onclick="app.modals.open('addContact')"><i
                                             data-lucide="plus"></i> Neu</button>
                                 </div>

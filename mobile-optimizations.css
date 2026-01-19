@@ -188,14 +188,10 @@
     .dashboard-grid:not(.single-column-mode) #dashboardMeetingsCard,
     .dashboard-grid:not(.single-column-mode) #view-contacts .card {
         grid-column: span 2 !important;
-        display: flex !important;
-        /* FORCE VISIBILITY */
+        /* display: flex !important; REMOVED to allow hiding */
     }
 
-    /* Force ALL cards to show on mobile, overriding any specific hides */
-    .dashboard-grid .card {
-        display: flex !important;
-    }
+    /* Allow card visibility logic to work on mobile */
 
     .card-value {
         font-size: 1.2rem;
@@ -396,8 +392,5 @@
         padding-bottom: 120px;
     }
 
-    /* Force visibility of all cards on tablets */
-    .dashboard-grid .card {
-        display: flex !important;
-    }
+    /* Allow card visibility logic to work on tablets */
 }

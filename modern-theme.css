@@ -334,14 +334,18 @@ h4 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md) 0;
-    margin-bottom: var(--spacing-xl);
+    padding: 20px 0;
+    margin-top: 10px;
+    margin-bottom: 30px;
     animation: fadeIn 0.5s ease-out;
     gap: 20px;
-    position: sticky;
-    top: 0;
-    background: var(--bg-app);
-    z-index: 100;
+}
+
+/* Hide top bar on mobile when keyboard is up to prevent "jumping" */
+@media (max-width: 768px) {
+    .top-bar.mobile-hide {
+        display: none !important;
+    }
 }
 
 .top-command-field {
@@ -358,7 +362,7 @@ h4 {
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 12px !important;
-    padding: 10px 45px 10px 40px !important;
+    padding: 12px 45px 12px 40px !important;
     color: white !important;
     font-size: 0.95rem !important;
     outline: none !important;
@@ -630,11 +634,17 @@ h4 {
     .top-command-field {
         max-width: none;
         width: 100%;
+        margin: 15px 0 !important;
     }
 
     .top-actions {
         justify-content: space-between;
         width: 100%;
+        margin-top: 10px;
+    }
+
+    .top-left-actions {
+        margin-bottom: 10px;
     }
 
     .hero-clock-card {
@@ -648,9 +658,9 @@ h4 {
         font-size: 3.2rem !important;
     }
 
-    /* Hide the old search bar in the top-bar on mobile */
+    /* Ensure search bar is visible and well-spaced on mobile */
     .top-bar .top-command-field {
-        display: none !important;
+        display: block !important;
     }
 
     /* Hide search in top actions too */
@@ -659,8 +669,10 @@ h4 {
     }
 
     .top-bar {
-        padding-top: 15px !important;
-        margin-bottom: 10px !important;
+        padding-top: 50px !important;
+        margin-top: 10px !important;
+        margin-bottom: 40px !important;
+        gap: 20px !important;
     }
 
     /* Floating Command Bar for Mobile */
@@ -1851,4 +1863,76 @@ button {
 .business-contact-card .btn-small:hover {
     background: rgba(255, 255, 255, 0.1) !important;
     transform: scale(1.1);
+}
+
+/* Card Close Button (Floating X) */
+.card-close-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 100 !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    pointer-events: auto !important;
+}
+
+/* Fallback X if lucide fails */
+.card-close-btn::after {
+    content: "×";
+    font-size: 20px;
+    line-height: 1;
+    display: none;
+}
+
+.card:not(:has(i[data-lucide="x"])) .card-close-btn::after {
+    display: block;
+}
+
+/* Room for the X button in the header */
+.card:has(.card-close-btn) .card-header {
+    padding-right: 35px;
+}
+
+/* Ensure the X button is visible on hover for PC */
+.card:hover .card-close-btn {
+    opacity: 1;
+}
+
+/* On mobile/tablet, the button is always visible and slightly larger */
+@media (max-width: 1024px) {
+    .card-close-btn {
+        opacity: 0.9 !important;
+        width: 32px;
+        height: 32px;
+        background: rgba(40, 40, 45, 0.9);
+        border-color: rgba(255, 255, 255, 0.3);
+        top: 4px;
+        right: 4px;
+    }
+}
+
+.card-close-btn:hover {
+    background: var(--danger);
+    color: white;
+    transform: scale(1.1);
+}
+
+.card-close-btn:active {
+    transform: scale(0.9);
+}
+
+.hidden {
+    display: none !important;
 }
