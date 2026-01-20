@@ -214,24 +214,29 @@
 /* Responsive adjustments */
 @media (max-width: 600px) {
     .card-clock-mega {
-        padding: 1.5rem;
+        padding: 1rem;
         min-height: auto;
+        grid-column: span 1 !important;
     }
 
     .mega-time {
-        font-size: 3.2rem;
+        font-size: 2.2rem;
     }
 
     .mega-weekday {
-        font-size: 1.1rem;
+        font-size: 0.9rem;
     }
 
     .mega-date-row {
-        font-size: 1.4rem;
+        font-size: 1.1rem;
     }
 
     .mega-seconds {
-        font-size: 1.2rem;
+        font-size: 0.9rem;
+    }
+
+    .mega-clock-footer {
+        display: none;
     }
 }
 

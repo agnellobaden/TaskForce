@@ -1,0 +1,160 @@
+/* Private Mode Styles Extension */
+body.mode-private {
+    background-color: #001a33 !important;
+    background-image: linear-gradient(135deg, #001a33 0%, #003366 100%) !important;
+}
+
+body.mode-private::before {
+    display: none !important;
+    /* Hide default gradient if any */
+}
+
+.badge-shared {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-business {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-private {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.badge-team {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-public {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.calendar-day.mode-private-cal {
+    background: rgba(0, 26, 51, 0.4);
+}
+
+/* Expanding Search Bar */
+.top-command-field {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    overflow: hidden !important;
+    width: 42px !important;
+    max-width: 42px !important;
+    min-width: 42px !important;
+    cursor: pointer !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 21px !important;
+    height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    flex: none !important;
+}
+
+.top-command-field.active {
+    width: 280px !important;
+    max-width: 280px !important;
+    min-width: 280px !important;
+    cursor: default !important;
+}
+
+.top-command-field input {
+    opacity: 0 !important;
+    width: 0 !important;
+    transition: opacity 0.3s, width 0.3s !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-left: 40px !important;
+    height: 100% !important;
+    color: white !important;
+    pointer-events: none !important;
+}
+
+.top-command-field.active input {
+    opacity: 1 !important;
+    width: calc(100% - 80px) !important;
+    pointer-events: all !important;
+}
+
+.top-command-field .search-icon-trigger {
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    opacity: 0.8 !important;
+    z-index: 10 !important;
+}
+
+.top-command-field button {
+    opacity: 0 !important;
+    transition: opacity 0.3s !important;
+    pointer-events: none !important;
+}
+
+.top-command-field.active button {
+    opacity: 0.8 !important;
+    pointer-events: all !important;
+}
+
+/* Mobile Fix for search */
+@media (max-width: 600px) {
+    .top-left-actions {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .top-command-field.active {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 100% !important;
+        margin-top: 4px !important;
+        margin-bottom: 4px !important;
+        order: 10 !important;
+        /* Ensures it stays below the switcher */
+    }
+
+    .top-bar {
+        gap: 8px !important;
+    }
+}

@@ -21,29 +21,21 @@
     <link rel="stylesheet" href="mobile-nav.css">
     <link rel="stylesheet" href="mobile-sidebar.css">
     <link rel="stylesheet" href="mobile-fixes.css">
+    <link rel="stylesheet" href="mobile-button-fix.css">
     <link rel="stylesheet" href="mobile-menu-fab.css">
     <link rel="stylesheet" href="hero-cards.css">
     <link rel="stylesheet" href="mobile-optimize.css">
     <link rel="stylesheet" href="mobile-optimizations.css">
     <link rel="stylesheet" href="button-toolbar.css">
     <link rel="stylesheet" href="styles/tasks-table.css">
-    <!-- EMERGENCY FIX: Force hamburger button visibility on mobile -->
-    <link rel="stylesheet" href="hamburger-force-visible.css">
+    <link rel="stylesheet" href="private_styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="https://www.paypal.com/sdk/js?client-id=test&currency=EUR"></script>
 </head>
 
-<link rel="stylesheet" href="pull-refresh.css">
-</head>
-
 <body>
-    <!-- PULL TO REFRESH INDICATOR -->
-    <div id="pullToRefresh">
-        <i data-lucide="arrow-down" class="icon"></i>
-        <div class="spinner"></div>
-    </div>
 
     <!-- LOGIN OVERLAY -->
     <div id="loginOverlay" class="hidden"
@@ -56,18 +48,8 @@
             <div class="card"
                 style="background: rgba(25, 25, 25, 0.9); border:1px solid var(--border); text-align: left; padding:25px;">
 
-                <!-- Welcome Back Info (Visible if User exists) -->
-                <div id="loginWelcome" class="hidden"
-                    style="text-align:center; padding: 0 0 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
-                    <div id="userLoginAvatar"
-                        style="width:70px; height:70px; border-radius:50%; margin:0 auto 10px; border:2px solid var(--primary); background: #333; overflow:hidden;">
-                    </div>
-                    <div style="font-weight:800; font-size:1.3rem; color:white;" id="userLoginName">Hallo!</div>
-                    <div class="text-muted text-sm" id="userLoginPersona">Dein TaskForce Profil</div>
-                </div>
-
-                <!-- Toggle (Hidden if already registered) -->
-                <div id="authTabs" style="display:flex; margin-bottom:20px; border-bottom:1px solid var(--border);">
+                <!-- Toggle -->
+                <div style="display:flex; margin-bottom:20px; border-bottom:1px solid var(--border);">
                     <button id="tabLogin" class="btn"
                         style="flex:1; border-radius:0; border-bottom:2px solid var(--primary); color:white;"
                         onclick="app.auth.switchTab('login')">Anmelden</button>
@@ -100,16 +82,6 @@
                             Team-Partner.</p>
                     </div>
 
-                    <div id="authPersonaField" class="form-group hidden">
-                        <label class="form-label">Nutzungs-Modus (Persona)</label>
-                        <select id="authPersona" class="form-input">
-                            <option value="mixed">Business & Familie (Gemischt)</option>
-                            <option value="business">2 Business User (Rein beruflich)</option>
-                            <option value="family">2 Familien Mitglieder (Rein privat)</option>
-                        </select>
-                        <p class="text-muted text-sm" style="margin-top:5px;">Wähle wie ihr TaskForce nutzen wollt.</p>
-                    </div>
-
                     <div id="teamToggleContainer" class="form-group"
                         style="display:flex; align-items:center; gap:10px; margin-bottom:15px; cursor:pointer;"
                         onclick="app.auth.toggleTeamField()">
@@ -120,19 +92,6 @@
                     <button id="authActionBtn" class="btn btn-primary"
                         style="width: 100%; justify-content: center; padding: 15px; font-size: 1.1rem; margin-top:10px;"
                         onclick="app.auth.submit()">Anmelden 🚀</button>
-                    <div id="authFooter"
-                        style="margin-top:20px; text-align:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-                        <p class="text-muted text-sm" id="authFooterHint">
-                            Noch kein Konto?
-                            <span onclick="app.auth.switchTab('register')"
-                                style="color:var(--primary); cursor:pointer; font-weight:700;">Jetzt Registrieren</span>
-                        </p>
-                        <p class="text-muted text-sm hidden" id="authFooterLoginHint">
-                            Bereits ein Konto?
-                            <span onclick="app.auth.switchTab('login')"
-                                style="color:var(--primary); cursor:pointer; font-weight:700;">Anmelden</span>
-                        </p>
-                    </div>
                 </div>
             </div>
             <p class="text-muted text-sm" style="margin-top:20px;">Alle Daten werden lokal verschlüsselt.</p>
@@ -151,12 +110,11 @@
                 <div id="clockDateSidebar">Wird geladen...</div>
             </div>
 
-            <div class="logo-area" style="margin-bottom: 20px; cursor: pointer;" onclick="app.navigateTo('dashboard')">
+            <div class="logo-area" style="margin-bottom: 20px;">
                 <i data-lucide="zap" class="logo-icon" size="24"></i>
                 <h2 style="font-size: 1.2rem;">TaskForce</h2>
-                <button class="icon-btn" style="margin-left:auto; display:none;"
-                    onclick="event.stopPropagation(); app.toggleSidebar()" id="sidebarCloseBtn"><i
-                        data-lucide="x"></i></button>
+                <button class="icon-btn" style="margin-left:auto; display:none;" onclick="app.toggleSidebar()"
+                    id="sidebarCloseBtn"><i data-lucide="x"></i></button>
             </div>
 
             <!-- Gamification Profile Tiny -->
@@ -174,8 +132,6 @@
             <div id="cat-general" class="nav-category">Planen</div>
             <a id="nav-dashboard" class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i>
                 Dashboard</a>
-            <a id="nav-team-manager" class="nav-item" onclick="app.modals.open('switchTeams')"><i
-                    data-lucide="users"></i> Team Manager</a>
             <a id="nav-calendar" class="nav-item" data-page="calendar"><i data-lucide="calendar"></i> Kalender</a>
 
             <div id="cat-business" class="nav-category">Business OS</div>
@@ -189,7 +145,7 @@
                 onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardMeetingsCard').scrollIntoView({behavior:'smooth'}), 100)"><i
                     data-lucide="users-2"></i> Meetings</a>
             <a id="nav-drive" class="nav-item" data-page="drive"><i data-lucide="car"></i> Fahrt-Modus</a>
-
+            <a id="nav-team" class="nav-item" data-page="team"><i data-lucide="users"></i> Team Planer</a>
 
             <div id="cat-private" class="nav-category">Privat</div>
             <a id="nav-tasks" class="nav-item" data-page="tasks"><i data-lucide="check-square"></i> Aufgaben & To-Do</a>
@@ -197,7 +153,6 @@
             <a id="nav-household" class="nav-item" data-page="household"
                 onclick="app.navigateTo('dashboard'); setTimeout(() => document.getElementById('dashboardHouseholdCard').scrollIntoView({behavior:'smooth'}), 100)"><i
                     data-lucide="home"></i> Haushalt</a>
-            <a id="nav-journal" class="nav-item" data-page="journal"><i data-lucide="book-open"></i> Journal</a>
             <a id="nav-shopping" class="nav-item" data-page="shopping"><i data-lucide="shopping-cart"></i> Einkauf</a>
             <a id="nav-health" class="nav-item" data-page="health"><i data-lucide="heart-pulse"></i> Gesundheit</a>
             <a id="nav-alarms" class="nav-item" onclick="app.modals.open('setAlarm')"><i data-lucide="alarm-clock"></i>
@@ -219,50 +174,43 @@
         <main class="main-content" id="mainContent">
             <!-- Header -->
             <header class="top-bar">
-                <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px;">
-                    <!-- Sidebar Toggle (Desktop & Mobile) -->
-                    <button class="icon-btn" onclick="app.toggleSidebar()" title="Menü ein/ausklappen">
+                <div class="top-left-actions" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    <button class="mobile-menu-toggle" onclick="app.toggleSidebar()" style="flex-shrink: 0;">
                         <i data-lucide="menu"></i>
+                        <span style="font-size: 24px; position:absolute; opacity:0; pointer-events:none;">☰</span>
                     </button>
                     <!-- Dashboard Mode Switcher -->
                     <div class="dash-mode-switcher"
-                        style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                        style="display: flex; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-right: 10px;">
                         <button id="btnModeBusiness" class="mode-btn active" onclick="app.dashboard.setMode('business')"
                             style="padding: 6px 15px; border-radius: 16px; border: none; background: var(--primary); color: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
-                            <i data-lucide="briefcase" size="14"></i> <span class="mode-text">Business</span>
+                            <i data-lucide="briefcase" size="14"></i> Business
                         </button>
                         <button id="btnModePrivate" class="mode-btn" onclick="app.dashboard.setMode('private')"
                             style="padding: 6px 15px; border-radius: 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
-                            <i data-lucide="user" size="14"></i> <span class="mode-text">Privat</span>
+                            <i data-lucide="user" size="14"></i> Privat
                         </button>
                     </div>
-                </div>
 
-                <!-- Top Smart Command Bar -->
-                <div class="top-command-field"
-                    style="flex: 1; max-width: 450px; position: relative; display: flex; align-items: center;">
-                    <i data-lucide="command" size="14" style="position: absolute; left: 12px; opacity: 0.5;"></i>
-                    <input type="text" id="smartInput" placeholder="Was tun?"
-                        onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
-                        style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 40px 8px 35px; color: white; font-size: 0.9rem; outline: none;">
-                    <button onclick="app.voice.startGlobal()" title="Sprachbefehl"
-                        style="position: absolute; right: 8px; background: none; border: none; color: white; opacity: 0.6; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="mic" size="16"></i>
-                    </button>
+                    <!-- Top Smart Command Bar -->
+                    <div class="top-command-field" id="smartSearchContainer"
+                        onclick="this.classList.add('active'); document.getElementById('smartInput').focus();"
+                        title="Was tun? (Suche)">
+                        <i data-lucide="search" class="search-icon-trigger" size="18"></i>
+                        <input type="text" id="smartInput" placeholder="Was tun?"
+                            onkeypress="if(event.key==='Enter') { if(app.smartCommand(this.value)) this.value=''; }"
+                            onblur="setTimeout(() => { if (!this.value) document.getElementById('smartSearchContainer').classList.remove('active'); }, 200)">
+                        <button onclick="event.stopPropagation(); app.voice.startGlobal()" title="Sprachbefehl"
+                            style="position: absolute; right: 8px; background: none; border: none; color: white; opacity: 0.6; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="mic" size="16"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn" title="AI Assistant" onclick="app.modals.open('aiChat')"><i
                             data-lucide="sparkles" class="text-accent"></i></button>
-                    <button class="icon-btn" title="Suche"><i data-lucide="search"></i></button>
-                    <div id="headerTeamSwitch" class="sync-badge" title="Team wechseln"
-                        onclick="app.modals.open('switchTeams')"
-                        style="cursor:pointer; display:flex; align-items:center; gap:8px; background: rgba(59, 130, 246, 0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.2); margin-right: 5px; transition: all 0.3s;">
-                        <i data-lucide="users" size="14" class="text-primary"></i>
-                        <span id="headerTeamBadge"
-                            style="font-size: 0.75rem; font-weight: 700; color: white;">Privat</span>
-                    </div>
-
-                    <div id="headerSyncIndicator" class="sync-badge" title="Sync Status"
+                    <!-- Redundant search button removed -->
+                    <div id="headerSyncIndicator" class="sync-badge" title="Offline"
                         style="opacity: 0.4; display:flex; align-items:center; gap:5px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 20px; margin-right: 10px; border: 1px solid rgba(255,255,255,0.1);">
                         <div style="width:8px; height:8px; background: var(--success); border-radius: 50%;"></div>
                         <span id="syncStatusHeader"
@@ -272,12 +220,9 @@
                             class="badg"
                             style="position: absolute; top:8px; right:8px; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
                     <div class="user-avatar" id="headerUserAvatar"
-                        onclick="document.getElementById('avatarUpload').click()"
-                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden; position: relative; cursor: pointer;">
+                        style="width: 40px; height: 40px; background: grey; border-radius: 50%; overflow: hidden; position: relative;">
                         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
                     </div>
-                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                        onchange="app.user.handleUpload(this)">
                 </div>
             </header>
 
@@ -288,15 +233,8 @@
                 <div id="view-dashboard" class="view-section">
 
                     <!-- HERO SECTION AT THE VERY TOP -->
-                    <div class="hero-clock-card"
-                        style="border-radius: 0 0 30px 30px; display: flex; flex-direction: column; align-items: center; padding: 25px 20px;">
-
-
-
-
-
-                        <div class="hero-clock-container"
-                            style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="hero-clock-card" style="margin: -20px -20px 20px -20px; border-radius: 0 0 30px 30px;">
+                        <div class="hero-clock-container">
                             <div class="clock-large" id="heroClockTime">--:--</div>
                             <div class="clock-details">
                                 <div class="day-of-week" id="heroClockDay">LADEN...</div>
@@ -344,13 +282,7 @@
                                 style="cursor:pointer; margin-bottom: 12px;">
                                 <span class="card-title"><i data-lucide="message-square" class="text-primary"></i>
                                     Kommunikation</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="pencil" class="card-action-icon" title="Bearbeiten"
-                                        onclick="event.stopPropagation(); app.modals.open('configureWidgets')"></i>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardCommunicationCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <i data-lucide="chevron-right" size="16" class="text-muted"></i>
                             </div>
                             <div class="comm-grid">
                                 <button class="comm-tile phone" onclick="app.comms.call()">
@@ -374,30 +306,44 @@
                             </div>
                         </div>
 
+                        <div id="dashboardSearchCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 15; background: linear-gradient(135deg, rgba(30,30,30,0.8), rgba(10,10,10,0.95));"
+                            draggable="true">
+                            <div class="card-header" style="margin-bottom: 15px;">
+                                <span class="card-title"><i data-lucide="scan-search" class="text-primary"></i> Business
+                                    Search</span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <div style="position:relative;">
+                                    <input type="text" id="googleSearchInput"
+                                        placeholder="Was suchst du? (z.B. IT Service)"
+                                        onkeypress="if(event.key==='Enter') app.businessSearch.perform(this.value)"
+                                        style="width:100%; padding:12px 40px 12px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:white; outline:none;">
+                                    <i data-lucide="search" size="14"
+                                        style="position:absolute; right:12px; top:14px; opacity:0.4;"></i>
+                                </div>
+                                <button class="btn btn-primary"
+                                    onclick="app.businessSearch.perform(document.getElementById('googleSearchInput').value)"
+                                    style="width:100%; height:44px; border-radius:12px;">
+                                    <i data-lucide="globe"></i> Google Suche
+                                </button>
+                                <button class="btn-small" onclick="app.modals.open('importBusiness')"
+                                    style="width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; height:36px; padding:0;">
+                                    <i data-lucide="sparkles" size="14"></i> Website Import
+                                </button>
+                            </div>
+                        </div>
 
                         <div id="dashboardStatusCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); order: 20;"
-                            draggable="true">
-                            <div class="card-header" style="margin-bottom:0; width:100%; cursor:pointer;"
-                                onclick="app.modals.open('dailyStatus')">
-                                <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                                    <div
-                                        style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                        <i data-lucide="clipboard-check" size="24"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 700; font-size: 1.1rem;">Tages-Check</div>
-                                        <div class="text-muted text-xs" id="statusSummaryText">Bereit für den Check
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="pencil" class="card-action-icon" title="Bearbeiten"
-                                        onclick="event.stopPropagation(); app.modals.open('dailyStatus')"></i>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardStatusCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                            style="grid-column: span 2; background: rgba(255, 255, 255, 0.03); border-left: 2px solid var(--border); display: flex; align-items: center; gap: 15px; cursor: pointer; order: 20;"
+                            onclick="app.modals.open('dailyStatus')" draggable="true">
+                            <div
+                                style="background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="clipboard-check" size="24"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 1.1rem;">Tages-Check</div>
+                                <div class="text-muted text-xs" id="statusSummaryText">Bereit für den Check</div>
                             </div>
                         </div>
 
@@ -410,15 +356,10 @@
                                     <i data-lucide="sparkles" class="text-accent" size="18"></i>
                                     <span>AI Assistant</span>
                                 </span>
-                                <div class="card-actions-bar">
-                                    <button onclick="app.ai.analyzeState()" class="btn btn-primary"
-                                        style="padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; border-radius: 10px;">
-                                        <i data-lucide="play" size="12"></i> Analyse
-                                    </button>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardAiCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button onclick="app.ai.analyzeState()" class="btn btn-primary"
+                                    style="padding: 6px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="play" size="14"></i> Analyse starten
+                                </button>
                             </div>
                             <div id="aiInsightsList" style="font-size: 0.9rem; line-height: 1.5;">
                                 <div class="text-muted text-sm">Klicke auf <i data-lucide="refresh-cw" size="12"
@@ -428,35 +369,20 @@
 
                         <!-- 3. HERO: Termine (Consolidated Window) -->
                         <div class="card dash-card card-medium" id="dashboardEventsCard"
-                            style="grid-column: span 2; padding: 15px; order: 30;" draggable="true">
-                            <div class="card-header"
-                                style="margin-bottom: 12px; display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
-                                <div
-                                    style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                    <span class="card-title"
-                                        style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
-                                        ZEITPLAN</span>
-                                    <div class="card-actions-bar">
-                                        <i data-lucide="pencil" class="card-action-icon" title="Kalender öffnen"
-                                            onclick="event.stopPropagation(); app.navigateTo('calendar')"></i>
-                                        <button class="card-close-btn" draggable="false"
-                                            onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardEventsCard', true)"
-                                            title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                    </div>
-                                </div>
-
-                                <div class="event-filters"
-                                    style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:3px; border-radius:10px; width:100%;">
-                                    <button onclick="app.dashboard.setEventFilter('all')" id="evFilter_all"
-                                        class="btn-filter active"
-                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:white; cursor :pointer;">Alle</button>
-                                    <button onclick="app.dashboard.setEventFilter('business')" id="evFilter_business"
-                                        class="btn-filter"
-                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:var(--text-muted); cursor:pointer;">Business</button>
-                                    <button onclick="app.dashboard.setEventFilter('private')" id="evFilter_private"
-                                        class="btn-filter"
-                                        style="flex:1; font-size:0.7rem; padding:5px; border-radius:8px; border:none; background:none; color:var(--text-muted); cursor:pointer;">Privat</button>
-                                </div>
+                            style="grid-column: span 2; padding: 12px; order: 30;" draggable="true">
+                            <div class="card-header" style="margin-bottom: 12px;">
+                                <span class="card-title"
+                                    style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">DEIN
+                                    ZEITPLAN</span>
+                                <button class="btn-small"
+                                    style="background: rgba(255,255,255,0.1); border-radius: 50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center;"
+                                    onclick="app.modals.open('addEvent')"><i data-lucide="plus" size="14"></i></button>
+                            </div>
+                            <!-- Filter Tabs -->
+                            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                                <button class="btn btn-secondary" id="dashboardFilterAllBtn" onclick="app.calendar.dashboardFilter('all'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterPrivateBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';" style="background:var(--primary); font-size:0.85rem; padding:6px 12px;">Alle</button>
+                                <button class="btn btn-secondary" id="dashboardFilterPrivateBtn" onclick="app.calendar.dashboardFilter('private'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';" style="font-size:0.85rem; padding:6px 12px;">Privat</button>
+                                <button class="btn btn-secondary" id="dashboardFilterBusinessBtn" onclick="app.calendar.dashboardFilter('business'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterPrivateBtn').style.background='';" style="font-size:0.85rem; padding:6px 12px;">Business</button>
                             </div>
                             <div id="dashboardEventsPreview" style="display:flex; flex-direction:column;">
                                 <!-- Filled by JS (Consolidated View) -->
@@ -470,13 +396,9 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="check-square" class="text-secondary"></i>
                                     To-Do</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="plus" class="card-action-icon"
-                                        onclick="event.stopPropagation(); app.modals.open('addTask')"></i>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardTasksCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button class="btn-small"
+                                    onclick="event.stopPropagation(); app.modals.open('addTask')"><i
+                                        data-lucide="plus"></i></button>
                             </div>
                             <div id="dashboardTaskPreview"></div>
                         </div>
@@ -487,13 +409,9 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="shopping-cart" class="text-success"></i>
                                     Einkauf</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="plus" class="card-action-icon"
-                                        onclick="event.stopPropagation(); app.modals.open('addTask', { category: 'shopping' })"></i>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardShoppingCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button class="btn-small"
+                                    onclick="event.stopPropagation(); app.modals.open('addTask', { category: 'shopping' })"><i
+                                        data-lucide="plus"></i></button>
                             </div>
                             <div id="dashboardShoppingPreview"></div>
                         </div>
@@ -503,13 +421,9 @@
                             id="dashboardHealthCard" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="heart"></i> Vitalität</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="more-horizontal" class="card-action-icon" title="Gesundheit Details"
-                                        onclick="event.stopPropagation(); app.navigateTo('health');"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHealthCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button onclick="event.stopPropagation(); app.navigateTo('health');"
+                                    style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                                    title="Gesundheit Details"><i data-lucide="more-horizontal" size="16"></i></button>
                             </div>
                             <div id="dashboardHealthPreview"></div>
                         </div>
@@ -518,13 +432,6 @@
                             style="grid-column: span 1; order: 38;" onclick="app.navigateTo('habits')" draggable="true">
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="flame"></i> Routinen</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="pencil" class="card-action-icon"
-                                        onclick="event.stopPropagation(); app.navigateTo('habits')"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHabitsCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
                             </div>
                             <div id="dashboardHabitsPreview"></div>
                         </div>
@@ -536,13 +443,6 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="pie-chart" class="text-danger"></i>
                                     Finanzen</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="pencil" class="card-action-icon"
-                                        onclick="event.stopPropagation(); app.navigateTo('finance')"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardFinanceCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
                             </div>
                             <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px;">
                                 <div
@@ -566,13 +466,9 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="alarm-clock" class="text-secondary"></i>
                                     Wecker</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="plus" class="card-action-icon"
-                                        onclick="event.stopPropagation(); app.modals.open('editAlarm', { addNew: true })"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardAlarmsCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button class="btn-small"
+                                    onclick="event.stopPropagation(); app.modals.open('editAlarm', { addNew: true })"><i
+                                        data-lucide="plus"></i></button>
                             </div>
                             <div id="dashboardAlarmsPreview"></div>
                         </div>
@@ -581,23 +477,14 @@
                         <div id="dashboardDriveCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 51;" onclick="app.actions.toggleDriveMode()"
                             draggable="true">
-                            <div class="card-header">
-                                <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                                    <div
-                                        style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                        <i data-lucide="navigation" size="20"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:700;">Drive Mode</div>
-                                        <div class="text-muted text-xs">Fahr-Assistent</div>
-                                    </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div
+                                    style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="navigation" size="20"></i>
                                 </div>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="play" class="card-action-icon" title="Starten"
-                                        onclick="event.stopPropagation(); app.actions.toggleDriveMode()"></i>
-                                    <button class="card-close-btn" draggable="false"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardDriveCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
+                                <div>
+                                    <div style="font-weight:700;">Drive Mode</div>
+                                    <div class="text-muted text-xs">Fahr-Assistent</div>
                                 </div>
                             </div>
                         </div>
@@ -607,12 +494,8 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="layers" class="text-primary"></i> Apps &
                                     Links</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="plus" class="card-action-icon" onclick="app.shortcuts.add()"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardShortcutsCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button class="btn-small" onclick="app.shortcuts.add()"><i
+                                        data-lucide="plus"></i></button>
                             </div>
                             <div id="dashboardShortcutsPreview"
                                 style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-top: 10px;">
@@ -629,21 +512,17 @@
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="clock" class="text-success"></i>
                                     Zeit-Tracker</span>
-                                <div class="card-actions-bar">
-                                    <i data-lucide="play" class="card-action-icon" id="timeTrackerToggle"
-                                        onclick="app.timeTracker.toggle()"></i>
-                                    <button class="card-close-btn"
-                                        onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardTimeTrackerCard', true)"
-                                        title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                                </div>
+                                <button class="btn-small" id="timeTrackerToggle" onclick="app.timeTracker.toggle()"
+                                    style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <i data-lucide="play" size="14"></i>
+                                </button>
                             </div>
                             <div id="timeTrackerDisplay" style="text-align: center; padding: 10px 0;">
                                 <div
                                     style="font-size: 2rem; font-weight: 700; color: #10b981; font-family: 'Courier New', monospace;">
                                     00:00:00</div>
                                 <div class="text-muted text-sm" id="timeTrackerTask">Bereit zum Starten</div>
-                                <div class="text-muted text-xs" id="timeTrackerToday" style="margin-top: 8px;">
-                                    Heute: 0h
+                                <div class="text-muted text-xs" id="timeTrackerToday" style="margin-top: 8px;">Heute: 0h
                                     0m</div>
                             </div>
                         </div>
@@ -652,9 +531,6 @@
                         <div id="dashboardNotesCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 105; background: linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(245, 158, 11, 0.02));"
                             draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardNotesCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="sticky-note" class="text-accent"></i>
                                     Notizen</span>
@@ -663,8 +539,7 @@
                                 </button>
                             </div>
                             <div id="quickNotesPreview" style="max-height: 120px; overflow-y: auto;">
-                                <div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine
-                                    Notizen
+                                <div class="text-muted text-sm" style="padding: 10px; text-align: center;">Keine Notizen
                                 </div>
                             </div>
                         </div>
@@ -673,9 +548,6 @@
                         <div id="dashboardProjectsCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 40; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.03)); border-left: 3px solid #8b5cf6;"
                             draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardProjectsCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div
@@ -715,9 +587,6 @@
                         <div id="dashboardMeetingsCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 60; background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(219, 39, 119, 0.03)); border-left: 3px solid #ec4899;"
                             draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardMeetingsCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header" style="margin-bottom: 15px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div
@@ -727,8 +596,7 @@
                                     <div>
                                         <span class="card-title"
                                             style="font-size: 1.1rem; font-weight: 700;">Meeting-Protokolle</span>
-                                        <div class="text-muted text-xs" id="meetingsStats">0 Meetings • 0 Action
-                                            Items
+                                        <div class="text-muted text-xs" id="meetingsStats">0 Meetings • 0 Action Items
                                         </div>
                                     </div>
                                 </div>
@@ -755,101 +623,26 @@
                         </div>
 
 
-                        <!-- Private Communication Card -->
-                        <div id="dashboardPrivateCommCard" class="card dash-card card-communication card-medium"
-                            style="grid-column: span 2; order: 12; background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.03)); border-left: 3px solid #a855f7;"
-                            draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardPrivateCommCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                            <div class="card-header" onclick="app.navigateTo('contacts')"
-                                style="cursor:pointer; margin-bottom: 12px;">
-                                <span class="card-title"><i data-lucide="heart" style="color: #a855f7;"></i>
-                                    Privat-Chat & Familie</span>
-                                <i data-lucide="chevron-right" size="16" class="text-muted"></i>
-                            </div>
-                            <div class="comm-grid">
-                                <button class="comm-tile phone" onclick="app.comms.call()"
-                                    style="--tile-color: #a855f7;">
-                                    <div class="tile-circle"
-                                        style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><i
-                                            data-lucide="phone-call" size="20"></i></div>
-                                    <span>Anruf</span>
-                                </button>
-                                <button class="comm-tile whatsapp" onclick="app.comms.whatsapp()"
-                                    style="--tile-color: #25d366;">
-                                    <div class="tile-circle"
-                                        style="background: rgba(37, 211, 102, 0.1); color: #25d366;"><i
-                                            data-lucide="message-circle" size="20"></i></div>
-                                    <span>WhatsApp</span>
-                                </button>
-                                <button class="comm-tile" onclick="app.navigateTo('contacts')"
-                                    style="background:rgba(168, 85, 247, 0.05); --tile-color: #a855f7;">
-                                    <div class="tile-circle"
-                                        style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><i
-                                            data-lucide="users" size="20"></i></div>
-                                    <span>Familie</span>
-                                </button>
-                                <button class="comm-tile" onclick="app.modals.open('quickNote')"
-                                    style="background:rgba(236, 72, 153, 0.05); --tile-color: #ec4899;">
-                                    <div class="tile-circle"
-                                        style="background: rgba(236, 72, 153, 0.1); color: #ec4899;"><i
-                                            data-lucide="sticky-note" size="20"></i></div>
-                                    <span>Quick-Info</span>
-                                </button>
-                            </div>
-                        </div>
-
                         <!-- HOUSEHOLD CARD (Private Only) -->
                         <div id="dashboardHouseholdCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02));"
-                            onclick="app.navigateTo('household')" draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardHouseholdCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
+                            style="grid-column: span 2; order: 120; background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(21, 128, 61, 0.02)); display:none;"
+                            draggable="true">
                             <div class="card-header">
-                                <span class="card-title"><i data-lucide="home" class="text-success"></i>
-                                    Haushalt</span>
-                                <button class="btn-small" onclick="event.stopPropagation(); app.household.add()">
+                                <span class="card-title"><i data-lucide="home" class="text-success"></i> Haushalt</span>
+                                <button class="btn-small" onclick="app.modals.open('householdAdd')">
                                     <i data-lucide="plus" size="14"></i>
                                 </button>
                             </div>
                             <div id="dashboardHouseholdPreview" style="padding: 10px 0;">
-                                <div class="text-muted text-sm" style="text-align: center;">Keine anstehenden
-                                    Aufgaben
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- JOURNAL CARD (Private Only) -->
-                        <div id="dashboardJournalCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 140; background: linear-gradient(135deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.02));"
-                            onclick="app.navigateTo('journal')" draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardJournalCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
-                            <div class="card-header">
-                                <span class="card-title"><i data-lucide="book-open" class="text-accent"></i> Journal
-                                    &
-                                    Me-Time</span>
-                                <button class="btn-small" onclick="event.stopPropagation(); app.journal.add()">
-                                    <i data-lucide="plus" size="14"></i>
-                                </button>
-                            </div>
-                            <div id="dashboardJournalPreview" style="padding: 10px 0;">
-                                <div class="text-muted text-sm" style="text-align: center;">Halte deine Gedanken
-                                    fest...
+                                <div class="text-muted text-sm" style="text-align: center;">Keine anstehenden Aufgaben
                                 </div>
                             </div>
                         </div>
 
                         <!-- MEAL PLAN CARD (Private Only) -->
                         <div id="dashboardMealPlanCard" class="card dash-card card-medium"
-                            style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02));"
+                            style="grid-column: span 2; order: 130; background: linear-gradient(135deg, rgba(234, 179, 8, 0.05), rgba(202, 138, 4, 0.02)); display:none;"
                             onclick="app.modals.open('viewMealPlan')" draggable="true">
-                            <button class="card-close-btn"
-                                onclick="event.stopPropagation(); app.dashboard.toggleCardVisibility('dashboardMealPlanCard', true)"
-                                title="Widget ausblenden"><i data-lucide="x" size="14"></i></button>
                             <div class="card-header">
                                 <span class="card-title"><i data-lucide="utensils" class="text-accent"></i>
                                     Wochenmenü</span>
@@ -860,9 +653,23 @@
                             </div>
                             <div id="dashboardMealPlanPreview" style="padding: 10px 0;">
                                 <div id="todayMealText"
-                                    style="font-weight: 600; text-align: center; margin-bottom: 5px;">Heute: --
+                                    style="font-weight: 600; text-align: center; margin-bottom: 5px;">Heute: --</div>
+                                <div class="text-muted text-xs" style="text-align: center;">Klicke für Wochenplan</div>
+                            </div>
+                        </div>
+
+                        <!-- PRIVATE DRIVE MODE CARD (Private Only) -->
+                        <div id="dashboardPrivateDriveCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 135; display:none;"
+                            onclick="app.actions.toggleDriveMode()" draggable="true">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div
+                                    style="background:rgba(59, 130, 246, 0.1); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="car" size="20" class="text-primary"></i>
                                 </div>
-                                <div class="text-muted text-xs" style="text-align: center;">Klicke für Wochenplan
+                                <div>
+                                    <div style="font-weight:700;">Privater Drive Mode</div>
+                                    <div class="text-muted text-xs">Fahrt-Assistent für private Termine</div>
                                 </div>
                             </div>
                         </div>
@@ -876,8 +683,7 @@
                     <div class="card-header" style="margin-bottom: 20px;">
                         <div>
                             <h1 style="margin-bottom: 5px;">Aufgaben & To-Do</h1>
-                            <p class="text-muted text-sm" style="margin: 0;">Organisiere deine Aufgaben
-                                professionell
+                            <p class="text-muted text-sm" style="margin: 0;">Organisiere deine Aufgaben professionell
                             </p>
                         </div>
                         <div style="display:flex; gap:10px;">
@@ -891,7 +697,57 @@
                         </div>
                     </div>
 
+                    <!-- Inline Add Task Form -->
+                    <div
+                        style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:25px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
+                        <input type="text" id="inlineTaskInput" class="form-input"
+                            placeholder="✨ Neue Aufgabe hinzufügen..."
+                            style="background:transparent; border:none; padding:0; height:auto; font-size:1.1rem;"
+                            onkeypress="if(event.key === 'Enter') app.tasks.addInline()">
+                        <button class="btn-primary" onclick="app.tasks.addInline()"
+                            style="border-radius:12px; width:48px; flex-shrink:0;"><i
+                                data-lucide="arrow-up"></i></button>
+                    </div>
 
+                    <!-- Statistics Bar -->
+                    <div class="tasks-stats-bar">
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(59, 130, 246, 0.15);">
+                                <i data-lucide="list-todo" size="18" style="color: #3b82f6;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Offen</span>
+                                <span class="tasks-stat-value" id="tasksStatOpen">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(239, 68, 68, 0.15);">
+                                <i data-lucide="flame" size="18" style="color: #ef4444;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Dringend</span>
+                                <span class="tasks-stat-value" id="tasksStatUrgent" style="color: #ef4444;">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
+                                <i data-lucide="shopping-cart" size="18" style="color: #22c55e;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Einkauf</span>
+                                <span class="tasks-stat-value" id="tasksStatShopping" style="color: #22c55e;">0</span>
+                            </div>
+                        </div>
+                        <div class="tasks-stat-item">
+                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
+                                <i data-lucide="check-circle" size="18" style="color: #22c55e;"></i>
+                            </div>
+                            <div class="tasks-stat-content">
+                                <span class="tasks-stat-label">Erledigt</span>
+                                <span class="tasks-stat-value" id="tasksStatDone" style="color: #22c55e;">0</span>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Filter Tabs -->
                     <!-- Filter Tabs -->
@@ -915,9 +771,19 @@
                     </div>
 
                     <!-- Tasks Table -->
-                    <!-- Tasks List (Card Style) -->
-                    <div class="card">
-                        <div id="taskListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="tasks-table-container">
+                        <!-- Table Header -->
+                        <div class="tasks-table-header">
+                            <div>✓</div>
+                            <div>Aufgabe</div>
+                            <div class="task-category">Kategorie</div>
+                            <div class="task-priority">Priorität</div>
+                            <div class="task-date">Erstellt</div>
+                            <div style="text-align: right;">Aktionen</div>
+                        </div>
+
+                        <!-- Table Body -->
+                        <div id="taskListContainer">
                             <!-- Tasks will be rendered here -->
                         </div>
                     </div>
@@ -992,44 +858,6 @@
                     </div>
                 </div>
 
-                <!-- HOUSEHOLD VIEW -->
-                <div id="view-household" class="view-section hidden">
-                    <div class="card-header">
-                        <h1>Haushalts-Management</h1>
-                        <button class="btn-primary" onclick="app.household.add()"><i data-lucide="plus"></i>
-                            Aufgabe</button>
-                    </div>
-                    <p class="text-muted">Putzplan, Wartungen & Abfallkalender</p>
-
-                    <div class="dashboard-grid" style="margin-top:20px;">
-                        <div class="card" style="grid-column: span 2;">
-                            <h3>Anstehende Aufgaben</h3>
-                            <div id="householdTasksList"
-                                style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
-                                <!-- Injected by JS -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- JOURNAL VIEW -->
-                <div id="view-journal" class="view-section hidden">
-                    <div class="card-header">
-                        <h1>Mein Journal</h1>
-                        <button class="btn-primary" onclick="app.journal.add()"><i data-lucide="plus"></i>
-                            Eintrag</button>
-                    </div>
-                    <p class="text-muted">Platz für Gedanken, Dankbarkeit & Me-Time</p>
-
-                    <div class="dashboard-grid" style="margin-top:20px;">
-                        <div class="card" style="grid-column: span 2;">
-                            <div id="journalEntriesList" style="display:flex; flex-direction:column; gap:15px;">
-                                <!-- Injected by JS -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- HABITS VIEW -->
                 <div id="view-habits" class="view-section hidden">
                     <div class="card-header">
@@ -1054,28 +882,15 @@
                         </div>
                     </div>
 
+                    <!-- Category Filter -->
+                    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" id="filterAllBtn" onclick="app.calendar.filterByCategory('all'); this.style.background='var(--primary)'; document.getElementById('filterPrivateBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';" style="background:var(--primary);">Alle</button>
+                        <button class="btn btn-secondary" id="filterPrivateBtn" onclick="app.calendar.filterByCategory('private'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';">Privat</button>
+                        <button class="btn btn-secondary" id="filterBusinessBtn" onclick="app.calendar.filterByCategory('business'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterPrivateBtn').style.background='';">Business</button>
+                    </div>
+
                     <div class="card" style="max-width: 1200px; margin: 0 auto;">
-                        <!-- Calendar Toolbar (Bearbeitungsleiste) -->
-                        <div class="calendar-toolbar"
-                            style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border); border-radius:12px 12px 0 0; margin-bottom: 20px;">
-                            <div style="display:flex; gap:10px;">
-                                <button class="btn btn-secondary" onclick="app.calendar.render()"
-                                    title="Aktualisieren"><i data-lucide="refresh-cw" size="16"></i></button>
-                                <button class="btn btn-secondary" onclick="alert('Kalender Export gestartet...')"
-                                    title="Exportieren"><i data-lucide="download" size="16"></i></button>
-                                <button class="btn btn-secondary" onclick="window.print()" title="Drucken"><i
-                                        data-lucide="printer" size="16"></i></button>
-                            </div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <span class="text-muted text-sm mobile-only"><i data-lucide="calendar" size="14"></i>
-                                    Liste</span>
-                                <button class="btn btn-secondary" onclick="app.modals.open('aiBriefing')"
-                                    title="KI Analyse"><i data-lucide="sparkles" size="16"></i> KI</button>
-                            </div>
-                        </div>
-
-                        <div class="calendar-header" style="margin-bottom: 20px; padding: 0 15px;">
-
+                        <div class="calendar-header" style="margin-bottom: 20px;">
                             <div style="display:flex; gap:10px; align-items:center; justify-content: space-between;">
                                 <button class="btn-primary" onclick="app.calendar.changeMonth(-1)"><i
                                         data-lucide="chevron-left"></i></button>
@@ -1087,7 +902,7 @@
                         </div>
 
                         <!-- Day Headers -->
-                        <div class="calendar-day-headers desktop-only"
+                        <div
                             style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; padding-bottom:10px; border-bottom:2px solid var(--border); font-weight:600; margin-bottom:10px;">
                             <div>Mo</div>
                             <div>Di</div>
@@ -1116,10 +931,6 @@
                         <div class="card" onclick="app.modals.open('setAlarm')">
                             <div class="card-header"><span class="card-title">⏰ Wecker</span></div>
                             <div id="activeAlarmDisplay" class="text-muted text-sm">Kein Wecker gestellt.</div>
-                        </div>
-
-                        <div class="card" onclick="app.navigateTo('calendar')">
-                            <div class="card-header"><span class="card-title">📅 Kalender</span></div>
                         </div>
 
                         <div class="card" onclick="app.navigateTo('health')">
@@ -1287,7 +1098,7 @@
                 </div>
 
                 <!-- CONTACTS VIEW -->
-                <div id="view-contacts" class="view-section hidden" style="max-width: 800px; margin: 0 auto;">
+                <div id="view-contacts" class="view-section hidden" style="max-width: 1000px; margin: 0 auto;">
                     <div class="card" style="padding:0; overflow:hidden;">
                         <!-- Header Section -->
                         <div
@@ -1297,22 +1108,29 @@
                                 <div>
                                     <h1
                                         style="margin:0; font-size:2rem; background: linear-gradient(to right, #fff, var(--text-muted)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
-                                        Business Kontakte</h1>
-                                    <p class="text-muted" style="margin:5px 0 0 0;">Dein zentrales Adressbuch für
-                                        Partner & Firmen.</p>
+                                        Kontakt Management</h1>
+                                    <p class="text-muted" style="margin:5px 0 0 0;">Verwalte deine privaten und geschäftlichen Kontakte.</p>
                                 </div>
                                 <div style="display:flex; gap:10px;">
-                                    <input type="file" id="contactFileInput" accept=".vcf,.csv" style="display:none;"
-                                        onchange="app.contacts.handleFileImport(this)">
-                                    <button class="btn btn-secondary"
-                                        onclick="document.getElementById('contactFileInput').click()"><i
-                                            data-lucide="download"></i> PC/Datei</button>
-                                    <button class="btn btn-secondary" onclick="app.contacts.importBrowser()"><i
-                                            data-lucide="smartphone"></i> Handy</button>
+                                    <button class="btn btn-secondary" onclick="app.contacts.importFromPhone()"><i
+                                            data-lucide="smartphone"></i> Telefonbuch Import</button>
                                     <button class="btn btn-primary" onclick="app.modals.open('addContact')"><i
                                             data-lucide="plus"></i> Neu</button>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Category Tabs -->
+                        <div style="display:flex; gap:10px; padding:20px 25px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2);">
+                            <button id="contactTabAll" class="btn btn-secondary" style="background:var(--primary); color:white; border:none;" onclick="app.contacts.filterContacts('all'); document.getElementById('contactTabAll').style.background='var(--primary)'; document.getElementById('contactTabPrivate').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
+                                <i data-lucide="users" size="16" style="margin-right:5px;"></i>Alle
+                            </button>
+                            <button id="contactTabPrivate" class="btn btn-secondary" style="border:none;" onclick="app.contacts.filterContacts('private'); document.getElementById('contactTabPrivate').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
+                                <i data-lucide="user" size="16" style="margin-right:5px;"></i>Privat
+                            </button>
+                            <button id="contactTabBusiness" class="btn btn-secondary" style="border:none;" onclick="app.contacts.filterContacts('business'); document.getElementById('contactTabBusiness').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabPrivate').style.background='';">
+                                <i data-lucide="briefcase" size="16" style="margin-right:5px;"></i>Business
+                            </button>
                         </div>
 
                         <!-- Search & Content -->
@@ -1322,11 +1140,11 @@
                                 <div style="position:relative;">
                                     <input type="text" placeholder="Kontakte filtern (Name, Telefon, Email...)"
                                         oninput="app.contacts.search(this.value)"
-                                        style="width:100%; padding:20px 20px 20px 55px; border-radius:20px; border:1px solid rgba(255,255,255,0.12); background:rgba(0,0,0,0.3); color:white; font-size:1.1rem; font-weight:500; outline:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                                        onfocus="this.style.borderColor='var(--primary)'; this.style.background='rgba(59, 130, 246, 0.1)'; this.style.transform='translateY(-1px)';"
-                                        onblur="this.style.borderColor='rgba(255,255,255,0.12)'; this.style.background='rgba(0,0,0,0.3)'; this.style.transform='none';">
-                                    <i data-lucide="search" size="24"
-                                        style="position:absolute; left:20px; top:50%; transform:translateY(-50%); opacity:0.4; color:var(--primary);"></i>
+                                        style="width:100%; padding:15px 15px 15px 45px; border-radius:18px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.02); color:white; font-size:1rem; outline:none; transition: all 0.3s;"
+                                        onfocus="this.style.borderColor='var(--primary)'; this.style.background='rgba(59, 130, 246, 0.05)'"
+                                        onblur="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='rgba(255,255,255,0.02)'">
+                                    <i data-lucide="search" size="20"
+                                        style="position:absolute; left:15px; top:15px; opacity:0.3;"></i>
                                 </div>
 
                                 <!-- Contact List -->
@@ -1334,7 +1152,23 @@
                                     <!-- Contacts rendered as a compact list -->
                                 </div>
 
-
+                                <!-- Global Google Search -->
+                                <div
+                                    style="margin-top:20px; padding:20px; background:rgba(0,0,0,0.2); border-radius:20px; border:1px solid rgba(59, 130, 246, 0.1);">
+                                    <div
+                                        style="font-size:0.7rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin-bottom:15px; letter-spacing:1px;">
+                                        <i data-lucide="globe" size="12"></i> Google Business Suche
+                                    </div>
+                                    <div style="display:flex; gap:10px;">
+                                        <input type="text" id="contactViewSearch"
+                                            placeholder="Google Suche: 'Zahnarzt Berlin'..."
+                                            onkeypress="if(event.key==='Enter') app.businessSearch.perform(this.value)"
+                                            style="flex:1; padding:12px 15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:white;">
+                                        <button class="btn btn-primary"
+                                            onclick="app.businessSearch.perform(document.getElementById('contactViewSearch').value)"><i
+                                                data-lucide="search"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1490,7 +1324,9 @@
                             </div>
                         </div>
 
-
+                        <!-- Firebase JS SDKs -->
+                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
                         <div class="card" style="border: 1px solid var(--accent);">
                             <h3><i data-lucide="flame"></i> Team Sync (Firebase)</h3>
@@ -1538,8 +1374,6 @@
 
     </main>
 
-
-
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-nav">
         <button class="nav-item-mobile active" data-page="dashboard"><i data-lucide="home"></i></button>
@@ -1553,9 +1387,8 @@
             </div>
         </div>
 
-
+        <button class="nav-item-mobile" data-page="calendar"><i data-lucide="calendar"></i></button>
         <button class="nav-item-mobile" data-page="tools"><i data-lucide="grid"></i></button>
-        <button class="nav-item-mobile" onclick="app.toggleSidebar()"><i data-lucide="more-vertical"></i></button>
     </nav>
     </div>
 
@@ -1578,10 +1411,6 @@
     </div>
 
 
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script src="app.js"></script>
     <script>

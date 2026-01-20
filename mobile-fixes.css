@@ -80,7 +80,11 @@
         display: none !important;
     }
 
-
+    .top-bar {
+        justify-content: center !important;
+        padding-top: 10px;
+        margin-bottom: 20px !important;
+    }
 
     .user-welcome {
         margin: 0 !important;
@@ -95,20 +99,7 @@
         opacity: 1 !important;
     }
 
-    /* 7. Show Team Badge even on Mobile */
     .top-actions {
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        margin-left: auto !important;
-    }
-
-    /* Hide less critical items on very small mobile to save space */
-    @media (max-width: 480px) {
-
-        .top-actions .icon-btn:not(#headerTeamSwitch),
-        .top-actions #headerSyncIndicator {
-            display: none !important;
-        }
+        display: none !important;
     }
 }

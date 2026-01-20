@@ -1,46 +1,30 @@
 /* Mobile Navigation & Sidebar Fixes */
 
-/* 1. Show Menu Toggle on ALL devices */
+/* 1. Show Menu Toggle on Mobile Header */
 .mobile-menu-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    width: 44px;
-    height: 44px;
+    display: none;
+    background: none;
+    border: none;
     color: white;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.mobile-menu-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-}
-
-.mobile-menu-toggle:active {
-    transform: scale(0.95);
 }
 
 @media (max-width: 768px) {
     .mobile-menu-toggle {
-        margin-right: 10px;
+        display: block;
+        margin-right: 15px;
     }
 
     .top-bar {
         padding-left: 15px;
         /* Adjust for logo/toggle */
     }
-}
 
-/* 2. Sidebar Drawer Style - MOBILE ONLY */
-@media (max-width: 768px) {
+    /* 2. Sidebar Drawer Style for Mobile */
     .sidebar {
         position: fixed;
         left: -280px;
+        /* Hidden by default */
         top: 0;
         bottom: 0;
         z-index: 1000;
@@ -52,21 +36,20 @@
         left: 0;
         /* Slide in */
     }
-}
 
-/* Overlay when sidebar is open */
-.sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: none;
-    backdrop-filter: blur(2px);
-}
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+        backdrop-filter: blur(2px);
+    }
 
-.sidebar.open~.sidebar-overlay,
-body:has(.sidebar.open) .sidebar-overlay {
-    display: block;
+    .sidebar.open+.sidebar-overlay {
+        display: block;
+    }
 }
 
 /* 3. Restore Drive Mode Button in Mobile Nav if missing, or ensure it's in the Sidebar */

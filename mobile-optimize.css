@@ -17,6 +17,9 @@
         /* Columns are handled by modern-theme.css (1fr or 2fr based on setting) */
         gap: 12px !important;
         padding-bottom: 100px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
     }
 
     /* 3. Compact Cards */
@@ -28,6 +31,15 @@
         box-shadow: none !important;
         /* Performance */
         border-radius: 12px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    .card-clock-mega {
+        grid-column: span 1 !important;
+        min-height: 140px !important;
+        padding: 10px !important;
+        overflow: hidden !important;
     }
 
     /* 4. Text Scaling */
@@ -75,10 +87,13 @@
 
     /* 8. Fix Mobile Nav overlapping content */
     .main-content {
-        padding: 15px !important;
+        padding: 12px !important;
         padding-bottom: 110px !important;
         padding-top: 80px !important;
         /* Space for top header */
+        width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
     }
 
     /* 9. Header Adjustments */

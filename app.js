@@ -41,29 +41,13 @@ const app = {
             // Check Login Status & Enforce Protection
             if (!this.state.user.isLoggedIn) {
                 const loginOverlay = document.getElementById('loginOverlay');
-                const authTabs = document.getElementById('authTabs');
                 if (loginOverlay) {
                     loginOverlay.classList.remove('hidden');
                     // Pre-fill if user exists
-                    if (this.state.user && this.state.user.name && this.state.user.name !== 'Creator') {
-                        if (authTabs) authTabs.classList.add('hidden'); // Hide registration
+                    if (this.state.user && this.state.user.name) {
                         app.auth.switchTab('login');
                         document.getElementById('authName').value = this.state.user.name;
-
-                        // Show Welcome Back
-                        const welcome = document.getElementById('loginWelcome');
-                        if (welcome) {
-                            welcome.classList.remove('hidden');
-                            document.getElementById('userLoginName').textContent = `Hallo, ${this.state.user.name}!`;
-                            const ava = document.getElementById('userLoginAvatar');
-                            if (ava) ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${this.state.user.name}" style="width:100%; height:100%; object-fit:cover;">`;
-
-                            const pText = (this.state.user.persona === 'family') ? 'Privat Modus' : (this.state.user.persona === 'business' ? 'Business OS' : 'Gemischter Modus');
-                            document.getElementById('userLoginPersona').textContent = pText;
-                        }
                     } else {
-                        if (authTabs) authTabs.classList.remove('hidden');
-                        document.getElementById('loginWelcome')?.classList.add('hidden');
                         app.auth.switchTab('register');
                     }
                 }
@@ -76,9 +60,8 @@ const app = {
             this.setupNavigation();
             this.startClock();
 
-            // Initialize Cloud Sync & Teams UI
+            // Initialize Cloud Sync
             this.cloud.init();
-            this.teams.updateHeaderBadge();
 
             // Render Initial Views
             this.tasks.render();
@@ -120,7 +103,6 @@ const app = {
 
             // Browser Back Button Support
             this.setupBackButton();
-            this.setupMobileGestures();
 
             // Background & Alert Setup
             this.notifications.requestPermission();
@@ -129,28 +111,9 @@ const app = {
             // Apply Pro status to UI
             this.user.applyProStatus();
 
-            // Mobile optimization: Hide top bar when keyboard is up to prevent "jumping"
-            const handleFocus = (e) => {
-                if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-                    // Don't hide if we're typing specifically in the smartInput itself
-                    if (e.target.id !== 'smartInput') {
-                        const topBar = document.querySelector('.top-bar');
-                        if (topBar) topBar.classList.add('mobile-hide');
-                    }
-                }
-            };
-            const handleBlur = (e) => {
-                const topBar = document.querySelector('.top-bar');
-                if (topBar) topBar.classList.remove('mobile-hide');
-            };
-            document.addEventListener('focus', handleFocus, true);
-            document.addEventListener('blur', handleBlur, true);
-
             // Create Icons safely
             if (window.lucide) lucide.createIcons();
 
-            // Initial Layout / Visibility Check - Always return to dashboard on refresh
-            this.navigateTo('dashboard', true);
         } catch (e) {
             console.error("Critical Init Error:", e);
             alert("Fehler beim Starten der App: " + e.message);
@@ -179,86 +142,6 @@ const app = {
                 this.navigateTo('dashboard', true);
             }
         });
-    },
-
-    // --- MOBILE GESTURES (Swipe & Pull-to-Refresh) ---
-    setupMobileGestures() {
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let ptrDist = 0;
-        const ptrThreshold = 150; // Distance to trigger refresh
-        const ptrIndicator = document.getElementById('pullToRefresh');
-
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        document.addEventListener('touchmove', e => {
-            const touchCurrentY = e.changedTouches[0].screenY;
-            const scrollY = window.scrollY;
-
-            // PULL TO REFRESH LOGIC
-            // Only if at the very top of the page
-            if (scrollY === 0 && touchCurrentY > touchStartY) {
-                ptrDist = touchCurrentY - touchStartY;
-
-                // Show indicator visually
-                if (ptrDist > 0 && ptrIndicator) {
-                    // Add resistance
-                    const resistance = 0.5;
-                    const move = Math.min(ptrDist * resistance, 100);
-                    ptrIndicator.style.top = `${move - 60}px`; // -60 is hidden height
-
-                    // Rotate icon if close to threshold
-                    const icon = ptrIndicator.querySelector('.icon');
-                    if (icon) {
-                        icon.style.transform = ptrDist > ptrThreshold ? 'rotate(0deg)' : 'rotate(180deg)';
-                    }
-                }
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].screenX;
-            const touchEndY = e.changedTouches[0].screenY;
-
-            // Handle Pull To Refresh
-            if (ptrDist > ptrThreshold && window.scrollY <= 0) {
-                if (ptrIndicator) {
-                    ptrIndicator.classList.add('refreshing');
-                    ptrIndicator.style.top = '20px';
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500); // Visual delay
-                }
-                return;
-            } else {
-                // Reset
-                if (ptrIndicator) {
-                    ptrIndicator.style.top = '-60px';
-                    ptrIndicator.classList.remove('refreshing');
-                }
-                ptrDist = 0;
-            }
-
-
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
-
-            // Strict Horizontal Check (Prevent accidental triggers while scrolling)
-            if (Math.abs(diffX) < Math.abs(diffY)) return;
-
-            // Swipe Right (Open Sidebar) - Only from very left edge (30px)
-            if (diffX > 50 && touchStartX < 40 && !app.isSidebarOpen) {
-                app.toggleSidebar();
-            }
-
-            // Swipe Left (Close Sidebar) - Only if open
-            if (diffX < -50 && app.isSidebarOpen) {
-                app.toggleSidebar();
-            }
-        }, { passive: true });
     },
 
     // --- STATE MANAGEMENT ---
@@ -292,24 +175,37 @@ const app = {
         if (!this.state.aiConfig) this.state.aiConfig = { provider: 'openai', openaiKey: '', grokKey: '', geminiKey: '' };
         if (!this.state.dashboardLayout) this.state.dashboardLayout = 'double';
         if (!this.state.shortcuts) this.state.shortcuts = []; // Initialize Shortcuts
-        if (!this.state.sync_deleted) this.state.sync_deleted = [];
-        if (!this.state.user.savedTeams) {
-            this.state.user.savedTeams = [
-                { id: Date.now(), label: 'Hauptteam', teamName: this.state.user.teamName || this.state.user.name || 'Owner', persona: this.state.user.persona || 'mixed' }
-            ];
-            this.saveState();
-        }
 
         // UI Default State
         if (!this.state.ui) this.state.ui = {};
         if (!this.state.ui.hiddenCards) this.state.ui.hiddenCards = [];
         if (!this.state.ui.dashboardMode) this.state.ui.dashboardMode = 'business';
-        if (!this.state.ui.eventFilter) this.state.ui.eventFilter = 'all';
 
-        // Household & Journal Migration
+        // Household Migration
         if (!this.state.household) this.state.household = [];
         if (!this.state.meals) this.state.meals = new Array(7).fill('');
-        if (!this.state.journal) this.state.journal = [];
+
+        // Add test data if empty
+        if (this.state.contacts.length === 0) {
+            this.state.contacts = [
+                { id: 1, name: 'Max Müller', phone: '+49 123 456789', email: 'max@business.de', category: 'business' },
+                { id: 2, name: 'Lisa Schmidt', phone: '+49 987 654321', email: 'lisa@example.de', category: 'private' },
+                { id: 3, name: 'Tom Wagner', phone: '+49 555 123456', email: 'tom@company.de', category: 'business' },
+            ];
+            this.saveState();
+        }
+
+        if (this.state.events.length === 0) {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            this.state.events = [
+                { id: 1, title: 'Team Meeting', date: today.toISOString().split('T')[0], time: '10:00', category: 'business', start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0).toISOString() },
+                { id: 2, title: 'Kaffee mit Freund', date: today.toISOString().split('T')[0], time: '15:00', category: 'private', start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0).toISOString() },
+                { id: 3, title: 'Präsentation', date: tomorrow.toISOString().split('T')[0], time: '09:00', category: 'business', start: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 9, 0).toISOString() },
+            ];
+            this.saveState();
+        }
 
         // Firebase Default Config Migration
         if (!this.state.cloud) this.state.cloud = {};
@@ -399,33 +295,6 @@ const app = {
             this.state.ui.hiddenCards = [];
             this.saveState();
         }
-
-        // Ensure all historical data has a type for the new mode filtering
-        const mode = (this.state.ui && this.state.ui.dashboardMode) || 'business';
-        ['events', 'tasks', 'expenses', 'habits'].forEach(key => {
-            if (this.state[key] && Array.isArray(this.state[key])) {
-                this.state[key].forEach(item => {
-                    if (!item.type) {
-                        item.type = 'business'; // Default legacy to business
-                        // Try to guess if it's private based on keywords
-                        if (item.title && (item.title.toLowerCase().includes('privat') || item.title.toLowerCase().includes('familie'))) {
-                            item.type = 'private';
-                        }
-                    }
-                });
-            }
-        });
-
-        // Health Data Migration (Fix Persistence Bug)
-        if (!this.state.healthData) this.state.healthData = [];
-        if (this.state.healthData.length > 0) {
-            this.state.healthData.forEach(d => {
-                if (d.shared === undefined) d.shared = false;
-            });
-            this.saveState();
-        }
-
-        this.saveState();
     },
 
     saveState(skipSync = false) {
@@ -458,23 +327,15 @@ const app = {
             //        Login    -> Hide Pass Repeat, Show Team
             if (m === 'register') {
                 document.getElementById('authPassRepeatField').classList.remove('hidden');
-                document.getElementById('authPersonaField').classList.remove('hidden');
                 document.getElementById('authTeamField').classList.add('hidden');
                 document.getElementById('teamToggleContainer').classList.add('hidden');
             } else {
                 document.getElementById('authPassRepeatField').classList.add('hidden');
-                document.getElementById('authPersonaField').classList.add('hidden');
                 document.getElementById('teamToggleContainer').classList.remove('hidden');
 
                 // Keep team field hidden unless checkbox is checked
                 this.updateTeamFieldVisibility();
             }
-
-            // Toggle Footer Hints
-            const footerHint = document.getElementById('authFooterHint');
-            const footerLoginHint = document.getElementById('authFooterLoginHint');
-            if (footerHint) footerHint.classList.toggle('hidden', m !== 'login');
-            if (footerLoginHint) footerLoginHint.classList.toggle('hidden', m !== 'register');
         },
         toggleTeamField() {
             const cb = document.getElementById('useTeamSync');
@@ -506,23 +367,15 @@ const app = {
 
             if (this.mode === 'register') {
                 if (pass !== passRep) { alert("Die Passwörter stimmen nicht überein! ❌"); return; }
-                const persona = document.getElementById('authPersona').value;
 
-                // Save new user
+                // Save new user (Team Name set to empty initially or default)
                 app.state.user = {
                     name: name,
                     password: pass,
                     teamName: name, // Default Team Name is Username
-                    persona: persona,
                     team: [{ id: Date.now(), name: name }],
-                    savedTeams: [{ id: Date.now(), label: 'Mein Team', teamName: name, persona: persona }],
                     isLoggedIn: true
                 };
-
-                // Initial Mode based on persona
-                if (persona === 'family') app.state.ui.dashboardMode = 'private';
-                else app.state.ui.dashboardMode = 'business';
-
                 app.saveState();
                 alert(`Registrierung erfolgreich! Willkommen, ${name}. ✨`);
                 this.closeOverlay();
@@ -548,12 +401,6 @@ const app = {
                     if (!app.state.user.password && pass) {
                         app.state.user.password = pass;
                         app.state.user.isLoggedIn = true;
-
-                        // Ensure savedTeams exists
-                        if (!app.state.user.savedTeams) {
-                            app.state.user.savedTeams = [{ id: Date.now(), label: 'Mein Team', teamName: teamToUse, persona: app.state.user.persona || 'mixed' }];
-                        }
-
                         app.saveState();
                         alert(`Passwort festgelegt. ✅\nTeam: ${teamToUse}`);
                         this.closeOverlay();
@@ -576,8 +423,6 @@ const app = {
         closeOverlay() {
             document.getElementById('loginOverlay').classList.add('hidden');
             app.user.updateHeader();
-            app.dashboard.applyMode(); // Refresh UI to respect persona
-            app.navigateTo('dashboard'); // Ensure dashboard is prominent after login
         }
     },
 
@@ -587,30 +432,7 @@ const app = {
             const n = document.getElementById('headerUserName');
             if (n) n.textContent = app.state.user.name || 'Gast';
             const ava = document.getElementById('headerUserAvatar');
-            if (ava && app.state.user.name) {
-                if (app.state.user.customAvatar) {
-                    ava.innerHTML = `<img src="${app.state.user.customAvatar}" alt="User" style="width:100%; height:100%; object-fit:cover;">`;
-                } else {
-                    ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${app.state.user.name}" alt="User">`;
-                }
-            }
-        },
-        handleUpload(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    app.state.user.customAvatar = e.target.result;
-                    app.saveState();
-                    app.user.updateHeader();
-                    // Also update login avatar if visible
-                    const loginAva = document.getElementById('userLoginAvatar');
-                    if (loginAva) {
-                        loginAva.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
-                    }
-                    if (typeof confetti === 'function') confetti({ particleCount: 50, spread: 50, origin: { y: 0.1, x: 0.9 } });
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
+            if (ava && app.state.user.name) ava.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${app.state.user.name}" alt="User">`;
         },
         upgradeToPro() {
             app.state.user.isPro = true;
@@ -658,138 +480,56 @@ const app = {
         }
     },
 
-    // --- TEAMS (Multi-Team Management) ---
-    teams: {
-        switch(teamId) {
-            const team = app.state.user.savedTeams.find(t => t.id === teamId);
-            if (!team) return;
-
-            app.state.user.teamName = team.teamName;
-            app.state.user.persona = team.persona;
-
-            // Force Mode if needed
-            if (team.persona === 'family') app.state.ui.dashboardMode = 'private';
-            else if (team.persona === 'business') app.state.ui.dashboardMode = 'business';
-
-            app.saveState();
-
-            // Re-sync
-            if (app.cloud && app.cloud.init) app.cloud.init();
-
-            app.dashboard.applyMode();
-            app.renderDashboard();
-            this.updateHeaderBadge();
-
-            app.modals.close();
-        },
-        add() {
-            const label = document.getElementById('newTeamLabel').value.trim();
-            const key = document.getElementById('newTeamKey').value.trim();
-            const persona = document.getElementById('newTeamPersona').value;
-
-            if (!label || !key) { alert("Bitte Name und Sync-Key eingeben."); return; }
-
-            if (!app.state.user.savedTeams) app.state.user.savedTeams = [];
-            if (app.state.user.savedTeams.some(t => t.teamName === key)) {
-                alert("Dieses Team ist bereits in deiner Liste.");
-                return;
-            }
-
-            const newTeam = {
-                id: Date.now(),
-                label: label,
-                teamName: key,
-                persona: persona
-            };
-            app.state.user.savedTeams.push(newTeam);
-            app.saveState();
-            this.switch(newTeam.id);
-        },
-        remove(id) {
-            if (app.state.user.savedTeams.length <= 1) { alert("Mindestens ein Team muss bleiben."); return; }
-            if (confirm("Dieses Team wirklich aus deiner Liste entfernen?")) {
-                const teamToRemove = app.state.user.savedTeams.find(t => t.id === id);
-                app.state.user.savedTeams = app.state.user.savedTeams.filter(t => t.id !== id);
-                if (teamToRemove && teamToRemove.teamName === app.state.user.teamName) {
-                    this.switch(app.state.user.savedTeams[0].id);
-                } else {
-                    app.saveState();
-                    app.modals.open('switchTeams');
-                }
-            }
-        },
-        updateHeaderBadge() {
-            const badge = document.getElementById('headerTeamBadge');
-            if (badge) {
-                const current = app.state.user.savedTeams?.find(t => t.teamName === app.state.user.teamName);
-                badge.textContent = current ? current.label : 'Offline';
-            }
-        }
-    },
-
-    // --- TEAM (Members List) ---
+    // --- TEAM MODULE ---
     team: {
-        render() {
-            const container = document.getElementById('teamMembersList');
-            if (!container) return;
-            const members = app.state.user.team || [];
-            if (members.length === 0) {
-                container.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Team-Mitglieder hinterlegt.</div>';
-            } else {
-                container.innerHTML = members.map(m => `
-                    <div class="card" style="margin-bottom:10px; padding:15px; display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03);">
-                        <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">
-                            ${m.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;">${m.name}</div>
-                            <div class="text-xs text-muted">Aktiv</div>
-                        </div>
-                        <button class="btn-small" onclick="app.team.remove('${m.id}')" style="background:none; border:none; color:var(--danger); opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
-                    </div>
-                `).join('');
-                if (window.lucide) lucide.createIcons();
-            }
-        },
-        add(name) {
-            if (!app.state.user.team) app.state.user.team = [];
-            app.state.user.team.push({ id: Date.now(), name });
+        addMember(name) {
+            if (!name) return;
+            app.state.user.team.push({ id: Date.now(), name: name });
             app.saveState();
             this.render();
         },
-        remove(id) {
-            if (confirm("Mitglied entfernen?")) {
-                app.state.user.team = app.state.user.team.filter(m => m.id != id);
-                app.saveState();
-                this.render();
+        render() {
+            const list = document.getElementById('teamMembersList');
+            if (!list) return;
+            if (!app.state.user.team || app.state.user.team.length === 0) {
+                list.innerHTML = '<span class="text-muted text-sm">Noch keine Teammitglieder.</span>';
+            } else {
+                list.innerHTML = app.state.user.team.map(m => `
+                    <div class="team-member-chip">
+                        <div class="team-avatar">${m.name ? m.name.substring(0, 2).toUpperCase() : '??'}</div>
+                        ${m.name}
+                    </div>
+                 `).join('');
+            }
+
+            const tasks = document.getElementById('teamTasksList');
+            if (tasks) {
+                tasks.innerHTML = (app.state.user.team && app.state.user.team.length) ? app.state.user.team.map(m => `
+                    <div class="task-item">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                             <div class="team-avatar" style="width:20px;height:20px;font-size:0.6rem;">${m.name.substring(0, 2)}</div>
+                             <span class="text-muted">Aufgabe für ${m.name}...</span>
+                        </div>
+                    </div>
+                 `).join('') : '<div class="text-muted text-sm">Füge Mitglieder hinzu, um Aufgaben zu teilen.</div>';
             }
         }
     },
 
     // --- NAVIGATION ---
     toggleSidebar() {
-        const layout = document.getElementById('app-layout');
+        this.isSidebarOpen = !this.isSidebarOpen;
         const sb = document.getElementById('mainSidebar');
-        if (!layout || !sb) return;
+        const closeBtn = document.getElementById('sidebarCloseBtn');
+        if (!sb) return;
 
-        if (window.innerWidth <= 768) {
-            // Mobile: Toggle "open" class on sidebar
-            sb.classList.toggle('open');
-            this.isSidebarOpen = sb.classList.contains('open');
-
-            // Sync close button visibility
-            const closeBtn = document.getElementById('sidebarCloseBtn');
-            if (closeBtn) closeBtn.style.display = this.isSidebarOpen ? 'block' : 'none';
+        if (this.isSidebarOpen) {
+            sb.classList.add('open');
+            if (closeBtn) closeBtn.style.display = 'block';
         } else {
-            // Desktop: Toggle "sidebar-collapsed" on layout
-            layout.classList.toggle('sidebar-collapsed');
-            this.isSidebarOpen = !layout.classList.contains('sidebar-collapsed');
+            sb.classList.remove('open');
+            if (closeBtn) closeBtn.style.display = 'none';
         }
-
-        // Save state if needed (optional)
-        // this.saveState();
-
-        if (window.lucide) lucide.createIcons();
     },
 
     setupNavigation() {
@@ -803,13 +543,6 @@ const app = {
 
     navigateTo(page, skipHistory = false) {
         this.state.currentPage = page;
-
-        // User Request: Top bar should only be visible on dashboard
-        const topBar = document.querySelector('.top-bar');
-        if (topBar) {
-            topBar.style.display = (page === 'dashboard') ? 'flex' : 'none';
-        }
-
         document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
 
         const target = document.getElementById(`view-${page}`);
@@ -836,9 +569,6 @@ const app = {
         if (page === 'health') app.health.render();
         if (page === 'contacts') app.contacts.render();
         if (page === 'shopping') app.shopping.render();
-        if (page === 'household') app.household.render();
-        if (page === 'journal') app.journal.render();
-        if (page === 'drive') app.drive.init();
         if (page === 'settings') {
             app.settings.render();
             app.settings.initPayPal();
@@ -889,6 +619,10 @@ const app = {
                         
                         <div style="display:flex; flex-direction:column; flex:1;">
                             <span style="font-weight:600; font-size:1.1rem;">${t.title}</span>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:2px;">
+                                ${t.isShared ? `<span class="badge-${t.type || 'team'}">${t.type === 'team' ? 'Team' : (t.type === 'public' ? 'Öffentlich' : 'Geteilt')}</span>` : ''}
+                                ${t.category === 'business' ? `<span class="badge-business">Business</span>` : ''}
+                            </div>
                         </div>
 
                         <button class="btn" onclick="app.shopping.delete(${t.id})" style="color:var(--text-muted); opacity:0.7;">
@@ -997,6 +731,8 @@ const app = {
     // --- CALENDAR & EVENTS ---
     calendar: {
         currentViewDate: new Date(),
+        currentFilter: 'all', // Add filter state
+        dashboardEventFilter: 'all', // Dashboard filter state
         toggleUrgency(id) {
             const e = app.state.events.find(x => x.id === id);
             if (e) {
@@ -1006,10 +742,18 @@ const app = {
                 app.renderDashboard();
             }
         },
+        filterByCategory(category) {
+            this.currentFilter = category;
+            this.render();
+        },
+        dashboardFilter(category) {
+            this.dashboardEventFilter = category;
+            app.renderDashboard();
+        },
         init() {
             this.render();
             setInterval(() => this.checkUrgency(), 30000);
-            setInterval(() => this.archiveOldEvents(), 3600000); // Check every hour
+            setInterval(() => this.archiveOldEvents(), 60000); // Check every minute
             this.checkUrgency();
             this.archiveOldEvents(); // Run on init
         },
@@ -1028,6 +772,27 @@ const app = {
                     return;
                 }
 
+                // Check for conflicts (same day, same time)
+                const conflictingEvent = app.state.events.find(e => {
+                    if (e.id === app.editingId) return false; // Skip if editing
+                    const eStart = new Date(e.start);
+                    const startTime = start.getTime();
+                    const eStartTime = eStart.getTime();
+                    const timeDiffMins = Math.abs(startTime - eStartTime) / (1000 * 60);
+                    const sameDay = start.toDateString() === eStart.toDateString();
+                    return sameDay && timeDiffMins < 60; // Conflict if within 60 mins and same day
+                });
+
+                if (conflictingEvent && !app.editingId) {
+                    const confirmAdd = confirm(
+                        `⚠️ Terminkonflikt erkannt!\n\n` +
+                        `Es existiert bereits ein Termin:\n` +
+                        `"${conflictingEvent.title}"\n\n` +
+                        `Möchtest du diesen Termin trotzdem hinzufügen?`
+                    );
+                    if (!confirmAdd) return;
+                }
+
                 // Validierung: Termin in der Vergangenheit (nur für neue Termine)
                 if (!app.editingId && start < now) {
                     const diffMinutes = Math.floor((now - start) / 1000 / 60);
@@ -1043,17 +808,6 @@ const app = {
                     return;
                 }
 
-                // Kollisions-Check: Gibt es bereits einen Termin zu dieser Zeit?
-                const collision = app.state.events.find(e =>
-                    e.id !== app.editingId &&
-                    e.start === start.toISOString()
-                );
-
-                if (collision) {
-                    const confirmMsg = `⚠️ Zeit-Konflikt!\n\nAm ${start.toLocaleDateString('de-DE')} um ${start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} hast du bereits einen Termin:\n"${collision.title}" (${collision.type === 'business' ? 'Business' : 'Privat'})\n\nMöchtest du diesen neuen Termin trotzdem zusätzlich speichern?`;
-                    if (!confirm(confirmMsg)) return;
-                }
-
                 if (app.editingId) {
                     const idx = app.state.events.findIndex(e => e.id === app.editingId);
                     if (idx !== -1) {
@@ -1064,15 +818,15 @@ const app = {
                             location: data.location,
                             phone: data.phone,
                             email: data.email,
-                            notes: data.notes,
+                            notes: data.notes, // Update notes
                             urgent: data.urgent,
-                            type: data.type || 'business',
-                            shared: data.shared !== undefined ? data.shared : true
+                            isShared: data.isShared,
+                            type: data.type,
+                            category: data.category || 'private' // Add category to edited events
                         };
                     }
                     app.editingId = null;
                 } else {
-                    const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                     app.state.events.push({
                         id: Date.now(),
                         title: data.title,
@@ -1080,10 +834,11 @@ const app = {
                         location: data.location || '',
                         phone: data.phone || '',
                         email: data.email || '',
-                        notes: data.notes || '',
+                        notes: data.notes || '', // Add notes
                         urgent: data.urgent || false,
-                        type: data.type || mode,
-                        shared: data.shared !== undefined ? data.shared : (data.type !== 'private')
+                        isShared: data.isShared || false,
+                        type: data.type || 'private',
+                        category: data.category || 'private' // 'private' or 'business'
                     });
                     app.gamification.addXP(30);
                 }
@@ -1107,8 +862,7 @@ const app = {
                 email: e.email,
                 notes: e.notes,
                 urgent: e.urgent,
-                type: e.type,
-                shared: e.shared
+                category: e.category || 'private'
             });
         },
         calculateDailyRoute() {
@@ -1149,17 +903,15 @@ const app = {
         },
         archiveOldEvents() {
             const now = new Date();
-            // Archive events older than 2 hours
-            const twoHoursAgo = new Date(now.getTime() - (2 * 60 * 60 * 1000));
-
-            const toArchive = app.state.events.filter(e => new Date(e.start) < twoHoursAgo);
+            // Archive all events that are in the past (started)
+            const toArchive = app.state.events.filter(e => new Date(e.start) < now);
 
             if (toArchive.length > 0) {
                 if (!app.state.archives) app.state.archives = [];
                 app.state.archives.push(...toArchive.map(e => ({ ...e, archivedAt: now.toISOString(), type: 'event' })));
 
-                // Keep recent and future events
-                app.state.events = app.state.events.filter(e => new Date(e.start) >= twoHoursAgo);
+                // Keep only future events
+                app.state.events = app.state.events.filter(e => new Date(e.start) >= now);
 
                 app.saveState();
                 console.log(`Archived ${toArchive.length} old events`);
@@ -1203,57 +955,41 @@ const app = {
             const dim = new Date(y, m + 1, 0).getDate();
 
             // Render days
-            const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-            const weekdaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-
             for (let d = 1; d <= dim; d++) {
-                const dayDate = new Date(y, m, d);
-                const wd = weekdaysShort[dayDate.getDay()];
-
                 const cell = document.createElement('div');
                 cell.className = 'calendar-day';
+                if (app.state.ui.dashboardMode === 'private') cell.classList.add('mode-private-cal');
 
                 // Highlight today
                 if (today.getDate() === d && today.getMonth() === m && today.getFullYear() === y) {
                     cell.classList.add('today');
                 }
 
-                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                 // Find events for this day (including archives)
                 const allPossibleEvents = [...app.state.events, ...(app.state.archives || [])];
-                const dayEvents = allPossibleEvents.filter(e => {
+                let dayEvents = allPossibleEvents.filter(e => {
                     const eventDate = new Date(e.start);
-                    const eventType = e.type || 'business';
-                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y && (eventType === mode || eventType === 'mixed' || e.shared === true);
+                    return eventDate.getDate() === d && eventDate.getMonth() === m && eventDate.getFullYear() === y;
                 });
 
+                // Apply category filter
+                if (this.currentFilter !== 'all') {
+                    dayEvents = dayEvents.filter(e => (e.category || 'private') === this.currentFilter);
+                }
+
                 // Build day content
-                let dayContent = `
-                    <div class="day-header-mobile">
-                        <span class="day-weekday mobile-only">${wd}., </span>
-                        <span class="day-number">${d}</span>
-                    </div>
-                `;
+                let dayContent = `<div class="day-number">${d}</div>`;
 
                 // Add event markers
                 if (dayEvents.length > 0) {
                     dayContent += '<div class="event-markers">';
                     dayEvents.forEach(ev => {
                         const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        const isPrivate = ev.type === 'private' || ev.type === 'mixed';
-                        const color = isPrivate ? '#10b981' : '#3b82f6';
-                        const bg = isPrivate ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)';
-
-                        // Desktop Marker (Text)
-                        dayContent += `<div class="event-marker desktop-only ${ev.urgent ? 'urgent' : ''}" 
-                                            style="border-left: 3px solid ${color}; background: ${bg}; color: white; font-size: 0.65rem; padding: 2px 5px; margin-bottom: 2px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" 
-                                            title="${ev.title} - ${eventTime} [${isPrivate ? 'Familie' : 'Business'}]">
-                                            ${ev.title}
-                                       </div>`;
-                        // Mobile Marker (Dot)
-                        dayContent += `<div class="event-dot mobile-only ${ev.urgent ? 'urgent' : ''}" 
-                                            style="width:5px; height:5px; border-radius:50%; background-color:${ev.urgent ? 'var(--danger)' : color}; margin: 2px;" 
-                                            title="${ev.title}"></div>`;
+                        const typeTag = ev.isShared ? `<span style="font-size:0.6rem; opacity:0.8; margin-left:4px; font-weight:800;">(${ev.type === 'team' ? 'T' : (ev.type === 'public' ? 'Ö' : 'G')})</span>` : '';
+                        const categoryIndicator = ev.category === 'business' 
+                            ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px; margin-left:2px;"></span>` 
+                            : `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#a78bfa; margin-right:4px; margin-left:2px;"></span>`;
+                        dayContent += `<div class="event-marker ${ev.urgent ? 'urgent' : ''}" style="display:flex; align-items:center;" title="${ev.title} - ${eventTime} (${ev.category === 'business' ? 'Business' : 'Privat'})">${categoryIndicator}${ev.title}${typeTag}</div>`;
                     });
                     dayContent += '</div>';
                 }
@@ -1277,6 +1013,11 @@ const app = {
 
     // --- DASHBOARD & HELPERS ---
     renderDashboard() {
+        // Archive old events before rendering
+        if (this.calendar && this.calendar.archiveOldEvents) {
+            this.calendar.archiveOldEvents();
+        }
+
         // Apply Card Visibility
         if (this.dashboard && this.dashboard.applyVisibility) {
             this.dashboard.applyVisibility();
@@ -1292,21 +1033,15 @@ const app = {
         if (dp) {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-            const activeFilter = app.state.ui.eventFilter || 'all';
-
-            const up = app.state.events
-                .filter(e => {
-                    const eventType = e.type || 'business';
-                    const isVisible = (eventType === mode || e.shared === true || eventType === 'mixed');
-                    if (!isVisible) return false;
-
-                    if (activeFilter !== 'all' && eventType !== activeFilter) return false;
-
-                    return new Date(e.start) >= startOfToday;
-                })
+            let up = app.state.events
+                .filter(e => new Date(e.start) >= startOfToday)
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 5);
+
+            // Apply dashboard filter
+            if (app.calendar.dashboardEventFilter && app.calendar.dashboardEventFilter !== 'all') {
+                up = up.filter(e => (e.category || 'private') === app.calendar.dashboardEventFilter);
+            }
 
             if (up.length > 0) {
                 dp.innerHTML = up.map((e, index) => {
@@ -1341,49 +1076,36 @@ const app = {
                         else countdown = `vor ${Math.floor(absM / 1440)} Tg.`;
                     }
 
-                    const duration = 60; // Assume 1 hour for now if not specified
-                    const end = new Date(start.getTime() + duration * 60000);
-                    const isOngoing = now >= start && now <= end;
-                    const progress = isOngoing ? ((now - start) / (end - start)) * 100 : 0;
+                    // Create category badge
+                    const categoryBadge = e.category === 'business' 
+                        ? `<span style="display: inline-block; padding: 3px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">Business</span>`
+                        : `<span style="display: inline-block; padding: 3px 8px; background: rgba(139, 92, 246, 0.2); color: #a78bfa; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">Privat</span>`;
 
                     return `
-                    <div class="event-item-card" style="display: flex; flex-direction: column; padding: 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || isOngoing ? 'var(--primary)' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; ${e.urgent || isOngoing ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})">
-                        
-                        <!-- Progress Bar (Bearbeitungsleiste / Fortschritt) -->
-                        ${isOngoing ? `<div style="position:absolute; bottom:0; left:0; height:3px; background:var(--primary); width:${progress}%; transition:width 1s linear; box-shadow: 0 0 10px var(--primary);"></div>` : ''}
-
-                        <div style="display: flex; align-items: center; width: 100%;">
-                            <!-- Avatar (Nach dem a - assume a is Avatar) -->
-                            <div style="width: 45px; height: 45px; border-radius: 12px; background: ${e.urgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:12px; border:1px solid ${e.urgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)'};">
-                                <span style="font-weight:800; font-size:1.1rem; color:${e.urgent ? 'var(--danger)' : 'var(--primary)'}">${e.title.charAt(0).toUpperCase()}</span>
+                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}';">
+                            <div style="width: 75px; display:flex; flex-direction:column; align-items:flex-start;">
+                                <div style="font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px; line-height:1;">${timeStr}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform:uppercase; margin-top:4px; font-weight:700;">${dateLabel}</div>
                             </div>
-
-                            <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                                    <div style="font-size: 0.65rem; color: ${(e.type === 'private') ? '#10b981' : (e.type === 'mixed' ? '#8b5cf6' : 'var(--primary)')}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">
-                                        <i data-lucide="${(e.type === 'private') ? 'users' : (e.type === 'mixed' ? 'layers' : 'briefcase')}" size="10"></i> 
-                                        ${(e.type === 'private') ? 'Privat' : (e.type === 'mixed' ? 'Gemischt' : 'Business')}
+                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 10px;">
+                                    <div style="display:flex; align-items:center; flex: 1;">
+                                        <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
+                                        ${categoryBadge}
                                     </div>
-                                    ${e.shared ? `<div style="font-size: 0.6rem; background: var(--success); color: white; padding: 2px 6px; border-radius: 4px; font-weight: 800;">TEAM</div>` : ''}
+                                    <div style="font-size: 0.75rem; color: ${diffMins > -15 && diffMins < 30 ? '#06b6d4' : 'var(--text-muted)'}; font-weight: 600; white-space:nowrap;">${countdown}</div>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${e.title}</div>
-                                    <div style="font-weight: 800; font-size: 0.9rem; color: #ffffff;">${timeStr}</div>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${e.location || 'Kein Ort'}</div>
-                                    <div style="font-size: 0.7rem; color: ${isOngoing ? 'var(--primary)' : 'var(--text-muted)'}; font-weight: 600; text-transform: uppercase;">${countdown}</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
+                                    ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
                                 </div>
                             </div>
-
-                            <!-- Edit/Action Bar (Bearbeitungsleiste) -->
-                            <div style="display:flex; align-items:center; gap:8px; margin-left:15px;">
-                                ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; color: var(--primary);"><i data-lucide="map" size="16"></i></a>` : ''}
-                                <button onclick="event.stopPropagation(); app.calendar.editEvent(${e.id})" style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.05); border:none; display:flex; align-items:center; justify-content:center; color: var(--text-muted);"><i data-lucide="pencil" size="16"></i></button>
+                            <div style="display:flex; align-items:center; margin-left:10px;">
+                                 ${e.urgent || (diffMins > -15 && diffMins < 30) ? '<div style="width:10px; height:10px; border-radius:50%; background:#06b6d4; box-shadow: 0 0 12px #06b6d4; margin-right:15px;"></div>' : ''}
+                                 <i data-lucide="chevron-right" size="18" class="text-muted" style="opacity:0.5;"></i>
                             </div>
                         </div>
-                    </div>
-                 `;
+                     `;
                 }).join('');
             } else {
                 dp.innerHTML = '<div class="text-muted text-sm" style="padding:20px; text-align:center;">Keine anstehenden Termine.<br><span style="opacity:0.6">Tippe auf "Neu", um zu planen.</span></div>';
@@ -1681,100 +1403,16 @@ const app = {
         }
         toggleCardBlink('dashboardAlarmsCard', (app.state.alarms || []).some(a => a.active));
 
-        // 7. Meal Plan Preview
-        const mealPreview = document.getElementById('dashboardMealPlanPreview');
-        const todayText = document.getElementById('todayMealText');
-        if (mealPreview) {
-            const todayIdx = (new Date().getDay() + 6) % 7; // 0=Mon
-            const todayMeal = app.meals.get(todayIdx);
-            if (todayText) todayText.textContent = todayMeal ? `Heute: ${todayMeal}` : 'Heute: Kein Plan eingetragen';
-
-            // Show next few days for preview
-            const daysNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-            let previewHtml = `<div id="todayMealText" style="font-weight: 700; text-align: center; margin-bottom: 8px; font-size:1.1rem; color:var(--accent);">${todayMeal || 'Nichts geplant'}</div>`;
-            previewHtml += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;">';
-            for (let i = 1; i <= 2; i++) {
-                const nextIdx = (todayIdx + i) % 7;
-                const nextMeal = app.meals.get(nextIdx);
-                previewHtml += `
-                    <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                        <div class="text-xs text-muted" style="text-transform:uppercase;">${daysNames[nextIdx]}</div>
-                        <div style="font-weight:600; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nextMeal || '--'}</div>
-                    </div>
-                `;
-            }
-            previewHtml += '</div>';
-            mealPreview.innerHTML = previewHtml;
+        // Update layout toggle button text
+        const layoutBtnText = document.getElementById('layoutToggleText');
+        if (layoutBtnText) {
+            const currentLayout = app.state.dashboardLayout || 'double';
+            layoutBtnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
         }
 
-        // Update Status Card Summary
-        const statusSummary = document.getElementById('statusSummaryText');
-        if (statusSummary) {
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-            const tasksCount = (app.state.tasks || []).filter(t => !t.done && t.category !== 'shopping').length;
-            const shopCount = (app.state.tasks || []).filter(t => !t.done && t.category === 'shopping').length;
-            const meals = app.state.meals || [];
-            const todayMeal = meals[(now.getDay() + 6) % 7];
-
-            statusSummary.textContent = `${tasksCount} Aufgaben • ${shopCount} Einkauf • ${todayMeal || 'Kein Menü'}`;
-        }
-
-        // 8. Drive Mode Card Update (Dynamic)
-        const driveCard = document.getElementById('dashboardDriveCard');
-        if (driveCard) {
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-            const nextDriveEvent = app.state.events
-                .filter(e => e.start.startsWith(todayStr) && e.location && new Date(e.start) > now)
-                .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
-            const drivePreview = document.getElementById('dashboardDrivePreview');
-            if (drivePreview) {
-                if (nextDriveEvent) {
-                    const eventStart = new Date(nextDriveEvent.start);
-                    const diffMs = eventStart - now;
-                    const diffMins = Math.floor(diffMs / 60000);
-                    const timeStr = eventStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-                    let timeDisplay = '';
-                    if (diffMins < 60) timeDisplay = `in ${diffMins}m`;
-                    else timeDisplay = `in ${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
-
-                    drivePreview.innerHTML = `
-                       <div class="card-header" style="margin-bottom:8px;">
-                            <span class="card-title"><i data-lucide="car" class="text-primary"></i> Drive Mode</span>
-                            <div class="text-xs" style="background:rgba(59,130,246,0.2); color:#3b82f6; padding:2px 6px; border-radius:4px; font-weight:bold;">${timeDisplay}</div>
-                       </div>
-                       <div style="display:flex; align-items:center; gap:12px;">
-                           <div style="background:rgba(255,255,255,0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                               <i data-lucide="navigation" size="20"></i>
-                           </div>
-                           <div style="overflow:hidden;">
-                               <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nextDriveEvent.location}</div>
-                               <div class="text-muted text-xs">Ziel um ${timeStr} • ${nextDriveEvent.title}</div>
-                           </div>
-                       </div>
-                    `;
-                } else {
-                    // Default State
-                    drivePreview.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="background:rgba(255, 255, 255, 0.05); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                <i data-lucide="navigation" size="20"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight:700;">Drive Mode</div>
-                                <div class="text-muted text-xs">Fahr-Assistent starten</div>
-                            </div>
-                        </div>
-                     `;
-                }
-            }
-        }
-
-        if (this.shortcuts) this.shortcuts.render();
-        if (this.contacts) this.contacts.renderQuick();
-        if (this.quickNotes) this.quickNotes.render();
+        if (this.shortcuts && this.shortcuts.render) this.shortcuts.render();
+        if (this.contacts && this.contacts.renderQuick) this.contacts.renderQuick();
+        if (this.quickNotes && this.quickNotes.render) this.quickNotes.render();
         if (this.projects) this.projects.render();
         if (this.meetings) this.meetings.render();
         if (this.dashboard) {
@@ -2025,6 +1663,158 @@ const app = {
         }
     },
 
+    // --- DRIVE ASSISTANT MODULE ---
+    drive: {
+        currentLocation: null,
+
+        init() {
+            this.renderRoute();
+            this.getLocation();
+        },
+
+        refresh() {
+            this.getLocation();
+            this.renderRoute();
+        },
+
+        getLocation() {
+            const statusEl = document.getElementById('currentLocationText');
+            if (statusEl) statusEl.textContent = "Suche GPS...";
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        this.currentLocation = `${position.coords.latitude},${position.coords.longitude}`;
+                        if (statusEl) statusEl.textContent = "GPS Gefunden ✅";
+                    },
+                    (error) => {
+                        console.error("GPS Error", error);
+                        if (statusEl) statusEl.textContent = "Kein GPS. Bitte eingeben.";
+                        this.askLocation();
+                    }
+                );
+            } else {
+                if (statusEl) statusEl.textContent = "GPS nicht verfügbar.";
+                this.askLocation();
+            }
+        },
+
+        askLocation() {
+            const loc = prompt("Wo befindest du dich gerade? (Ort/Straße)", this.currentLocation || "");
+            if (loc) {
+                this.currentLocation = loc;
+                const statusEl = document.getElementById('currentLocationText');
+                if (statusEl) statusEl.textContent = "📍 " + loc;
+                this.renderRoute();
+            }
+        },
+
+        renderRoute() {
+            const list = document.getElementById('driveRouteList');
+            if (!list) return;
+
+            const today = new Date().setHours(0, 0, 0, 0);
+            const nowTime = new Date().getTime();
+
+            const routeEvents = app.state.events.filter(e => {
+                const eventDate = new Date(e.start);
+                const ed = new Date(e.start).setHours(0, 0, 0, 0);
+
+                // Only show events for today that haven't started yet
+                // This excludes all past/expired events from the drive mode route
+                return ed === today &&
+                    eventDate.getTime() > nowTime && // Event is in the future
+                    e.location && e.location.trim().length > 0;
+            });
+            routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (routeEvents.length === 0) {
+                list.innerHTML = `<div class="card" style="background:rgba(255,255,255,0.05); text-align:center; padding:20px;">
+                    <i data-lucide="calendar-off" size="32" class="text-muted"></i>
+                    <p class="text-muted">Keine auswärtigen Termine für heute.</p>
+                </div>`;
+            } else {
+                let html = '';
+
+                // Start Point
+                html += `
+                <div style="display:flex; gap:15px; ">
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <div style="width:12px; height:12px; background:var(--success); border-radius:50%; margin-top:5px;"></div>
+                        <div style="width:2px; flex:1; background:rgba(255,255,255,0.1);"></div>
+                    </div>
+                    <div style="padding-bottom:15px;">
+                        <div class="text-sm text-muted">Start</div>
+                        <div style="font-weight:bold;">${this.currentLocation || "Standort ermitteln..."}</div>
+                    </div>
+                </div>`;
+
+                // Stops
+                routeEvents.forEach((e, idx) => {
+                    const isLast = idx === routeEvents.length - 1;
+                    const time = new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    html += `
+                    <div style="display:flex; gap:15px;">
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <div style="width:12px; height:12px; border: 2px solid var(--primary); background:#000; border-radius:50%; margin-top:5px;"></div>
+                            ${!isLast ? '<div style="width:2px; flex:1; background:rgba(255,255,255,0.1);"></div>' : ''}
+                        </div>
+                        <div style="padding-bottom: ${isLast ? '0' : '20px'}; flex:1;">
+                            <div class="card" style="margin:0 0 15px 0; padding:20px; border-left: 4px solid var(--primary); background: rgba(255,255,255,0.05); border-radius: 16px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                    <span style="font-weight:800; font-size:1.1rem; color:#fff;">${e.title}</span>
+                                    <span style="color: var(--primary); font-weight:bold; font-size:1rem;">${time} Uhr</span>
+                                </div>
+                                <div class="text-sm text-muted" style="display:flex; align-items:center; gap:8px;">
+                                    <i data-lucide="map-pin" size="14"></i> <span style="font-size: 0.95rem;">${e.location}</span>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" style="color: var(--primary); display:flex; align-items:center; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px;" title="In Google Maps öffnen">
+                                        <i data-lucide="external-link" size="14"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+
+                list.innerHTML = html;
+            }
+            if (window.lucide) lucide.createIcons();
+        },
+
+        openNavigation() {
+            if (!this.currentLocation) {
+                alert("Bitte erst Standort festlegen!");
+                this.askLocation();
+                return;
+            }
+
+            const today = new Date().setHours(0, 0, 0, 0);
+            const nowTime = new Date().getTime();
+
+            const routeEvents = app.state.events.filter(e => {
+                const eventDate = new Date(e.start);
+                const ed = new Date(e.start).setHours(0, 0, 0, 0);
+
+                // Only include future events for today with a location
+                return ed === today &&
+                    eventDate.getTime() > nowTime && // Event is in the future
+                    e.location && e.location.trim().length > 0;
+            });
+            routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (routeEvents.length === 0) {
+                alert("Keine Ziele für heute gefunden.");
+                return;
+            }
+
+            // Construct Google Maps URL
+            // Format: https://www.google.com/maps/dir/Start/Stop1/Stop2/...
+            const origin = encodeURIComponent(this.currentLocation);
+            const destinations = routeEvents.map(e => encodeURIComponent(e.location)).join('/');
+
+            window.open(`https://www.google.com/maps/dir/${origin}/${destinations}`, '_blank');
+        }
+    },
 
     // --- AI MODULE ---
     ai: {
@@ -2537,18 +2327,8 @@ const app = {
             }
         },
         toggleUrgency(id) { const t = app.state.tasks.find(x => x.id === id); if (t) { t.urgent = !t.urgent; app.saveState(); this.render(); app.renderDashboard(); } },
-        add(t, u, category = 'todo', shared = false) {
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-            const finalType = mode;
-            app.state.tasks.push({
-                id: Date.now(),
-                title: t,
-                urgent: u,
-                category: category,
-                type: finalType,
-                shared: shared,
-                done: false
-            });
+        add(t, u, category = 'todo', isShared = false, type = 'private') {
+            app.state.tasks.push({ id: Date.now(), title: t, urgent: u, category: category, done: false, isShared: isShared, type: type });
             app.saveState();
             this.render(); // Renders Tasks
             if (category === 'shopping' && app.shopping) app.shopping.render(); // Renders Shopping if needed
@@ -2593,7 +2373,7 @@ const app = {
                 l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben.</div>';
             } else {
                 l.innerHTML = f.map(t => `
-                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}" style="border-left: 3px solid var(--primary);">
+                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}">
                     <div style="display:flex;align-items:center;gap:10px; width:100%;">
                         <div class="checkbox-circle ${t.done ? 'checked' : ''}" onclick="app.tasks.toggle(${t.id})"></div>
                         
@@ -2605,11 +2385,15 @@ const app = {
                             <span style="${t.done ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">
                                 ${t.title}
                             </span>
-                             ${t.category && t.category !== 'todo' && t.category !== 'shopping' ? `<span class="text-xs text-muted">${t.category}</span>` : ''}
+                             <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:2px;">
+                                 ${t.isShared ? `<span class="badge-${t.type || 'team'}">${t.type === 'team' ? 'Team' : (t.type === 'public' ? 'Öffentlich' : 'Geteilt')}</span>` : ''}
+                                 ${t.category === 'business' ? `<span class="badge-business">Business</span>` : ''}
+                                 ${t.category && t.category !== 'todo' && t.category !== 'shopping' && t.category !== 'business' && t.category !== 'private' ? `<span class="text-xs text-muted">${t.category}</span>` : ''}
+                             </div>
                         </div>
 
-                        <button class="btn" onclick="app.tasks.delete(${t.id})" style="color:var(--text-muted); opacity:0.7;">
-                            <i data-lucide="trash-2" size="16"></i>
+                        <button class="btn" onclick="app.tasks.delete(${t.id})" title="Archivieren" style="color:var(--text-muted); opacity:0.7;">
+                            <i data-lucide="archive" size="16"></i>
                         </button>
                     </div>
                 </div>`).join('');
@@ -2634,21 +2418,21 @@ const app = {
                 app.renderDashboard();
             }
         },
-        add(a, d, dateStr, urgent = false, shared = false) {
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-            const finalType = mode;
+        add(a, d, dateStr, urgent = false, category = 'private', isShared = false, type = 'private') {
             app.state.expenses.push({
                 id: Date.now(),
                 amount: parseFloat(a),
                 desc: d,
                 date: dateStr || new Date().toISOString().split('T')[0],
                 urgent: urgent,
-                type: finalType,
-                shared: shared
+                category: category,
+                isShared: isShared,
+                type: type
             });
             app.saveState();
             this.render();
             app.renderDashboard();
+            app.gamification.addXP(25);
         },
         edit(id) {
             const e = app.state.expenses.find(x => x.id === id);
@@ -2777,7 +2561,11 @@ const app = {
                                     <button class="btn-toggle-urgent ${e.urgent ? 'is-urgent' : ''}" onclick="app.finance.toggleUrgency(${e.id})" title="Wichtig"><i data-lucide="flame" size="14"></i></button>
                                     <div>
                                         <div style="font-weight:600;">${e.desc}</div>
-                                        <div class="text-sm text-muted">${d}</div>
+                                        <div style="display:flex; align-items:center; gap:5px; margin-top:2px;">
+                                            <div class="text-sm text-muted">${d}</div>
+                                            ${e.isShared ? `<span class="badge-${e.type || 'shared'}" style="font-size:0.65rem; padding:1px 6px;">${e.type || 'Shared'}</span>` : ''}
+                                            ${e.category && e.category !== 'private' ? `<span class="badge-business" style="font-size:0.65rem; padding:1px 6px;">${e.category}</span>` : ''}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3118,9 +2906,7 @@ const app = {
                 value: liters,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder,
-                scope: 'private',
-                shared: false
+                reminder: reminder
             });
 
             app.saveState();
@@ -3150,9 +2936,7 @@ const app = {
                 type: 'steps',
                 value: steps,
                 date: today,
-                timestamp: new Date().toISOString(),
-                scope: 'private',
-                shared: false
+                timestamp: new Date().toISOString()
             });
 
             app.saveState();
@@ -3169,9 +2953,7 @@ const app = {
                 value: hours,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder,
-                scope: 'private',
-                shared: false
+                reminder: reminder
             });
 
             app.saveState();
@@ -3192,9 +2974,7 @@ const app = {
                 value: kg,
                 date: today,
                 timestamp: new Date().toISOString(),
-                reminder: reminder,
-                scope: 'private',
-                shared: false
+                reminder: reminder
             });
 
             app.saveState();
@@ -3816,7 +3596,7 @@ const app = {
 
             if (isNew) {
                 if (!app.state.alarms) app.state.alarms = [];
-                app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true, type: 'private' });
+                app.state.alarms.push({ id: Date.now(), title, time, sound, days, active: true });
             } else {
                 const a = app.state.alarms.find(x => x.id === id);
                 if (a) Object.assign(a, { title, time, sound, days });
@@ -3873,37 +3653,6 @@ const app = {
             return true;
         }
 
-        // 5. Journaling
-        if (text.startsWith('j ') || text.startsWith('journal ') || text.startsWith('tagebuch ')) {
-            const content = raw.substring(raw.indexOf(' ') + 1).trim();
-            if (content) {
-                if (!app.state.journal) app.state.journal = [];
-                app.state.journal.unshift({
-                    id: Date.now(),
-                    title: 'Gedanke',
-                    text: content,
-                    mood: '😌',
-                    date: new Date().toISOString()
-                });
-                app.saveState();
-                app.navigateTo('journal');
-                return true;
-            }
-        }
-
-        // 6. Team Switching (Quick Key)
-        if (text.startsWith('team ') || text.startsWith('key ')) {
-            const query = text.substring(text.indexOf(' ') + 1).trim();
-            const found = app.state.user.savedTeams.find(t =>
-                t.label.toLowerCase().includes(query) ||
-                t.teamName.toLowerCase().includes(query)
-            );
-            if (found) {
-                app.teams.switch(found.id);
-                return true;
-            }
-        }
-
         // Default Case: Add as Task
         if (raw.length > 2) {
             app.tasks.add(finalTitle, false, 'todo');
@@ -3925,8 +3674,6 @@ const app = {
             else { app.navigateTo('dashboard'); }
         }
     },
-
-
 
     // --- CLOUD SYNC MODULE (Firebase) ---
     cloud: {
@@ -4032,52 +3779,85 @@ const app = {
                         if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Live Sync (${new Date().toLocaleTimeString()})</span>`;
                     } else if (!doc.exists && !doc.metadata.hasPendingWrites) {
                         // NEW TEAM DETECTED (No cloud data found)
-                        // Instead of clearing local state, we push our local events to start the cloud doc.
-                        console.log("New Team detected. Initializing cloud with local data.");
-                        this.push();
+                        // "sollen meine ganzen anderen termine nicht drin stehen"
+                        // Clear local data to start fresh for this new individual team
+                        console.log("New Team detected. Clearing local state.");
+                        app.state.tasks = [];
+                        app.state.events = [];
+                        app.state.expenses = [];
+                        app.state.habits = [];
+                        app.state.healthData = [];
+                        app.state.alarms = [];
+
+                        app.saveState(); // Save empty state locally
+                        app.renderDashboard(); // Update UI
+
+                        // Optional: Create initial empty doc in cloud? 
+                        // Or wait for first user action to create it via pushState.
                     }
                 });
         },
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            const collections = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'shortcuts', 'quickNotes', 'household', 'meals', 'journal', 'meetings', 'projects'];
-            let changed = false;
+            const merge = (key, fallback) => {
+                if (cloudState[key] !== undefined) return cloudState[key];
+                return app.state[key] || fallback;
+            };
 
-            collections.forEach(key => {
-                if (cloudState[key] !== undefined) {
-                    const merged = cloudState[key] || [];
+            // Compare versions for quick dirty check
+            const localCompare = {
+                tasks: app.state.tasks,
+                events: app.state.events,
+                expenses: app.state.expenses,
+                habits: app.state.habits,
+                healthData: app.state.healthData || [],
+                alarms: app.state.alarms || [],
+                contacts: app.state.contacts || [],
+                shortcuts: app.state.shortcuts || [],
+                xp: app.state.xp || 0,
+                level: app.state.level || 1,
+                ui: app.state.ui || {}
+            };
 
-                    if (JSON.stringify(app.state[key]) !== JSON.stringify(merged)) {
-                        app.state[key] = merged;
-                        changed = true;
-                    }
-                }
-            });
+            const cloudCompare = {
+                tasks: merge('tasks', []),
+                events: merge('events', []),
+                expenses: merge('expenses', []),
+                habits: merge('habits', []),
+                healthData: merge('healthData', []),
+                alarms: merge('alarms', []),
+                contacts: merge('contacts', []),
+                shortcuts: merge('shortcuts', []),
+                xp: merge('xp', 0),
+                level: merge('level', 1),
+                ui: merge('ui', {})
+            };
 
-            if (cloudState.xp !== undefined && cloudState.xp > app.state.xp) {
-                app.state.xp = cloudState.xp;
-                app.state.level = cloudState.level || 1;
-                changed = true;
-            }
-            if (changed) {
-                app.saveState(true); // Skip manual periodic push
+            if (JSON.stringify(localCompare) !== JSON.stringify(cloudCompare)) {
+                app.state.tasks = cloudCompare.tasks;
+                app.state.events = cloudCompare.events;
+                app.state.expenses = cloudCompare.expenses;
+                app.state.habits = cloudCompare.habits;
+                app.state.healthData = cloudCompare.healthData;
+                app.state.alarms = cloudCompare.alarms;
+                app.state.contacts = cloudCompare.contacts;
+                app.state.shortcuts = cloudCompare.shortcuts;
+                app.state.xp = cloudCompare.xp;
+                app.state.level = cloudCompare.level;
+                app.state.ui = cloudCompare.ui;
+
+                app.saveState(true); // Skip Push to avoid loop
                 app.renderDashboard();
                 if (app.tasks) app.tasks.render();
-                if (app.shopping) app.shopping.render();
                 if (app.calendar) app.calendar.render();
                 if (app.finance) app.finance.render();
                 if (app.habits) app.habits.render();
                 if (app.health) app.health.render();
-                if (app.quickNotes) app.quickNotes.render();
-                if (app.household) app.household.render();
-                if (app.journal) app.journal.render();
-                if (app.meetings) app.meetings.render();
-                if (app.projects) app.projects.render();
-                console.log("☁️ Data Synchronized from Cloud (Mirror)");
-            }
+                console.log("☁️ Data Synchronized from Cloud");
 
-            this.updateIndicator(true);
+                this.updateIndicator(true);
+            }
         },
         updateIndicator(active) {
             const el = document.getElementById('headerSyncIndicator');
@@ -4114,20 +3894,14 @@ const app = {
                     tasks: app.state.tasks,
                     events: app.state.events,
                     expenses: app.state.expenses,
-                    habits: app.state.habits || [],
+                    habits: app.state.habits,
                     healthData: app.state.healthData || [],
                     alarms: app.state.alarms || [],
                     contacts: app.state.contacts || [],
                     shortcuts: app.state.shortcuts || [],
-                    quickNotes: app.state.quickNotes || [],
-                    household: app.state.household || [],
-                    meals: app.state.meals || [],
-                    journal: app.state.journal || [],
-                    meetings: app.state.meetings || [],
-                    projects: app.state.projects || [],
                     xp: app.state.xp || 0,
                     level: app.state.level || 1,
-                    sync_deleted: app.state.sync_deleted || [],
+                    ui: app.state.ui || {},
                     last_updated: new Date().toISOString()
                 },
                 updated_at: new Date().toISOString()
@@ -4226,21 +4000,13 @@ const app = {
         },
         applyLayoutPreference() {
             const grids = document.querySelectorAll('.dashboard-grid');
-            const currentLayout = app.state.dashboardLayout || 'double';
-
             grids.forEach(g => {
-                if (currentLayout === 'single') {
+                if (app.state.dashboardLayout === 'single') {
                     g.classList.add('single-column-mode');
                 } else {
                     g.classList.remove('single-column-mode');
                 }
             });
-
-            // Update button text to reflect current state
-            const btnText = document.getElementById('layoutToggleText');
-            if (btnText) {
-                btnText.textContent = currentLayout === 'single' ? '1 Spalte' : '2 Spalten';
-            }
         },
         initPayPal() {
             if (app.state.user.isPro) return;
@@ -4358,245 +4124,10 @@ const app = {
             }
         },
         resetApp() {
-            if (confirm("⚠️ ACHTUNG: Das gesamte Konto wird gelöscht! Alle lokalen Daten gehen verloren und du musst dich neu registrieren. Fortfahren?")) {
+            if (confirm("Möchtest du wirklich alle Daten löschen? Dies kann nicht rückgängig gemacht werden!")) {
                 localStorage.clear();
                 location.reload();
             }
-        },
-    },
-
-
-
-    // --- DRIVE MODE MODULE ---
-    drive: {
-        currentLocation: null,
-        init() {
-            this.getLocation();
-            this.render();
-        },
-        getLocation() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (p) => { this.currentLocation = `${p.coords.latitude},${p.coords.longitude}`; this.render(); },
-                    (e) => { console.error("GPS Error", e); }
-                );
-            }
-        },
-        askLocation() {
-            const loc = prompt("Aktuellen Standort eingeben (Adresse oder Ort):", this.currentLocation || "");
-            if (loc) { this.currentLocation = loc; this.render(); }
-        },
-        render() {
-            let container = document.getElementById('view-drive');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'view-drive';
-                container.className = 'hidden';
-                container.style.position = 'fixed';
-                container.style.inset = '0';
-                container.style.background = '#0d0d0d';
-                container.style.zIndex = '5000';
-                container.style.display = 'flex';
-                container.style.flexDirection = 'column';
-                document.body.appendChild(container);
-            }
-
-            const todayIdx = (new Date().getDay() + 6) % 7;
-            const todayMeal = app.meals.get(todayIdx);
-
-            // Calculate Route Info
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-            const nextEvent = app.state.events
-                .filter(e => e.start.startsWith(todayStr) && e.location && new Date(e.start) > now)
-                .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
-
-            let mapHtml = '';
-            let nextStopInfo = '';
-
-            if (nextEvent) {
-                const start = new Date(nextEvent.start);
-                const diffMins = Math.floor((start - now) / 1000 / 60);
-                const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-
-
-                // Map Embed
-                // Using simple iframe embed for location
-                let locEncoded = encodeURIComponent(nextEvent.location);
-                let originParam = "";
-                if (this.currentLocation) {
-                    originParam = `&origin=${encodeURIComponent(this.currentLocation)}`;
-                }
-
-                // Calculate time display with hours
-                let timeDisplayHtml = "";
-                if (diffMins < 60) {
-                    timeDisplayHtml = `${diffMins} <span style="font-size:1rem; font-weight:600; opacity:0.7;">min</span>`;
-                } else {
-                    const h = Math.floor(diffMins / 60);
-                    const m = diffMins % 60;
-                    timeDisplayHtml = `${h} <span style="font-size:1rem; font-weight:600; opacity:0.7;">Std</span> ${m} <span style="font-size:1rem; font-weight:600; opacity:0.7;">min</span>`;
-                }
-
-                mapHtml = `
-                    <div style="height:200px; width:100%; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); margin-bottom:15px; position:relative;">
-                        <iframe width="100%" height="100%" style="border:0; opacity:0.8; filter: invert(90%) hue-rotate(180deg) contrast(90%);" loading="lazy" allowfullscreen src="https://maps.google.com/maps?q=${locEncoded}${originParam}&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
-                        <div style="position:absolute; bottom:10px; right:10px; background:var(--primary); color:white; padding:8px 12px; border-radius:10px; font-weight:bold; font-size:0.8rem; box-shadow:0 5px 15px rgba(0,0,0,0.5); pointer-events:none;">
-                            <i data-lucide="map-pin" size="12"></i> Zielgebiet
-                        </div>
-                    </div>
-                `;
-
-                nextStopInfo = `
-                    <div style="margin-bottom:15px; background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05)); border:1px solid rgba(59,130,246,0.3); padding:15px; border-radius:20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
-                            <div>
-                                <div class="text-xs text-primary" style="font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">NÄCHSTES ZIEL</div>
-                                <div style="font-size:1.4rem; font-weight:bold; line-height:1.2;">${nextEvent.location}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:2rem; font-weight:800; color:white;">${timeDisplayHtml}</div>
-                                <div class="text-xs text-muted">bis Start (${timeStr})</div>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                             <div style="background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:10px; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
-                                <i data-lucide="calendar" size="14" style="opacity:0.7"></i> ${nextEvent.title}
-                             </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                nextStopInfo = `
-                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:20px; border-radius:20px; text-align:center;">
-                        <i data-lucide="check-circle" size="32" class="text-success" style="margin-bottom:10px;"></i>
-                        <div style="font-weight:bold; font-size:1.2rem;">Alles erledigt!</div>
-                        <div class="text-muted text-sm">Keine weiteren Termine mit Fahrt heute.</div>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = `
-                <div style="flex:1; padding:20px; display:flex; flex-direction:column; gap:10px; max-width:600px; margin:0 auto; width:100%; overflow-y:auto;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <button onclick="app.drive.close()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                <i data-lucide="arrow-left"></i>
-                            </button>
-                            <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Cockpit</h2>
-                        </div>
-                        <div style="font-size:1.5rem; font-weight:bold; font-family:monospace; color:var(--primary);">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                    
-                    ${nextStopInfo}
-                    ${mapHtml}
-
-                    <div style="display:flex; gap:10px; align-items:stretch;">
-                        <button class="btn" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:18px; text-align:left; display:flex; flex-direction:column; justify-content:center;" onclick="app.drive.askLocation()">
-                            <span class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:1px;">Start-Standort</span>
-                            <div style="font-size:0.9rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:${this.currentLocation ? 'white' : 'var(--accent)'};">📍 ${this.currentLocation || 'Bitte festlegen...'}</div>
-                        </button>
-                        <button class="btn-primary" style="width:70px; border-radius:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px rgba(59,130,246,0.2); background: linear-gradient(135deg, #2563eb, #1d4ed8);" onclick="app.drive.openNavigation()" title="Google Maps starten">
-                            <i data-lucide="navigation" size="28"></i>
-                        </button>
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <h4 style="margin:0 0 10px 0; font-size:0.9rem; text-transform:uppercase; opacity:0.6; padding-left:5px;">Heutige Route</h4>
-                        <div id="driveRouteList"></div>
-                    </div>
-
-                    <!-- Meal Plan Mini -->
-                    <div style="margin-top:20px; background:linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(234, 179, 8, 0.05)); border:1px solid rgba(234, 179, 8, 0.2); padding:15px; border-radius:20px; display:flex; align-items:center; gap:15px;">
-                        <div style="background:rgba(234, 179, 8, 0.2); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                            <i data-lucide="utensils" class="text-accent" size="20"></i>
-                        </div>
-                        <div>
-                            <div class="text-xs text-muted" style="text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Essen heute</div>
-                            <div style="font-weight:700; font-size:1rem; color:#fff;">${todayMeal || 'Nichts eingetragen'}</div>
-                        </div>
-                    </div>
-
-                    <div style="height:80px;"></div> <!-- Spacer -->
-                </div>
-                
-                <!-- Floating Bottom Bar -->
-                 <div style="position:fixed; bottom:20px; left:20px; right:20px; display:flex; gap:10px; max-width:560px; margin:0 auto; z-index:5001;">
-                        <button class="btn" style="flex:1; background:rgba(30,30,30,0.9); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); padding:16px; border-radius:20px; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:10px; color:white; box-shadow:0 10px 20px rgba(0,0,0,0.5);" onclick="app.voice.startGlobal()">
-                            <i data-lucide="mic" size="20" class="text-primary"></i> <span>Sprachbefehl</span>
-                        </button>
-                 </div>
-            `;
-
-            container.classList.remove('hidden');
-            this.renderRoute();
-            if (window.lucide) lucide.createIcons();
-            if (app.requestWakeLock) app.requestWakeLock();
-        },
-        renderRoute() {
-            const list = document.getElementById('driveRouteList');
-            if (!list) return;
-
-            const today = new Date().setHours(0, 0, 0, 0);
-            const now = new Date();
-
-            const routeEvents = app.state.events.filter(e => {
-                const ed = new Date(e.start).setHours(0, 0, 0, 0);
-                return ed === today && e.location && e.location.trim().length > 0;
-            }).sort((a, b) => new Date(a.start) - new Date(b.start));
-
-            if (routeEvents.length === 0) {
-                list.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.3; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
-                    <i data-lucide="calendar-off" size="48" style="margin-bottom:12px;"></i>
-                    <div style="font-size:0.9rem;">Keine Termine mit Standort für heute.</div>
-                </div>`;
-                return;
-            }
-
-            list.innerHTML = routeEvents.map((e, i) => {
-                const eventTime = new Date(e.start);
-                const isPast = eventTime < now;
-                const timeStr = eventTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const isLast = i === routeEvents.length - 1;
-
-                return `
-                <div style="display:flex; gap:15px; opacity: ${isPast ? 0.4 : 1}; position:relative;">
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div style="width:14px; height:14px; border-radius:50%; background: ${isPast ? 'rgba(255,255,255,0.2)' : 'var(--primary)'}; border: 3px solid #0d0d0d; box-shadow: 0 0 0 2px ${isPast ? 'transparent' : 'rgba(59,130,246,0.3)'}; margin-top:6px; z-index:2;"></div>
-                        ${!isLast ? `<div style="position:absolute; top:20px; bottom:0; width:2px; background:rgba(255,255,255,0.1); left:6px; z-index:1;"></div>` : ''}
-                    </div>
-                    <div style="flex:1; padding-bottom:20px;">
-                        <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:18px; transition:all 0.3s; ${!isPast ? 'border-left:4px solid var(--primary);' : ''}">
-                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px;">
-                                <div style="font-weight:800; font-size:1.1rem; color:#fff;">${e.title}</div>
-                                <div style="font-weight:800; color:var(--primary); font-size:1rem;">${timeStr}</div>
-                            </div>
-                            <div class="text-sm text-muted" style="display:flex; align-items:center; gap:6px;">
-                                <i data-lucide="map-pin" size="14"></i> <span>${e.location}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        },
-        openNavigation() {
-            const today = new Date().setHours(0, 0, 0, 0);
-            const routeEvents = app.state.events.filter(e => {
-                const ed = new Date(e.start).setHours(0, 0, 0, 0);
-                return ed === today && e.location && e.location.trim().length > 0;
-            }).sort((a, b) => new Date(a.start) - new Date(b.start));
-
-            if (routeEvents.length === 0) { alert("Keine Ziele für heute!"); return; }
-            const origin = encodeURIComponent(this.currentLocation || "");
-            const destinations = routeEvents.map(e => encodeURIComponent(e.location)).join('/');
-            window.open(`https://www.google.com/maps/dir/${origin}/${destinations}`, '_blank');
-        },
-        close() {
-            const c = document.getElementById('view-drive');
-            if (c) c.classList.add('hidden');
-            if (app.releaseWakeLock) app.releaseWakeLock();
-            app.navigateTo('dashboard');
         }
     },
 
@@ -4608,66 +4139,45 @@ const app = {
             if (!o || !c) return;
             o.classList.remove('hidden');
 
-            // Hide top bar while modal is open to keep view clean
-            const topBar = document.querySelector('.top-bar');
-            if (topBar) topBar.style.visibility = 'hidden';
-
             // Push history state so back button closes modal
             window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
 
             if (type === 'addContact') {
-                const con = data.id ? data : { name: '', phone: '', email: '', address: '', homepage: '', type: (app.state.ui && app.state.ui.dashboardMode) || 'business', shared: false };
-                app.editingId = con.id || null;
                 c.innerHTML = `
                     <div style="padding:24px;">
-                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> ${app.editingId ? 'Kontakt bearbeiten' : 'Business Kontakt'}</h3>
+                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> Neuer Kontakt</h3>
+                        <div class="form-group">
+                            <label class="form-label">Kategorie</label>
+                            <select id="newContactCategory" class="form-input">
+                                <option value="private">Privat</option>
+                                <option value="business">Business</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label class="form-label">Name / Firma</label>
-                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname" value="${con.name}">
+                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname">
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div class="form-group">
                                 <label class="form-label">Telefon</label>
-                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789" value="${con.phone}">
+                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">E-Mail</label>
-                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de" value="${con.email}">
+                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Adresse / Standort</label>
-                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt" value="${con.address}">
+                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Homepage (URL)</label>
-                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de" value="${con.homepage || ''}">
-                        </div>
-                        <div class="form-group" ${((app.state.ui && app.state.ui.dashboardMode) === 'private' && !app.editingId) ? 'style="display:none;"' : ''}>
-                            <label class="form-label">Kategorie</label>
-                            <div style="display:flex; gap:10px; margin-top:5px;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border); ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}">
-                                    <input type="radio" name="contactType" value="business" ${con.type === 'business' ? 'checked' : ''}> 
-                                    <span>Business</span>
-                                </label>
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-                                    <input type="radio" name="contactType" value="private" ${con.type === 'private' ? 'checked' : ''}> 
-                                    <span>Privat</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
-                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                <input type="checkbox" id="contactShared" value="true" ${con.shared ? 'checked' : ''} style="width:18px; height:18px;">
-                                <div>
-                                    <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards sichtbar</div>
-                                    <div class="text-xs text-muted">Kontakt erscheint privat & geschäftlich</div>
-                                </div>
-                            </label>
+                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de">
                         </div>
                         <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> ${app.editingId ? 'Änderungen speichern' : 'Speichern'}</button>
+                            <button class="btn btn-primary" onclick="app.contacts.submit()"><i data-lucide="save"></i> Speichern</button>
                         </div>
                     </div>`;
             }
@@ -4687,17 +4197,28 @@ const app = {
                                 <input id="newTaskTitle" class="form-input" value="${title}" placeholder="Was einkaufen? (z.B. Milch)">
                                 <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
                             </div>
+                            
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size:0.75rem;">Kategorie</label>
+                                    <select id="taskCategorySelect" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                        <option value="private">Privat / Familie</option>
+                                        <option value="business">Business</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size:0.75rem;">Sichtbarkeit</label>
+                                    <select id="taskVisibility" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                        <option value="private">Nur ich</option>
+                                        <option value="team">Team Sichtbarkeit</option>
+                                        <option value="public">Öffentlich</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <!-- Hidden Category Input -->
                             <input type="hidden" name="taskCategory" value="shopping">
 
-                            <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 15px 0;">
-                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                    <input type="checkbox" id="newTaskShared" checked style="width:18px; height:18px;">
-                                    <div>
-                                        <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
-                                    </div>
-                                </label>
-                            </div>
                             <div class="form-group">
                                 <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
                             </div>
@@ -4716,8 +4237,26 @@ const app = {
                                 <button class="btn-secondary" onclick="app.voice.listenTo('newTaskTitle')"><i data-lucide="mic"></i></button>
                             </div>
                             
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size:0.75rem;">Kategorie</label>
+                                    <select id="taskCategorySelect" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                        <option value="private">Privat / Familie</option>
+                                        <option value="business">Business</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" style="font-size:0.75rem;">Sichtbarkeit</label>
+                                    <select id="taskVisibility" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                        <option value="private">Nur ich</option>
+                                        <option value="team">Team Sichtbarkeit</option>
+                                        <option value="public">Öffentlich</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="form-group">
-                                <label class="form-label">Liste</label>
+                                <label class="form-label" style="font-size:0.75rem;">Liste</label>
                                 <div style="display:flex; gap:10px;">
                                     <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
                                         <input type="radio" name="taskCategory" value="todo" checked> To-Do
@@ -4728,14 +4267,6 @@ const app = {
                                 </div>
                             </div>
 
-                            <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 15px 0;">
-                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                                    <input type="checkbox" id="newTaskShared" checked style="width:18px; height:18px;">
-                                    <div>
-                                        <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
-                                    </div>
-                                </label>
-                            </div>
                             <div class="form-group">
                                 <label><input type="checkbox" id="newTaskUrgent"> 🔥 Dringend?</label>
                             </div>
@@ -4849,8 +4380,7 @@ const app = {
                 const ph = data.phone || '';
                 const em = data.email || '';
                 const no = data.notes || ''; // New Notes Field
-                const currentMode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-                const finalType = data.type || (app.editingId ? 'business' : currentMode);
+                const cat = data.category || 'private'; // Category Field
 
                 c.innerHTML = `
                 <div style="padding:20px;max-height:80vh;overflow-y:auto;">
@@ -4864,6 +4394,24 @@ const app = {
                     <div class="form-group" style="display:flex;gap:5px;">
                         <input id="evtTitle" class="form-input" value="${t}" placeholder="Titel (z.B. Zahnarzt)">
                         <button class="btn-secondary" onclick="app.voice.listenTo('evtTitle')"><i data-lucide="mic"></i></button>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Kategorie</label>
+                            <select id="evtCategory" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private" ${cat === 'private' ? 'selected' : ''}>Privat / Familie</option>
+                                <option value="business" ${cat === 'business' ? 'selected' : ''}>Business</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Sichtbarkeit</label>
+                            <select id="evtVisibility" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private">Nur ich</option>
+                                <option value="team">Team Sichtbarkeit</option>
+                                <option value="public">Öffentlich</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -4883,53 +4431,6 @@ const app = {
 
                     <div class="form-group">
                         <textarea id="evtNotes" class="form-input" rows="3" placeholder="Bemerkungen / Notizen...">${no}</textarea>
-                    </div>
-
-                    <div class="form-group" ${((app.state.ui && app.state.ui.dashboardMode) === 'private' && !app.editingId) ? 'style="display:none;"' : ''}>
-                        <label class="form-label">Kategorie</label>
-                        <div style="display:grid; grid-template-columns: ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? '1fr' : '1fr 1fr'}; gap:10px; margin-top:8px;">
-                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(59, 130, 246, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${finalType === 'business' ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s; ${(app.state.ui && app.state.ui.dashboardMode) === 'private' ? 'display:none;' : ''}" id="labelTypeBusiness">
-                                <i data-lucide="briefcase" style="color:${finalType === 'business' ? 'var(--primary)' : 'var(--text-muted)'}"></i>
-                                <span style="font-size:0.8rem; font-weight:700; color:${finalType === 'business' ? 'white' : 'var(--text-muted)'}">Business</span>
-                                <input type="radio" name="evtType" value="business" ${finalType === 'business' ? 'checked' : ''} style="display:none;" 
-                                    onchange="this.parentElement.style.borderColor='var(--primary)'; this.parentElement.style.background='rgba(59, 130, 246, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='var(--primary)'; 
-                                    document.getElementById('labelTypePrivate').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypePrivate').style.background='rgba(255,255,255,0.05)'; 
-                                    document.getElementById('labelTypePrivate').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypePrivate').querySelector('i').style.color='var(--text-muted)';
-                                    document.getElementById('mixedToggleContainer').style.display='none';">
-                            </label>
-                            <label style="display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; background:rgba(16, 185, 129, 0.05); padding:15px 10px; border-radius:16px; border:2px solid ${(finalType === 'private' || finalType === 'mixed') ? '#10b981' : 'rgba(255,255,255,0.05)'}; transition:all 0.3s;" id="labelTypePrivate">
-                                <i data-lucide="users" style="color:${(finalType === 'private' || finalType === 'mixed') ? '#10b981' : 'var(--text-muted)'}"></i>
-                                <span style="font-size:0.8rem; font-weight:700; color:${(finalType === 'private' || finalType === 'mixed') ? 'white' : 'var(--text-muted)'}">Privat / Familie</span>
-                                <input type="radio" name="evtType" value="private" ${(finalType === 'private' || finalType === 'mixed') ? 'checked' : ''} style="display:none;" 
-                                    onchange="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='rgba(16, 185, 129, 0.1)'; this.parentElement.querySelector('span').style.color='white'; this.parentElement.querySelector('i').style.color='#10b981'; 
-                                    document.getElementById('labelTypeBusiness').style.borderColor='rgba(255,255,255,0.05)'; document.getElementById('labelTypeBusiness').style.background='rgba(255,255,255,0.05)'; 
-                                    document.getElementById('labelTypeBusiness').querySelector('span').style.color='var(--text-muted)'; document.getElementById('labelTypeBusiness').querySelector('i').style.color='var(--text-muted)';
-                                    document.getElementById('mixedToggleContainer').style.display='block';">
-                            </label>
-                        </div>
-                    </div>
-
-                    <div id="mixedToggleContainer" style="display: ${(data.type === 'private' || data.type === 'mixed') ? 'block' : 'none'}; margin-bottom: 20px; background: rgba(59, 130, 246, 0.05); padding: 12px; border-radius: 12px; border: 1px dashed rgba(59, 130, 246, 0.3);">
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" id="evtMixed" ${data.type === 'mixed' ? 'checked' : ''} style="width:18px; height:18px;">
-                            <div>
-                                <div style="font-weight:600; font-size:0.9rem;">Im Business-Dashboard anzeigen</div>
-                                <div style="font-size:0.75rem; color:var(--text-muted);">Erlaubt es, diesen privaten Termin auch in der Business-Ansicht zu sehen.</div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px;">
-                        <label class="form-label" style="display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="eye" size="16"></i> Team-Sichtbarkeit
-                        </label>
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-top:10px;">
-                            <input type="checkbox" id="evtShared" ${data.shared !== false ? 'checked' : ''} style="width:20px; height:20px;">
-                            <div>
-                                <div style="font-weight:600; font-size:0.9rem;">Mit Team teilen (Sync)</div>
-                                <div style="font-size:0.75rem; color:var(--text-muted);">Wenn deaktiviert, bleibt dieser Termin nur auf deinem Gerät.</div>
-                            </div>
-                        </label>
                     </div>
 
                     <div class="form-group">
@@ -4991,7 +4492,7 @@ const app = {
                 const amount = data.amount || '';
                 c.innerHTML = `
                 <div style="padding:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:var(--bg-card); padding:10px 0; border-bottom:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; position:sticky; top:0; background:var(--bg-card); z-index:10; padding:10px 0; border-bottom:1px solid var(--border);">
                         <h3 style="margin:0;">Ausgabe erfassen</h3>
                         <button class="btn btn-primary btn-small" onclick="app.modals.submitExpense()">▼ Speichern</button>
                     </div>
@@ -5002,6 +4503,24 @@ const app = {
                             <button class="btn-secondary" onclick="app.voice.listenTo('expDesc')" title="Spracheingabe"><i data-lucide="mic"></i></button>
                         </div>
                     </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Kategorie</label>
+                            <select id="expCategory" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private">Privat / Familie</option>
+                                <option value="business">Business</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Sichtbarkeit</label>
+                            <select id="expVisibility" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private">Nur ich</option>
+                                <option value="team">Team Sichtbarkeit</option>
+                                <option value="public">Öffentlich</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <div class="form-group">
                             <label class="form-label">Betrag (€)</label>
@@ -5012,18 +4531,10 @@ const app = {
                             <input type="date" id="expDate" class="form-input" value="${today}">
                         </div>
                     </div>
-                    <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom:15px;">
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" id="expShared" checked style="width:18px; height:18px;">
-                            <div>
-                                <div style="font-weight:600; font-size:0.85rem;">In beiden Dashboards & Sync</div>
-                            </div>
-                        </label>
-                    </div>
                     <div class="form-group">
                         <label><input type="checkbox" id="expUrgent"> 🔥 Wichtig / Dringend</label>
                     </div>
-                    <div style="background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px;">
+                    <div style="position: sticky; bottom: -20px; background: var(--bg-card); padding-top: 10px; padding-bottom: 20px; border-top: 1px solid var(--border); margin-top: 20px; margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px;">
                          <button class="btn btn-primary" onclick="app.modals.submitExpense()" style="width:100%;">Speichern</button>
                     </div>
 
@@ -5226,13 +4737,9 @@ const app = {
                 const todayStr = now.toISOString().split('T')[0];
                 const dateDisplay = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
                 // --- DATA ---
                 const events = (app.state.events || [])
-                    .filter(e => {
-                        const eventType = e.type || 'business';
-                        return e.start.startsWith(todayStr) && (eventType === mode || eventType === 'mixed');
-                    })
+                    .filter(e => e.start.startsWith(todayStr))
                     .sort((a, b) => new Date(a.start) - new Date(b.start));
 
                 const tasksOpen = (app.state.tasks || []).filter(t => !t.done && t.category !== 'shopping');
@@ -5250,23 +4757,13 @@ const app = {
                     .reduce((sum, d) => sum + d.value, 0);
                 const waterGoal = app.state.hydrationGoal || 2.5;
 
-                const householdTasks = (app.state.household || []);
-                const householdOpen = householdTasks.filter(h => !h.lastDone || new Date(h.lastDone).toDateString() !== now.toDateString());
-
-                const mealPlan = app.state.meals || [];
-                const todayMeal = mealPlan[(now.getDay() + 6) % 7];
-
-                const shoppingCount = (app.state.tasks || []).filter(t => !t.done && t.category === 'shopping').length;
-                const quickNotes = (app.state.quickNotes || []);
-                const latestNote = quickNotes.length > 0 ? quickNotes[0].content : null;
-
                 // --- UI ---
                 c.innerHTML = `
                 <div style="padding: 20px 20px 80px 20px; max-height: 85vh; overflow-y: auto;">
                     <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted);" onclick="app.modals.close()"><i data-lucide="x"></i></button>
                     
                     <div style="text-align: center; margin-bottom: 25px;">
-                        <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Team & Tages-Check</h2>
+                        <h2 style="font-size: 1.8rem; margin-bottom: 5px;">Tages-Check</h2>
                         <div class="text-muted">${dateDisplay}</div>
                     </div>
 
@@ -5291,7 +4788,6 @@ const app = {
                                     <div style="display: flex; align-items: center; gap: 15px; opacity: ${isPast ? 0.5 : 1}; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px;">
                                         <div style="background: var(--surface); padding: 5px 10px; border-radius: 8px; font-weight: bold; min-width: 60px; text-align: center;">${time}</div>
                                         <div>
-                                            <div style="font-size:0.6rem; color:${e.type === 'private' ? '#10b981' : 'var(--primary)'}; text-transform:uppercase; font-weight:800; margin-bottom:1px;">${e.type === 'private' ? 'Familie' : 'Business'}</div>
                                             <div style="font-weight: 600;">${e.title}</div>
                                             ${e.location ? `<div class="text-xs text-muted">📍 ${e.location}</div>` : ''}
                                         </div>
@@ -5314,41 +4810,6 @@ const app = {
                             </div>
                         </div>
                     </div>
-
-                    <div style="margin-bottom: 25px;">
-                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="users" size="18" class="text-success"></i> Team / Haushalt</h4>
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <i data-lucide="home" class="text-success" size="18"></i>
-                                    <span>Haushalt</span>
-                                </div>
-                                <div style="font-weight: bold;">${householdOpen.length} Offen</div>
-                            </div>
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <i data-lucide="shopping-cart" class="text-primary" size="18"></i>
-                                    <span>Einkaufsliste</span>
-                                </div>
-                                <div style="font-weight: bold;">${shoppingCount} Artikel</div>
-                            </div>
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <i data-lucide="utensils" class="text-accent" size="18"></i>
-                                    <span>Heute Menü</span>
-                                </div>
-                                <div style="font-weight: bold;">${todayMeal || 'Kein Plan'}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${latestNote ? `
-                    <div style="margin-bottom: 25px;">
-                        <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="sticky-note" size="18" class="text-primary"></i> Letzte Notiz</h4>
-                        <div style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; font-size: 0.9rem; line-height: 1.4;">
-                            ${latestNote}
-                        </div>
-                    </div>` : ''}
 
                     <div style="margin-bottom: 25px;">
                         <h4 style="margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i data-lucide="bar-chart-2" size="18" class="text-accent"></i> Status</h4>
@@ -5432,6 +4893,24 @@ const app = {
                         <label class="form-label">Name</label>
                         <input id="habitName" class="form-input" placeholder="z.B. Hund laufen">
                     </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Kategorie</label>
+                            <select id="habitCategory" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private">Privat / Familie</option>
+                                <option value="business">Business</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.75rem;">Sichtbarkeit</label>
+                            <select id="habitVisibility" class="form-input" style="font-size:0.85rem; padding:8px;">
+                                <option value="private">Nur ich</option>
+                                <option value="team">Team Sichtbarkeit</option>
+                                <option value="public">Öffentlich</option>
+                            </select>
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <div class="form-group">
                             <label class="form-label">Uhrzeit (Optional)</label>
@@ -5457,6 +4936,54 @@ const app = {
                     </div>
                     <button class="btn btn-primary" onclick="app.modals.submitHabit()" style="margin-top:10px;width:100%;">Speichern</button>
                 </div>`;
+            } else if (type === 'editContact') {
+                const con = data;
+                c.innerHTML = `
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3><i data-lucide="edit-2" class="text-primary"></i> Kontakt bearbeiten</h3>
+                        <button onclick="app.modals.close()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem;"><i data-lucide="x"></i></button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input id="editContactName" class="form-input" value="${con.name}" placeholder="Name">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Telefon</label>
+                            <input id="editContactPhone" class="form-input" value="${con.phone || ''}" placeholder="Telefon" style="font-size:1rem; padding:12px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">E-Mail</label>
+                            <input id="editContactEmail" class="form-input" type="email" value="${con.email || ''}" placeholder="Email" style="font-size:1rem; padding:12px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Adresse / Standort</label>
+                        <textarea id="editContactAddress" class="form-input" placeholder="Straße und Hausnummer&#10;Postleitzahl Stadt" style="font-size:1rem; padding:12px; min-height:80px; resize:vertical;">${con.address || ''}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Website / Homepage</label>
+                        <input id="editContactHomepage" class="form-input" value="${con.homepage || ''}" placeholder="https://www.beispiel.de" style="font-size:1rem; padding:12px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Kategorie</label>
+                        <select id="editContactCategory" class="form-input" style="font-size:0.85rem; padding:8px;">
+                            <option value="private" ${(con.category || 'private') === 'private' ? 'selected' : ''}>Privat / Familie</option>
+                            <option value="business" ${(con.category || 'private') === 'business' ? 'selected' : ''}>Business</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="btn" style="flex:1;" onclick="app.modals.close()">Abbrechen</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="app.contacts.saveEdit(${con.id})"><i data-lucide="save"></i> Speichern</button>
+                    </div>
+                </div>`;
             } else if (type === 'viewContactCard') {
                 const con = data;
                 c.innerHTML = `
@@ -5465,7 +4992,9 @@ const app = {
                         <button onclick="app.modals.close()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.2); border:none; color:white; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="x" size="16"></i></button>
                         <div style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; font-size:2rem; font-weight:bold; color:white; backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.3);">${con.name.charAt(0).toUpperCase()}</div>
                         <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">${con.name}</h2>
-                        <div style="font-size:0.7rem; opacity:0.8; text-transform:uppercase; margin-top:4px; font-weight:700; letter-spacing:1px;">Business Partner</div>
+                        <div style="font-size:0.7rem; opacity:0.8; text-transform:uppercase; margin-top:4px; font-weight:700; letter-spacing:1px;">
+                            ${con.category === 'business' ? '🏢 Business Partner' : '👤 Kontakt'}
+                        </div>
                     </div>
 
                     <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
@@ -5506,9 +5035,11 @@ const app = {
                             <i data-lucide="globe"></i> Website öffnen
                         </button>` : ''}
 
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button class="btn" style="flex:1; background:rgba(59, 130, 246, 0.1); height:32px; font-size:0.75rem; color:var(--primary); font-weight:700;" onclick="app.modals.open('addContact', app.state.contacts.find(c => c.id === ${con.id}))"><i data-lucide="pencil" size="12"></i> Bearbeiten</button>
-                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.05); height:32px; font-size:0.75rem; color:var(--danger);" onclick="if(confirm('Entfernen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="12"></i> Löschen</button>
+                        <div style="display:flex; gap:10px; margin-top:12px; padding:0 10px;">
+                            <button class="btn" style="flex:1; background:rgba(59, 130, 246, 0.3); border:1px solid rgba(59, 130, 246, 0.6); height:44px; font-size:0.8rem; font-weight:600; color:var(--primary); border-radius:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="app.contacts.editContact(${con.id})"><i data-lucide="edit" size="18"></i> Bearbeiten</button>
+                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.3); border:1px solid rgba(239, 68, 68, 0.5); height:44px; font-size:0.8rem; font-weight:600; color:#ff6b6b; border-radius:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="if(confirm('Kontakt wirklich löschen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="18"></i> Löschen</button>
+                        </div>
+                            <button class="btn" style="flex:1; background:rgba(239, 68, 68, 0.05); height:32px; font-size:0.7rem; color:var(--danger);" onclick="if(confirm('Entfernen?')) { app.contacts.delete(${con.id}); app.modals.close(); }"><i data-lucide="trash-2" size="12"></i> Löschen</button>
                         </div>
                     </div>
                 </div>`;
@@ -5517,7 +5048,6 @@ const app = {
                 const cards = [
                     { id: 'dashboardAiCard', name: 'AI Assistant', icon: 'sparkles' },
                     { id: 'dashboardCommunicationCard', name: 'Kommunikation', icon: 'message-square' },
-                    { id: 'dashboardPrivateCommCard', name: 'Privat-Chat & Familie', icon: 'heart' },
                     { id: 'dashboardStatusCard', name: 'Tages-Check', icon: 'clipboard-check' },
                     { id: 'dashboardEventsCard', name: 'Zeitplan / Termine', icon: 'calendar' },
                     { id: 'dashboardTasksCard', name: 'Aufgaben (To-Do)', icon: 'check-square' },
@@ -5528,41 +5058,29 @@ const app = {
                     { id: 'dashboardAlarmsCard', name: 'Wecker', icon: 'alarm-clock' },
                     { id: 'dashboardDriveCard', name: 'Drive / Fahrt-Modus', icon: 'navigation' },
                     { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' },
-                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' },
-                    { id: 'dashboardTimeTrackerCard', name: 'Zeit-Tracker', icon: 'clock' },
-                    { id: 'dashboardNotesCard', name: 'Schnell-Notizen', icon: 'sticky-note' },
-                    { id: 'dashboardProjectsCard', name: 'Projekte', icon: 'briefcase' },
-                    { id: 'dashboardMeetingsCard', name: 'Meeting Protokolle', icon: 'users-2' },
-                    { id: 'dashboardHouseholdCard', name: 'Haushalt', icon: 'home' },
-                    { id: 'dashboardMealPlanCard', name: 'Wochenmenü', icon: 'utensils' },
-                    { id: 'dashboardJournalCard', name: 'Journal', icon: 'book-open' }
+                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' }
                 ];
 
                 c.innerHTML = `
-                <div style="padding:20px; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling: touch;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                        <h3 style="margin:0;"><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
-                        <button onclick="app.modals.close()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x"></i></button>
-                    </div>
+                <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                    <h3><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
                     <p class="text-muted text-sm mb-4">Wähle aus, welche Karten angezeigt werden sollen.</p>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; flex-direction:column; gap:10px;">
                         ${cards.map(card => {
                     const isVisible = !hidden.includes(card.id);
                     return `
-                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:18px; margin:0; cursor:pointer; background:rgba(255,255,255,0.03); border:1px solid ${isVisible ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.05)'}; transition:all 0.2s;" onclick="app.dashboard.toggleCardVisibility('${card.id}')">
-                                <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                                    <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                                        <i data-lucide="${card.icon}" class="${isVisible ? 'text-primary' : 'text-muted'}" size="20"></i>
-                                    </div>
-                                    <span style="font-weight:600; font-size:1rem; ${!isVisible ? 'opacity:0.5' : ''}">${card.name}</span>
+                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:15px; margin:0; cursor:pointer;" onclick="app.dashboard.toggleCardVisibility('${card.id}')">
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <i data-lucide="${card.icon}" class="text-muted"></i>
+                                    <span style="font-weight:600; ${!isVisible ? 'opacity:0.5' : ''}">${card.name}</span>
                                 </div>
-                                <div class="checkbox-circle ${isVisible ? 'checked' : ''}" style="width:28px; height:28px; flex-shrink:0;"></div>
+                                <div class="checkbox-circle ${isVisible ? 'checked' : ''}" style="width:24px; height:24px;"></div>
                             </div>
                             `;
                 }).join('')}
                     </div>
-                    <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:30px; width:100%; height:52px; font-weight:700; font-size:1.1rem; border-radius:14px;">Fertig</button>
-                    ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
+                     <button class="btn btn-primary" onclick="app.modals.close()" style="margin-top:20px;width:100%;">Fertig</button>
+                     ${window.lucide ? '<script>lucide.createIcons();</script>' : ''}
                 </div>`;
             } else if (type === 'aiBriefing') {
                 c.innerHTML = `
@@ -5571,136 +5089,123 @@ const app = {
                     ${data.html}
                     <button class="btn btn-primary" style="width:100%; margin-top:15px; padding:12px;" onclick="app.modals.close(); window.speechSynthesis.cancel();">Danke, Verstanden</button>
                 </div>`;
-            } else if (type === 'switchTeams') {
-                const teams = app.state.user.savedTeams || [];
-                const currentKey = app.state.user.teamName;
-
+            } else if (type === 'householdAdd') {
                 c.innerHTML = `
-                    <div style="padding:24px; width:100%; max-width:450px;">
-                    <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="users" class="text-primary"></i> Team Manager</h3>
-                    <p class="text-muted text-sm mb-4">Umschalten zwischen deinen verbundenen Teams oder Familien-Bündnissen.</p>
-                    
-                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
-                        ${teams.map(t => `
-                            <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:15px; margin:0; cursor:pointer; border:2px solid ${t.teamName === currentKey ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; background: ${t.teamName === currentKey ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)'}" onclick="app.teams.switch(${t.id})">
-                                <div style="display:flex; align-items:center; gap:15px;">
-                                    <div style="width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;">
-                                        <i data-lucide="${t.persona === 'family' ? 'user' : (t.persona === 'business' ? 'briefcase' : 'layers')}" size="18" class="text-muted"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:700;">${t.label}</div>
-                                        <div class="text-xs text-muted" style="letter-spacing:0.5px; text-transform:uppercase;">Key: ${t.teamName}</div>
-                                    </div>
-                                </div>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    ${t.teamName === currentKey ? '<span style="font-size:0.6rem; background:var(--primary); padding:2px 6px; border-radius:10px; font-weight:800;">AKTIV</span>' : ''}
-                                    <button class="btn-small" onclick="event.stopPropagation(); app.teams.remove(${t.id})" style="background:none; border:none; color:var(--danger); opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
-                                </div>
-                            </div>
-                        `).join('')}
+                <div style="padding:20px;">
+                    <h3><i data-lucide="home" class="text-success"></i> Haushaltsaufgabe</h3>
+                    <div class="form-group">
+                        <label class="form-label">Aufgabe</label>
+                        <input id="householdTask" class="form-input" placeholder="z.B. Wäsche waschen">
                     </div>
-
-                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
-                        <h4 style="font-size:0.9rem; margin-bottom:15px; display:flex; align-items:center; gap:8px;"><i data-lucide="plus-circle" size="16"></i> Team hinzufügen</h4>
-                        <div class="form-group">
-                            <label class="form-label">Name des Teams (Anzeige)</label>
-                            <input id="newTeamLabel" class="form-input" placeholder="z.B. Firma XY oder Familie Müller">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Sync-Key (Genauer Team-Namen)</label>
-                            <input id="newTeamKey" class="form-input" placeholder="Genau wie bei deinem Partner">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Modus</label>
-                            <select id="newTeamPersona" class="form-input">
-                                <option value="mixed">Mixed (Business & Familie)</option>
-                                <option value="business">Nur Business</option>
-                                <option value="family">Nur Familie</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="app.teams.add()" style="width:100%; margin-top:10px;">Verbindung herstellen</button>
+                    <div class="form-group">
+                        <label class="form-label">Kategorie</label>
+                        <select id="householdCategory" class="form-input">
+                            <option value="cleaning">Putzen</option>
+                            <option value="laundry">Wäsche</option>
+                            <option value="cooking">Kochen</option>
+                            <option value="shopping">Einkaufen</option>
+                            <option value="maintenance">Reparatur</option>
+                            <option value="garden">Garten</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
                     </div>
-
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Datum (Optional)</label>
+                            <input type="date" id="householdDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Uhrzeit (Optional)</label>
+                            <input type="time" id="householdTime" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="householdUrgent"> 🔥 Dringend?</label>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="btn" style="flex:1" onclick="app.modals.close()">Abbrechen</button>
+                        <button class="btn btn-primary" style="flex:1" onclick="app.modals.submitHousehold()">Speichern</button>
                     </div>
                 </div>`;
-            }
-            else if (type === 'importContactsReview') {
-                const contacts = data.rawContacts || [];
-                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+            } else if (type === 'importBusiness') {
+                c.innerHTML = `
+                <div style="padding:28px; max-width: 550px; background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(0, 0, 0, 0.98)); border-radius: 28px;">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+                        <div style="width:52px; height:52px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow: 0 8px 20px rgba(255,255,255,0.1);">
+                            <i data-lucide="sparkles" color="white" size="24"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Smart Business Import</h2>
+                            <p class="text-muted text-sm">Präzise Datenextraktion mit AI</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 1: Website Link</label>
+                            <input id="importUrl" class="form-input" placeholder="https://www.firma.de" style="border-radius:12px; background:rgba(0,0,0,0.5);">
+                        </div>
 
-                let listHtml = contacts.map((c, idx) => {
-                    const name = c.name && c.name[0] ? c.name[0] : 'Unbekannt';
-                    const phone = c.tel && c.tel[0] ? c.tel[0] : '';
-                    const email = c.email && c.email[0] ? c.email[0] : '';
-                    const address = c.address && c.address[0] ? c.address[0] : '';
-
-                    return `
-                        <div class="import-review-item" data-name="${name}" data-phone="${phone}" data-email="${email}" data-address="${address}"
-                             style="padding:15px; background:rgba(255,255,255,0.04); border-radius:16px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.08); transition:all 0.2s;">
-                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
-                                <div style="font-weight:700; color:white; font-size:1.1rem;">${name}</div>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <input type="checkbox" checked class="import-check" style="width:20px; height:20px; cursor:pointer;">
-                                </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label" style="font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6;">Schritt 2: Deep Analysis (Empfohlen)</label>
+                            <p class="text-xs text-muted" style="margin-bottom:8px;">Kopiere den Text aus dem <strong>Impressum</strong> oder <strong>Footer</strong> hier hinein für 100% Genauigkeit:</p>
+                            <textarea id="importManualText" class="form-input" rows="4" placeholder="Kopierte Daten hier einfügen..." style="background:rgba(0,0,0,0.5); border-radius:12px; font-size:0.85rem;"></textarea>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="app.businessSearch.importFromUrl()" style="width:100%; margin-top:20px; height:48px; border-radius:12px; border-width:2px; font-weight:bold;">
+                            <i data-lucide="scan-search"></i> Daten jetzt analysieren
+                        </button>
+                    </div>
+                    
+                    <div id="importResults" class="hidden" style="animation: fadeIn 0.4s ease-out;">
+                        <div style="display:flex; flex-direction:column; gap:14px; background: rgba(59, 130, 246, 0.05); padding: 20px; border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Name / Firma</label>
+                                <input id="impName" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                             </div>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                                <div>
-                                    <label class="text-xs text-muted" style="display:block; margin-bottom:4px; text-transform:uppercase; font-weight:700;">Kategorie</label>
-                                    <select class="form-input import-type" style="padding:8px; font-size:0.85rem; height:40px;">
-                                        <option value="business" ${mode === 'business' ? 'selected' : ''}>Business</option>
-                                        <option value="private" ${mode === 'private' ? 'selected' : ''}>Privat</option>
-                                    </select>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Telefon</label>
+                                    <input id="impPhone" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                                 </div>
-                                <div style="display:flex; align-items:center; gap:8px; margin-top:20px;">
-                                    <input type="checkbox" class="import-shared" style="width:18px; height:18px; cursor:pointer;" id="shared_${idx}">
-                                    <label for="shared_${idx}" class="text-xs text-muted" style="cursor:pointer; font-weight:600;">In beiden Ansichten</label>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Email</label>
+                                    <input id="impEmail" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                                 </div>
                             </div>
-                            <div class="text-xs text-muted" style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-wrap:wrap; gap:10px;">
-                                ${phone ? `<span><i data-lucide="phone" size="10"></i> ${phone}</span>` : ''}
-                                ${email ? `<span><i data-lucide="mail" size="10"></i> ${email}</span>` : ''}
-                                ${address ? `<span><i data-lucide="map-pin" size="10"></i> ${address}</span>` : ''}
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Adresse / Standort</label>
+                                <input id="impAddress" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                             </div>
-                        </div >
-                    `;
-                }).join('');
-
-                c.innerHTML = `
-                    <div style="padding:24px; max-height:85vh; display:flex; flex-direction:column; width:100%; max-width:500px;">
-                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
-                            <div>
-                                <h3 style="display:flex; align-items:center; gap:10px; margin:0;">
-                                    <i data-lucide="download" class="text-primary"></i> Kontakte prüfen
-                                </h3>
-                                <p class="text-xs text-muted" style="margin-top:5px;">${contacts.length} Kontakte gefunden. Wähle aus, welche du importieren möchtest.</p>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Website</label>
+                                <input id="impUrl" class="form-input" style="background:rgba(0,0,0,0.4); border-radius:10px;">
                             </div>
-                            <button onclick="app.modals.close()" style="background:rgba(255,255,255,0.05); border:none; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="x" size="18"></i></button>
-                        </div>
-                        
-                        <div style="flex:1; overflow-y:auto; margin-bottom:20px; padding-right:8px; -webkit-overflow-scrolling: touch;" id="importReviewList">
-                            ${listHtml}
-                        </div>
-                        
-                        <div style="display:flex; justify-content:end; gap:12px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1);">
-                            <button class="btn" style="flex:1;" onclick="app.modals.close()">Abbrechen</button>
-                            <button class="btn btn-primary" style="flex:2;" onclick="app.contacts.submitImportBatch()">
-                                <i data-lucide="check"></i> Alles Importieren
+                            <button class="btn btn-primary" style="width:100%; margin-top:8px; height:52px; font-size:1.1rem; border-radius:14px;" onclick="app.businessSearch.saveImported()">
+                                <i data-lucide="check-circle"></i> In Adressbuch speichern
                             </button>
                         </div>
-                    </div>`;
+                    </div>
+                    
+                    <div id="importLoading" class="hidden" style="text-align:center; padding:40px;">
+                        <div style="display:inline-block; margin-bottom:20px; position:relative;">
+                             <div class="spinner" style="width:60px; height:60px; border-width:4px;"></div>
+                             <i data-lucide="bot" size="24" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.8;" class="text-primary"></i>
+                        </div>
+                        <h4 style="margin-bottom:8px;">Extrahiere Business-Daten...</h4>
+                        <p class="text-muted text-sm">Die AI analysiert den Text auf Firmennamen, Nummern und Adressen.</p>
+                    </div>
+
+                    <div style="margin-top:24px; text-align:center; padding-top:20px; border-top: 1px solid rgba(255,255,255,0.05);">
+                         <button class="btn" style="background:transparent; border:none; color:var(--text-muted);" onclick="app.modals.close()">Abbrechen</button>
+                    </div>
+                </div>`;
             }
             if (window.lucide) lucide.createIcons();
         },
         close(fromHistory = false) {
             const o = document.getElementById('modalOverlay');
             if (o) o.classList.add('hidden');
-
-            // Restore top bar visibility (only if on dashboard)
-            const topBar = document.querySelector('.top-bar');
-            if (topBar && app.state.currentPage === 'dashboard') {
-                topBar.style.visibility = 'visible';
-                topBar.style.display = 'flex';
-            }
             app.editingId = null;
 
             // Create loop breaker
@@ -5721,7 +5226,17 @@ const app = {
                     if (hidden) cat = hidden.value;
                 }
 
-                app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat, document.getElementById('newTaskShared').checked);
+                const category = document.getElementById('taskCategorySelect')?.value || 'private';
+                const visibility = document.getElementById('taskVisibility')?.value || 'private';
+                const isShared = visibility !== 'private';
+                const shareType = visibility === 'private' ? 'private' : visibility;
+
+                if (isShared) {
+                    const confirmed = confirm(`Diesen ${cat === 'shopping' ? 'Einkauf' : 'Eintrag'} wirklich unter "${visibility}" TEILEN?`);
+                    if (!confirmed) return;
+                }
+
+                app.tasks.add(t, document.getElementById('newTaskUrgent').checked, cat, isShared, shareType);
                 this.close();
 
                 // Smart Navigation
@@ -5756,11 +5271,45 @@ const app = {
             const a = document.getElementById('expAmount').value;
             const date = document.getElementById('expDate').value;
             const u = document.getElementById('expUrgent').checked;
+            const category = document.getElementById('expCategory')?.value || 'private';
+            const visibility = document.getElementById('expVisibility')?.value || 'private';
+            const isShared = visibility !== 'private';
+
             if (d && a && date) {
-                app.finance.add(a, d, date, u, document.getElementById('expShared').checked);
+                if (isShared) {
+                    if (!confirm(`Diese Ausgabe wirklich unter "${visibility}" TEILEN?`)) return;
+                }
+                app.finance.add(a, d, date, u, category, isShared, visibility);
                 this.close();
                 app.navigateTo('dashboard');
                 app.dashboard.scrollToCard('dashboardFinanceCard');
+            }
+        },
+        submitHousehold() {
+            const task = document.getElementById('householdTask').value;
+            const category = document.getElementById('householdCategory').value;
+            const date = document.getElementById('householdDate').value;
+            const time = document.getElementById('householdTime').value;
+            const urgent = document.getElementById('householdUrgent').checked;
+
+            if (task) {
+                if (!app.state.household) app.state.household = [];
+                app.state.household.push({
+                    id: Date.now(),
+                    task: task,
+                    category: category,
+                    date: date || null,
+                    time: time || null,
+                    urgent: urgent,
+                    done: false,
+                    createdAt: new Date().toISOString()
+                });
+                app.saveState();
+                this.close();
+                app.renderDashboard();
+                app.navigateTo('dashboard');
+            } else {
+                alert("Bitte Aufgabe eingeben.");
             }
         },
         submitTeamMember() { const n = document.getElementById('teamMemberName').value; if (n) { app.team.addMember(n); this.close(); app.navigateTo('dashboard'); } },
@@ -5826,9 +5375,23 @@ const app = {
                 const time = document.getElementById('habitTime').value;
                 const urgent = document.getElementById('habitUrgent').checked;
                 const days = Array.from(document.querySelectorAll('input[name="habitDays"]:checked')).map(cb => parseInt(cb.value));
-                const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
+                const category = document.getElementById('habitCategory')?.value || 'private';
+                const visibility = document.getElementById('habitVisibility')?.value || 'private';
+
                 if (!app.state.habits) app.state.habits = [];
-                app.state.habits.push({ id: Date.now(), name, streak: 0, goal, time, days, urgent, history: [], type: mode });
+                app.state.habits.push({
+                    id: Date.now(),
+                    name,
+                    streak: 0,
+                    goal,
+                    time,
+                    days,
+                    urgent,
+                    history: [],
+                    category: category,
+                    isShared: visibility !== 'private',
+                    type: visibility
+                });
                 app.saveState();
                 app.habits.render();
                 app.renderDashboard();
@@ -5838,8 +5401,6 @@ const app = {
             }
         },
         submitEvent() {
-            const typeRadio = document.querySelector('input[name="evtType"]:checked');
-            const mixedCheck = document.getElementById('evtMixed');
             const data = {
                 title: document.getElementById('evtTitle').value,
                 date: document.getElementById('evtDate').value,
@@ -5849,10 +5410,16 @@ const app = {
                 email: document.getElementById('evtEmail').value,
                 notes: document.getElementById('evtNotes').value,
                 urgent: document.getElementById('evtUrgent').checked,
-                shared: document.getElementById('evtShared').checked,
-                type: typeRadio ? typeRadio.value : 'business'
+                category: document.getElementById('evtCategory')?.value || 'private',
+                visibility: document.getElementById('evtVisibility')?.value || 'private',
+                isShared: document.getElementById('evtVisibility')?.value !== 'private',
+                type: document.getElementById('evtVisibility')?.value || 'private'
             };
             if (data.title && data.date && data.time) {
+                if (data.isShared) {
+                    const confirmed = confirm(`Diesen Termin wirklich unter "${data.visibility}" TEILEN?`);
+                    if (!confirmed) return;
+                }
                 app.calendar.addEvent(data);
                 this.close();
                 app.navigateTo('dashboard');
@@ -5861,14 +5428,28 @@ const app = {
         }
     },
     contacts: {
-        add(n, p, e, a, h = '', type = 'business', shared = false) {
+        currentFilter: 'all', // Filter state for contacts
+        add(n, p, e, a, h = '') {
             if (!app.state.contacts) app.state.contacts = [];
-            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h, type: type, shared: shared });
+            app.state.contacts.push({ id: Date.now(), name: n, phone: p, email: e, address: a, homepage: h, category: 'private' });
             app.saveState();
             this.render();
             app.renderDashboard();
             app.modals.close(); // Close if open
-            app.navigateTo('contacts');
+            app.navigateTo('dashboard');
+        },
+        filterContacts(category) {
+            this.currentFilter = category;
+            // Update button styles
+            const allBtn = document.getElementById('contactTabAll');
+            const privBtn = document.getElementById('contactTabPrivate');
+            const bizBtn = document.getElementById('contactTabBusiness');
+            
+            if (allBtn) allBtn.style.background = category === 'all' ? 'var(--primary)' : '';
+            if (privBtn) privBtn.style.background = category === 'private' ? 'var(--primary)' : '';
+            if (bizBtn) bizBtn.style.background = category === 'business' ? 'var(--primary)' : '';
+            
+            this.render();
         },
         delete(id) {
             app.state.contacts = app.state.contacts.filter(c => c.id !== id);
@@ -5876,166 +5457,41 @@ const app = {
             this.render();
             app.renderDashboard();
         },
-        call(num) { if (num) window.location.href = `tel:${num} `; },
+        call(num) { if (num) window.location.href = `tel:${num}`; },
         whatsapp(num) { if (num) window.open(`https://wa.me/${num.replace(/\D/g, '')}`, '_blank'); },
         mail(email) { if (email) window.location.href = `mailto:${email}`; },
-        handleFileImport(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                if (file.name.toLowerCase().endsWith('.vcf')) {
-                    this.parseVCF(content);
-                } else if (file.name.toLowerCase().endsWith('.csv')) {
-                    this.parseCSV(content);
-                }
-            };
-            reader.readAsText(file);
-            input.value = ''; // Reset
-        },
-        parseVCF(vcf) {
-            const cards = vcf.split('BEGIN:VCARD');
-            const contacts = [];
-            cards.forEach(card => {
-                if (!card.trim()) return;
-                const lines = card.split(/\r?\n/);
-                let fn = '', tel = '', email = '', adr = '', org = '';
-                lines.forEach(line => {
-                    const upper = line.toUpperCase();
-                    if (upper.startsWith('FN:')) fn = line.substring(3).trim();
-                    else if (upper.startsWith('TEL')) {
-                        const pts = line.split(':');
-                        if (pts[1]) tel = pts[1].trim();
-                    }
-                    else if (upper.startsWith('EMAIL')) {
-                        const pts = line.split(':');
-                        if (pts[1]) email = pts[1].trim();
-                    }
-                    else if (upper.startsWith('ADR')) {
-                        const pts = line.split(':');
-                        if (pts[1]) adr = pts[1].replace(/;/g, ' ').trim();
-                    }
-                    else if (upper.startsWith('ORG')) {
-                        const pts = line.split(':');
-                        if (pts[1]) org = pts[1].replace(/;/g, ' ').trim();
-                    }
-                });
-
-                // If Full Name missing but Organization found, use ORG as name
-                if (!fn && org) fn = org;
-
-                if (fn) contacts.push({ name: [fn], tel: [tel], email: [email], address: [adr] });
-            });
-            if (contacts.length > 0) {
-                app.modals.open('importContactsReview', { rawContacts: contacts });
-            } else {
-                alert("Keine gültigen Kontakte in der vCard-Datei gefunden.");
-            }
-        },
-        parseCSV(csv) {
-            // Smarter CSV parser
-            const lines = csv.split(/\r?\n/);
-            const contacts = [];
-            let header = [];
-
-            lines.forEach((line, i) => {
-                const cols = line.split(/[;,]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
-                if (i === 0) {
-                    header = cols.map(c => c.toLowerCase());
-                    return;
-                }
-                if (!line.trim()) return;
-
-                let name = cols[0], tel = '', email = '', adr = '';
-
-                // Try to find columns by header names if possible
-                const nameIdx = header.findIndex(h => h.includes('name') || h.includes('firma'));
-                const telIdx = header.findIndex(h => h.includes('tel') || h.includes('phone') || h.includes('mobil'));
-                const emailIdx = header.findIndex(h => h.includes('mail'));
-                const adrIdx = header.findIndex(h => h.includes('adr') || h.includes('statt') || h.includes('ort'));
-
-                if (nameIdx !== -1) name = cols[nameIdx];
-                if (telIdx !== -1) tel = cols[telIdx];
-                if (emailIdx !== -1) email = cols[emailIdx];
-                if (adrIdx !== -1) adr = cols[adrIdx];
-
-                if (name) contacts.push({ name: [name], tel: [tel], email: [email], address: [adr] });
-            });
-            if (contacts.length > 0) {
-                app.modals.open('importContactsReview', { rawContacts: contacts });
-            } else {
-                alert("Keine gültigen Kontakte in der CSV-Datei gefunden.");
-            }
-        },
         async importBrowser() {
             try {
                 if ('contacts' in navigator && 'ContactsManager' in window) {
                     const props = ['name', 'email', 'tel', 'address'];
                     const contacts = await navigator.contacts.select(props, { multiple: true });
                     if (contacts.length > 0) {
-                        app.modals.open('importContactsReview', { rawContacts: contacts });
+                        contacts.forEach(c => {
+                            const name = c.name ? c.name[0] : 'Unbekannt';
+                            const phone = c.tel ? c.tel[0] : '';
+                            const email = c.email ? c.email[0] : '';
+                            if (phone && app.state.contacts.some(existing => existing.phone === phone)) return;
+                            this.add(name, phone, email, '', '');
+                        });
+                        alert(`${contacts.length} Kontakte erfolgreich importiert! ✨`);
                     }
-                } else {
-                    alert("Handy-Import wird von diesem Browser nicht unterstützt. Bitte nutze den Datei-Import (.vcf).");
                 }
             } catch (err) {
                 console.error("Contact Import Error:", err);
             }
         },
-        submitImportBatch() {
-            const items = document.querySelectorAll('.import-review-item');
-            let count = 0;
-            items.forEach(item => {
-                const checked = item.querySelector('.import-check').checked;
-                if (!checked) return;
-
-                const name = item.dataset.name;
-                const phone = item.dataset.phone;
-                const email = item.dataset.email;
-                const address = item.dataset.address;
-                const type = item.querySelector('.import-type').value;
-                const isShared = item.querySelector('.import-shared').checked;
-
-                // Avoid exact duplicates
-                if (phone && app.state.contacts.some(existing => existing.phone === phone && existing.name === name)) return;
-
-                app.state.contacts.push({
-                    id: Date.now() + Math.random(),
-                    name,
-                    phone,
-                    email,
-                    address,
-                    homepage: '',
-                    type,
-                    shared: isShared
-                });
-                count++;
-            });
-
-            app.saveState();
-            this.render();
-            app.renderDashboard();
-            app.modals.close();
-
-            if (count > 0) {
-                if (app.notifications) app.notifications.send("✅ Import erfolgreich", `${count} Kontakte wurden hinzugefügt.`);
-                else alert(`${count} Kontakte erfolgreich hinzugefügt! ✨`);
-            }
-        },
         search(q) {
             const list = document.getElementById('contactsList');
             if (!list) return;
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-
-            const contacts = (app.state.contacts || []).filter(c => {
-                const cType = c.type || 'business';
-                if (cType !== mode && !c.shared) return false;
-
-                return c.name.toLowerCase().includes(q.toLowerCase()) ||
-                    (c.phone && c.phone.includes(q)) ||
-                    (c.email && c.email.toLowerCase().includes(q.toLowerCase()));
-            });
+            let contacts = (app.state.contacts || []).filter(c =>
+                c.name.toLowerCase().includes(q.toLowerCase()) ||
+                (c.phone && c.phone.includes(q)) ||
+                (c.email && c.email.toLowerCase().includes(q.toLowerCase()))
+            );
+            // Apply category filter
+            if (this.currentFilter !== 'all') {
+                contacts = contacts.filter(c => (c.category || 'private') === this.currentFilter);
+            }
             this.renderFiltered(contacts);
         },
         renderFiltered(contacts) {
@@ -6044,48 +5500,39 @@ const app = {
             if (contacts.length === 0) {
                 list.innerHTML = `<div class="text-muted" style="text-align:center; padding:20px;">Keine Kontakte gefunden.</div>`;
             } else {
+                list.style.display = 'flex';
+                list.style.flexDirection = 'column';
+                list.style.gap = '8px';
+                list.style.background = 'rgba(0,0,0,0.2)';
+                list.style.padding = '10px';
+                list.style.borderRadius = '20px';
+                list.style.border = '1px solid rgba(255,255,255,0.05)';
+
                 list.innerHTML = contacts.map(c => `
-                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:20px; padding:15px 25px; background:rgba(255,255,255,0.03); border-radius:18px; cursor:pointer; transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border:1px solid rgba(255,255,255,0.06); margin-bottom:6px; position:relative; overflow:hidden;">
-                        
-                        <div class="contact-avatar" style="width:50px; height:50px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:14px; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:1.3rem; flex-shrink:0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
-                            ${c.name.charAt(0).toUpperCase()}
-                        </div>
-                        
-                        <div style="flex:1.5; min-width:0;">
-                            <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.shared ? 'Business & Privat' : (c.type === 'private' ? 'Familie & Freunde' : 'Business Partner')}</div>
-                        </div>
-
-                        <div class="desktop-only" style="flex:2; min-width:0;">
-                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
-                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(34,197,94,0.1); display:flex; align-items:center; justify-content:center; color:var(--success);"><i data-lucide="phone" size="14"></i></div>
-                                <span>${c.phone || '<span style="opacity:0.3">Keine Nummer</span>'}</span>
+                    <div class="contact-list-item" style="display:flex; align-items:center; justify-content:space-between; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; transition:all 0.2s ease; border:1px solid transparent;">
+                        <div onclick="app.contacts.openCard(${c.id})" style="flex:1; display:flex; align-items:center; gap:15px; cursor:pointer;">
+                            <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                                ${c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                                <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${c.phone || c.email || 'Kontakt'}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                 ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
+                                 ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
+                                 <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
                             </div>
                         </div>
-
-                        <div class="desktop-only" style="flex:2.5; min-width:0;">
-                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
-                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color:var(--primary);"><i data-lucide="mail" size="14"></i></div>
-                                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.email || '<span style="opacity:0.3">Keine E-Mail</span>'}</span>
-                            </div>
+                        <div style="flex-shrink:0;">
+                            <button onclick="event.stopPropagation(); app.contacts.editContact(${c.id})" style="background:rgba(59, 130, 246, 0.3); border:1px solid rgba(59, 130, 246, 0.5); color:var(--primary); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; display:flex; align-items:center; gap:6px; white-space:nowrap;" onmouseover="this.style.background='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.3)'">
+                                <i data-lucide="edit-2" size="14"></i>Bearbeiten
+                            </button>
                         </div>
-
-                        <div class="contact-action-bar" style="display:flex; align-items:center; gap:8px; padding-left:20px; border-left:1px solid rgba(255,255,255,0.08);">
-                            <div style="display:flex; gap:6px;">
-                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.call('${c.phone}')" title="Anrufen" style="background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.2); color:var(--success); transition:all 0.2s;"><i data-lucide="phone" size="16"></i></button>` : ''}
-                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.whatsapp('${c.phone}')" title="WhatsApp" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:#10b981; transition:all 0.2s;"><i data-lucide="message-circle" size="16"></i></button>` : ''}
-                                ${c.email ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.mail('${c.email}')" title="Email" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2); color:var(--primary); transition:all 0.2s;"><i data-lucide="mail" size="16"></i></button>` : ''}
-                            </div>
-                            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 5px;" class="desktop-only"></div>
-                            <div style="display:flex; gap:6px;">
-                                <button class="btn-small" onclick="event.stopPropagation(); app.modals.open('addContact', app.state.contacts.find(con => con.id === ${c.id}))" title="Bearbeiten" style="background:rgba(255,255,255,0.05); transition:all 0.2s;"><i data-lucide="pencil" size="16"></i></button>
-                                <button class="btn-small delete-btn" onclick="event.stopPropagation(); app.contacts.delete(${c.id})" title="Löschen" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:var(--danger); transition:all 0.2s;"><i data-lucide="trash-2" size="16"></i></button>
-                            </div>
-                        </div>
-                        <div style="position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--accent)); width:100%; opacity:0.8; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);"></div>
                     </div>
                 `).join('');
-
             }
             if (window.lucide) lucide.createIcons();
         },
@@ -6093,22 +5540,20 @@ const app = {
             const list = document.getElementById('contactsList');
             if (!list) return;
 
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-
-            // Update Header dynamically
-            const titleEl = document.querySelector('#view-contacts h1');
-            if (titleEl) titleEl.textContent = mode === 'business' ? 'Business Kontakte' : 'Private Kontakte';
-
-            const descEl = document.querySelector('#view-contacts p');
-            if (descEl) descEl.textContent = mode === 'business' ? 'Dein zentrales Adressbuch für Partner & Firmen.' : 'Deine Familie, Freunde und Bekannte.';
-
             let contacts = app.state.contacts || [];
 
-            // Filter by mode
-            contacts = contacts.filter(c => {
-                const cType = c.type || 'business';
-                return cType === mode || c.shared;
-            });
+            // Apply category filter
+            if (this.currentFilter !== 'all') {
+                contacts = contacts.filter(c => (c.category || 'private') === this.currentFilter);
+            }
+
+            // Update filter button styles
+            const allBtn = document.getElementById('contactTabAll');
+            const privBtn = document.getElementById('contactTabPrivate');
+            const bizBtn = document.getElementById('contactTabBusiness');
+            if (allBtn) allBtn.style.background = this.currentFilter === 'all' ? 'var(--primary)' : '';
+            if (privBtn) privBtn.style.background = this.currentFilter === 'private' ? 'var(--primary)' : '';
+            if (bizBtn) bizBtn.style.background = this.currentFilter === 'business' ? 'var(--primary)' : '';
 
             if (contacts.length === 0) {
                 list.innerHTML = `
@@ -6116,8 +5561,8 @@ const app = {
                         <div style="width: 80px; height: 80px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
                             <i data-lucide="contact-2" size="40" class="text-primary"></i>
                         </div>
-                        <h3 style="margin-bottom: 10px;">Adressbuch noch leer</h3>
-                        <p class="text-muted">Füge deinen ersten ${mode === 'private' ? 'privaten' : 'Business'} Kontakt hinzu.</p>
+                        <h3 style="margin-bottom: 10px;">Keine Kontakte gefunden</h3>
+                        <p class="text-muted">${this.currentFilter === 'all' ? 'Füge deinen ersten Kontakt hinzu.' : `Keine ${this.currentFilter === 'business' ? 'Business' : 'privaten'} Kontakte vorhanden.`}</p>
                         <button class="btn btn-primary" style="margin-top: 20px;" onclick="app.modals.open('addContact')">
                             <i data-lucide="plus"></i> Kontakt hinzufügen
                         </button>
@@ -6133,125 +5578,57 @@ const app = {
                 list.style.border = '1px solid rgba(255,255,255,0.05)';
 
                 list.innerHTML = contacts.map(c => `
-                    <div class="contact-list-item" onclick="app.contacts.openCard(${c.id})" style="display:flex; align-items:center; gap:20px; padding:15px 25px; background:rgba(255,255,255,0.03); border-radius:18px; cursor:pointer; transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border:1px solid rgba(255,255,255,0.06); margin-bottom:6px; position:relative; overflow:hidden;">
-                        
-                        <!-- Avatar / Icon (Visual Start) -->
-                        <div class="contact-avatar" style="width:50px; height:50px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:14px; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:1.3rem; flex-shrink:0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
-                            ${c.name.charAt(0).toUpperCase()}
-                        </div>
-                        
-                        <!-- Name Section (Horizontal nach Avatar) -->
-                        <div style="flex:1.5; min-width:0;">
-                            <div class="contact-name" style="font-weight:700; font-size:1.2rem; color:white; letter-spacing:-0.4px;">${c.name}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-top:2px; letter-spacing:0.5px;">${c.shared ? 'Business & Privat' : (c.type === 'private' ? 'Familie & Freunde' : 'Business Partner')}</div>
-                        </div>
-
-                        <!-- Kontakt-Details (Tabellarisch / Horizontal) -->
-                        <div class="desktop-only" style="flex:2; min-width:0;">
-                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
-                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(34,197,94,0.1); display:flex; align-items:center; justify-content:center; color:var(--success);"><i data-lucide="phone" size="14"></i></div>
-                                <span>${c.phone || '<span style="opacity:0.3">Keine Nummer</span>'}</span>
+                    <div class="contact-list-item" style="display:flex; align-items:center; justify-content:space-between; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; cursor:pointer; transition:all 0.2s ease; border:1px solid transparent;">
+                        <div onclick="app.contacts.openCard(${c.id})" style="flex:1; display:flex; align-items:center; gap:15px; cursor:pointer;">
+                            <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
+                                ${c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+                                <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${c.phone || c.email || 'Kontakt'}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                 ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
+                                 ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
+                                 <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
                             </div>
                         </div>
-
-                        <div class="desktop-only" style="flex:2.5; min-width:0;">
-                            <div style="font-size:0.9rem; color:white; font-weight:600; display:flex; align-items:center; gap:8px;">
-                                <div style="width:28px; height:28px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color:var(--primary);"><i data-lucide="mail" size="14"></i></div>
-                                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.email || '<span style="opacity:0.3">Keine E-Mail</span>'}</span>
-                            </div>
+                        <div style="flex-shrink:0;">
+                            <button onclick="event.stopPropagation(); app.contacts.editContact(${c.id})" style="background:rgba(59, 130, 246, 0.3); border:1px solid rgba(59, 130, 246, 0.5); color:var(--primary); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; display:flex; align-items:center; gap:6px; white-space:nowrap;" onmouseover="this.style.background='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.3)'">
+                                <i data-lucide="edit-2" size="14"></i>Bearbeiten
+                            </button>
                         </div>
-
-                        <!-- Bearbeitungsleiste (Action Toolbar) -->
-                        <div class="contact-action-bar" style="display:flex; align-items:center; gap:8px; padding-left:20px; border-left:1px solid rgba(255,255,255,0.08);">
-                            <div style="display:flex; gap:6px;">
-                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.call('${c.phone}')" title="Anrufen" style="background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.2); color:var(--success); transition:all 0.2s;"><i data-lucide="phone" size="16"></i></button>` : ''}
-                                ${c.phone ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.whatsapp('${c.phone}')" title="WhatsApp" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:#10b981; transition:all 0.2s;"><i data-lucide="message-circle" size="16"></i></button>` : ''}
-                                ${c.email ? `<button class="btn-small" onclick="event.stopPropagation(); app.contacts.mail('${c.email}')" title="Email" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2); color:var(--primary); transition:all 0.2s;"><i data-lucide="mail" size="16"></i></button>` : ''}
-                            </div>
-                            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 5px;" class="desktop-only"></div>
-                            <div style="display:flex; gap:6px;">
-                                <button class="btn-small" onclick="event.stopPropagation(); app.modals.open('addContact', app.state.contacts.find(con => con.id === ${c.id}))" title="Bearbeiten" style="background:rgba(255,255,255,0.05); transition:all 0.2s;"><i data-lucide="pencil" size="16"></i></button>
-                                <button class="btn-small delete-btn" onclick="event.stopPropagation(); app.contacts.delete(${c.id})" title="Löschen" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:var(--danger); transition:all 0.2s;"><i data-lucide="trash-2" size="16"></i></button>
-                            </div>
-                        </div>
-                        <!-- Bearbeitungsleiste (Decorative Progress / Status Bar) -->
-                        <div style="position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--accent)); width:100%; opacity:0.8; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);"></div>
                     </div>
                 `).join('');
-
-
             }
             if (window.lucide) lucide.createIcons();
 
             if (!document.getElementById('contactListStyles')) {
                 const style = document.createElement('style');
                 style.id = 'contactListStyles';
-                style.innerHTML = `
-                    .contact-list-item:hover { 
-                        background: rgba(255,255,255,0.08) !important; 
-                        transform: translateY(-2px); 
-                        border-color: rgba(59, 130, 246, 0.4) !important; 
-                        box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
-                    }
-                    .contact-list-item:hover .contact-avatar {
-                        transform: scale(1.05);
-                    }
-                    .contact-action-bar button:hover {
-                        transform: scale(1.1);
-                        filter: brightness(1.2);
-                    }
-                    /* Mobile Optimization */
-                    @media (max-width: 480px) {
-                        .contact-list-item {
-                            padding: 15px !important;
-                            gap: 12px !important;
-                            flex-wrap: wrap !important;
-                        }
-                        .contact-avatar {
-                            width: 42px !important;
-                            height: 42px !important;
-                            font-size: 1.1rem !important;
-                        }
-                        .contact-name {
-                            font-size: 1.1rem !important;
-                        }
-                        .contact-action-bar {
-                            width: 100% !important;
-                            padding-left: 0 !important;
-                            border-left: none !important;
-                            border-top: 1px solid rgba(255,255,255,0.08) !important;
-                            padding-top: 10px !important;
-                            margin-top: 5px !important;
-                            justify-content: space-between !important;
-                        }
-                    }
-                `;
-
+                style.innerHTML = `.contact-list-item:hover { background: rgba(255,255,255,0.08) !important; border-color: rgba(59, 130, 246, 0.3) !important; }`;
                 document.head.appendChild(style);
             }
 
 
+            const importBtn = document.getElementById('importContactsBtn');
+            if (importBtn) {
+                importBtn.style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
+            }
         },
         renderQuick() {
             const container = document.getElementById('dashboardQuickContacts');
             if (!container) return;
-
-            const mode = (app.state.ui && app.state.ui.dashboardMode) || 'business';
-
-            const contacts = (app.state.contacts || [])
-                .filter(c => {
-                    const cType = c.type || 'business';
-                    return cType === mode || c.shared;
-                })
-                .slice(0, 3);
-
+            const contacts = (app.state.contacts || []).slice(0, 3);
             if (contacts.length === 0) {
-                container.innerHTML = `<div class="text-xs text-muted" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.05);">Keine ${mode === 'private' ? 'privaten ' : ''}Favoriten.</div>`;
+                container.innerHTML = `<div class="text-xs text-muted" style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.05);">Keine Favoriten für Schnellzugriff.</div>`;
                 return;
             }
             container.innerHTML = `
                 <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
-                    <i data-lucide="star" size="10" class="text-primary"></i> ${mode === 'business' ? 'Business Favoriten' : 'Wichtige Kontakte'}
+                    <i data-lucide="star" size="10" class="text-primary"></i> Business Favoriten
                 </div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     ${contacts.map(c => `
@@ -6259,7 +5636,7 @@ const app = {
                             <div style="width:32px; height:32px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:bold; color:white; flex-shrink:0;">${c.name.charAt(0).toUpperCase()}</div>
                             <div style="flex:1; min-width:0;">
                                 <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
-                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || (c.shared ? 'Geteilter Kontakt' : (c.type === 'business' ? 'Business Partner' : 'Privat'))}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.phone || c.email || 'Business Partner'}</div>
                             </div>
                             <i data-lucide="chevron-right" size="14" style="opacity:0.3;"></i>
                         </div>
@@ -6273,33 +5650,41 @@ const app = {
             if (!contact) return;
             app.modals.open('viewContactCard', contact);
         },
+        editContact(id) {
+            const contact = app.state.contacts.find(c => c.id === id);
+            if (!contact) return;
+            app.modals.open('editContact', contact);
+        },
+        saveEdit(id) {
+            const contact = app.state.contacts.find(c => c.id === id);
+            if (!contact) return;
+
+            const name = document.getElementById('editContactName').value.trim();
+            if (!name) {
+                alert('Bitte mindestens einen Namen eingeben.');
+                return;
+            }
+
+            contact.name = name;
+            contact.phone = document.getElementById('editContactPhone').value.trim();
+            contact.email = document.getElementById('editContactEmail').value.trim();
+            contact.address = document.getElementById('editContactAddress').value.trim();
+            contact.homepage = document.getElementById('editContactHomepage').value.trim();
+            contact.category = document.getElementById('editContactCategory')?.value || 'private';
+
+            app.saveState();
+            this.render();
+            app.renderDashboard();
+            app.modals.close();
+            alert('✅ Kontakt erfolgreich aktualisiert!');
+        },
         submit() {
             const n = document.getElementById('newContactName').value;
             const p = document.getElementById('newContactPhone').value;
             const e = document.getElementById('newContactEmail').value;
             const a = document.getElementById('newContactAddress').value;
             const h = document.getElementById('newContactHomepage')?.value || '';
-
-            const typeRadio = document.querySelector('input[name="contactType"]:checked');
-            const type = typeRadio ? typeRadio.value : 'business';
-            const shared = document.getElementById('contactShared') ? document.getElementById('contactShared').checked : false;
-
-            if (n) {
-                if (app.editingId) {
-                    const idx = app.state.contacts.findIndex(c => c.id === app.editingId);
-                    if (idx !== -1) {
-                        app.state.contacts[idx] = { ...app.state.contacts[idx], name: n, phone: p, email: e, address: a, homepage: h, type: type, shared: shared };
-                        app.saveState();
-                        this.render();
-                        app.renderDashboard();
-                        if (app.notifications) app.notifications.send("✅ Kontakt aktualisiert", `${n} wurde erfolgreich gespeichert.`);
-                    }
-                    app.editingId = null;
-                } else {
-                    this.add(n, p, e, a, h, type, shared);
-                }
-                app.modals.close();
-            }
+            if (n) { this.add(n, p, e, a, h); app.modals.close(); }
         }
     },
     businessSearch: {
@@ -6399,12 +5784,8 @@ const app = {
             const a = document.getElementById('impAddress').value;
             const h = document.getElementById('impUrl').value;
 
-            const typeRadio = document.querySelector('input[name="impType"]:checked');
-            const type = typeRadio ? typeRadio.value : 'business';
-            const shared = document.getElementById('impShared') ? document.getElementById('impShared').checked : false;
-
             if (n) {
-                app.contacts.add(n, p, e, a, h, type, shared);
+                app.contacts.add(n, p, e, a, h);
                 app.modals.close();
                 app.navigateTo('contacts');
                 if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -6513,51 +5894,19 @@ const app = {
         }
     },
     dashboard: {
-        setEventFilter(filter) {
-            app.state.ui.eventFilter = filter;
-            app.saveState();
-
-            // Update active button UI
-            document.querySelectorAll('.btn-filter').forEach(btn => {
-                if (btn.id === `evFilter_${filter}`) {
-                    btn.classList.add('active');
-                    btn.style.color = 'white';
-                    btn.style.background = 'rgba(255,255,255,0.15)';
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.color = 'var(--text-muted)';
-                    btn.style.background = 'none';
-                }
-            });
-
-            app.renderDashboard();
-        },
         setMode(mode) {
             app.state.ui.dashboardMode = mode;
             app.saveState();
             this.applyMode();
             app.renderDashboard();
+            if (app.state.currentPage === 'calendar') app.calendar.render();
+            if (app.state.currentPage === 'tasks') app.tasks.render();
+            if (app.state.currentPage === 'shopping') app.shopping.render();
         },
         applyMode() {
-            const persona = app.state.user.persona || 'mixed';
-            let activeMode = app.state.ui.dashboardMode || 'business';
-
-            // Force mode if persona is fixed
-            if (persona === 'business') activeMode = 'business';
-            if (persona === 'family') activeMode = 'private';
-
-            const mode = activeMode;
-            app.state.ui.dashboardMode = mode; // Keep state in sync
-
+            const mode = app.state.ui.dashboardMode || 'business';
             const btnBiz = document.getElementById('btnModeBusiness');
             const btnPri = document.getElementById('btnModePrivate');
-            const switcher = document.querySelector('.dash-mode-switcher');
-
-            // Hide switcher if persona is NOT mixed
-            if (switcher) {
-                if (persona !== 'mixed') switcher.style.display = 'none';
-                else switcher.style.display = 'flex';
-            }
 
             // Update Buttons
             if (btnBiz && btnPri) {
@@ -6581,12 +5930,7 @@ const app = {
             // Update UI Indicators
             const statusPill = document.querySelector('.status-pill');
             if (statusPill) {
-                let statusText = 'TaskForce OS';
-                if (persona === 'business') statusText = 'Business OS';
-                else if (persona === 'family') statusText = 'Privat Modus';
-                else statusText = mode === 'business' ? 'Business OS' : 'Privat Modus';
-
-                statusPill.innerHTML = `<span class="status-dot"></span> ${statusText}`;
+                statusPill.innerHTML = `<span class="status-dot"></span> ${mode === 'business' ? 'Business OS' : 'Privat Modus'}`;
             }
             document.body.classList.remove('mode-business', 'mode-private');
             document.body.classList.add(`mode-${mode}`);
@@ -6594,6 +5938,7 @@ const app = {
             // Define which cards belong to which mode
             const businessItems = [
                 'dashboardProjectsCard',
+                'dashboardCommunicationCard',
                 'dashboardFinanceCard',
                 'dashboardMeetingsCard',
                 'dashboardDriveCard',
@@ -6616,7 +5961,6 @@ const app = {
                 'dashboardHealthCard',
                 'dashboardMealPlanCard',
                 'dashboardHouseholdCard',
-                'dashboardJournalCard',
                 'dashboardShortcutsCard',
                 'dashboardNotesCard',
                 'dashboardAlarmsCard',
@@ -6625,20 +5969,17 @@ const app = {
                 'nav-tasks',
                 'nav-habits',
                 'nav-household',
-                'nav-journal',
                 'nav-shopping',
                 'nav-health',
                 'nav-alarms',
                 'nav-tools'
             ];
 
-            // Always visible (or user controlled)
+            // Always visible
             const sharedItems = [
                 'dashboardEventsCard',
                 'dashboardStatusCard',
                 'dashboardAiCard',
-                'dashboardCommunicationCard', // Now shared
-                'dashboardPrivateCommCard',   // Now shared
                 'cat-general',
                 'nav-dashboard',
                 'nav-calendar'
@@ -6730,42 +6071,31 @@ const app = {
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
-                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
-                'dashboardHouseholdCard', 'dashboardJournalCard', 'dashboardPrivateCommCard', 'dashboardMealPlanCard'
+                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard'
             ];
 
             allCards.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    if (hidden.includes(id)) {
-                        el.classList.add('hidden');
-                    } else {
-                        el.classList.remove('hidden');
-                    }
+                    if (hidden.includes(id)) el.classList.add('hidden');
+                    else el.classList.remove('hidden');
                 }
             });
         },
-        toggleCardVisibility(id, silent = false) {
-            console.log("Toggle visibility for:", id);
+        toggleCardVisibility(id) {
             if (!app.state.ui) app.state.ui = {};
             if (!app.state.ui.hiddenCards) app.state.ui.hiddenCards = [];
 
             const index = app.state.ui.hiddenCards.indexOf(id);
             if (index > -1) {
-                app.state.ui.hiddenCards.splice(index, 1);
-                console.log("Showing card:", id);
+                app.state.ui.hiddenCards.splice(index, 1); // Remove from hidden (Show it)
             } else {
-                app.state.ui.hiddenCards.push(id);
-                console.log("Hiding card:", id);
+                app.state.ui.hiddenCards.push(id); // Add to hidden
             }
-
             app.saveState();
             this.applyVisibility();
-
-            // Re-render modal to update switch state (if not silent)
-            if (!silent) {
-                app.modals.open('configureWidgets');
-            }
+            // Re-render modal to update switch state
+            app.modals.open('configureWidgets');
         },
         scrollToCard(id) {
             setTimeout(() => {
@@ -6813,9 +6143,9 @@ const app = {
                         // UI aktualisieren
                         const btn = document.getElementById('timeTrackerToggle');
                         if (btn) {
-                            btn.setAttribute('data-lucide', 'pause');
-                            btn.classList.add('active');
-                            btn.style.color = 'var(--danger)';
+                            btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
+                            btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                            btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
                         }
 
                         const taskEl = document.getElementById('timeTrackerTask');
@@ -6861,9 +6191,9 @@ const app = {
 
             const btn = document.getElementById('timeTrackerToggle');
             if (btn) {
-                btn.setAttribute('data-lucide', 'pause');
-                btn.classList.add('active');
-                btn.style.color = 'var(--danger)';
+                btn.innerHTML = '<i data-lucide="pause" size="14"></i>';
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
             }
 
             const taskEl = document.getElementById('timeTrackerTask');
@@ -6895,9 +6225,9 @@ const app = {
 
             const btn = document.getElementById('timeTrackerToggle');
             if (btn) {
-                btn.setAttribute('data-lucide', 'play');
-                btn.classList.remove('active');
-                btn.style.color = 'var(--success)';
+                btn.innerHTML = '<i data-lucide="play" size="14"></i>';
+                btn.style.background = 'rgba(16, 185, 129, 0.1)';
+                btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             }
 
             const taskEl = document.getElementById('timeTrackerTask');
@@ -7133,174 +6463,165 @@ const app = {
         }
     },
 
-    // --- HOUSEHOLD MODULE (UPGRADED) ---
-    household: {
-        add() {
-            const name = prompt('🧹 Haushalts-Aufgabe (z.B. Staubsaugen, Müll, Heizungswartung):');
-            if (!name || !name.trim()) return;
+    // --- CONTACTS MODULE ---
+    contacts: {
+        async importFromPhone() {
+            try {
+                // Check if Contact Picker API is supported
+                if (!('contacts' in navigator)) {
+                    alert('❌ Telefonbuch-Import wird von diesem Browser nicht unterstützt.\n\nBitte nutze Chrome oder Edge auf Android.');
+                    return;
+                }
 
-            const freq = prompt('Wiederholung (keine, wöchentlich, monatlich, jährlich):', 'wöchentlich');
+                // Request contacts with specific properties
+                const props = ['name', 'tel', 'email', 'address'];
+                const opts = { multiple: true };
 
-            if (!app.state.household) app.state.household = [];
-            app.state.household.push({
+                const contacts = await navigator.contacts.select(props, opts);
+
+                if (!contacts || contacts.length === 0) {
+                    alert('Keine Kontakte ausgewählt.');
+                    return;
+                }
+
+                // Import contacts
+                let imported = 0;
+                if (!app.state.contacts) app.state.contacts = [];
+
+                contacts.forEach(contact => {
+                    const name = contact.name?.[0] || 'Unbekannt';
+                    const phone = contact.tel?.[0] || '';
+                    const email = contact.email?.[0] || '';
+                    const address = contact.address?.[0]?.formatted || '';
+
+                    // Check if contact already exists
+                    const exists = app.state.contacts.find(c =>
+                        c.name === name || (phone && c.phone === phone)
+                    );
+
+                    if (!exists) {
+                        app.state.contacts.push({
+                            id: Date.now() + imported,
+                            name: name,
+                            phone: phone,
+                            email: email,
+                            address: address,
+                            homepage: '',
+                            category: 'private', // Default to private
+                            createdAt: new Date().toISOString()
+                        });
+                        imported++;
+                    }
+                });
+
+                app.saveState();
+                this.render();
+                alert(`✅ ${imported} Kontakte erfolgreich importiert!`);
+                app.gamification.addXP(imported * 5);
+            } catch (error) {
+                console.error('Contact import error:', error);
+                if (error.name === 'AbortError') {
+                    // User cancelled
+                    return;
+                }
+                alert('❌ Fehler beim Importieren der Kontakte:\n' + error.message);
+            }
+        },
+
+        submit() {
+            const name = document.getElementById('newContactName').value.trim();
+            const phone = document.getElementById('newContactPhone').value.trim();
+            const email = document.getElementById('newContactEmail').value.trim();
+            const address = document.getElementById('newContactAddress').value.trim();
+            const homepage = document.getElementById('newContactHomepage').value.trim();
+            const category = document.getElementById('newContactCategory')?.value || 'private';
+
+            if (!name) {
+                alert('Bitte mindestens einen Namen eingeben.');
+                return;
+            }
+
+            if (!app.state.contacts) app.state.contacts = [];
+
+            app.state.contacts.push({
                 id: Date.now(),
-                name: name.trim(),
-                frequency: freq || 'keine',
-                lastDone: null,
+                name: name,
+                phone: phone,
+                email: email,
+                address: address,
+                homepage: homepage,
+                category: category,
                 createdAt: new Date().toISOString()
             });
 
             app.saveState();
+            app.modals.close();
             this.render();
-            app.renderDashboard();
             app.gamification.addXP(10);
         },
 
-        toggleDone(id) {
-            const item = app.state.household.find(h => h.id === id);
-            if (item) {
-                item.lastDone = new Date().toISOString();
-                app.saveState();
-                this.render();
-                app.renderDashboard();
-                app.gamification.addXP(20);
-                if (window.confetti) confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
-            }
-        },
-
         delete(id) {
-            if (confirm('Aufgabe wirklich löschen?')) {
-                app.state.household = app.state.household.filter(h => h.id !== id);
+            if (confirm('Kontakt wirklich löschen?')) {
+                app.state.contacts = app.state.contacts.filter(c => c.id !== id);
                 app.saveState();
                 this.render();
-                app.renderDashboard();
             }
         },
 
-        render() {
-            const list = document.getElementById('householdTasksList');
-            if (list) {
-                const items = app.state.household || [];
-                if (items.length === 0) {
-                    list.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben geplant. Alles sauber! ✨</div>';
-                } else {
-                    list.innerHTML = items.map(h => {
-                        const lastDoneText = h.lastDone ? new Date(h.lastDone).toLocaleDateString('de-DE') : 'Noch nie';
-                        return `
-                            <div class="task-item" style="border-left: 3px solid var(--success);">
-                                <div style="display:flex; align-items:center; gap:12px; width:100%;">
-                                    <div class="checkbox-circle" onclick="app.household.toggleDone(${h.id})"></div>
-                                    <div style="flex:1;">
-                                        <div style="font-weight:600;">${h.name}</div>
-                                        <div class="text-xs text-muted">Turnus: ${h.frequency} • Erledigt am: ${lastDoneText}</div>
-                                    </div>
-                                    <button class="btn" onclick="app.household.delete(${h.id})" style="opacity:0.5;"><i data-lucide="trash-2" size="14"></i></button>
-                                </div>
+        search(query) {
+            this.render(query);
+        },
+
+        render(searchQuery = '') {
+            const container = document.getElementById('contactsList');
+            if (!container) return;
+
+            if (!app.state.contacts || app.state.contacts.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 20px; text-align: center;">Noch keine Kontakte vorhanden.<br>Importiere Kontakte oder füge manuell hinzu.</div>';
+                return;
+            }
+
+            let contacts = app.state.contacts;
+
+            // Filter by search query
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                contacts = contacts.filter(c =>
+                    c.name.toLowerCase().includes(q) ||
+                    (c.phone && c.phone.includes(q)) ||
+                    (c.email && c.email.toLowerCase().includes(q)) ||
+                    (c.address && c.address.toLowerCase().includes(q))
+                );
+            }
+
+            if (contacts.length === 0) {
+                container.innerHTML = '<div class="text-muted text-sm" style="padding: 20px; text-align: center;">Keine Kontakte gefunden.</div>';
+                return;
+            }
+
+            // Sort alphabetically
+            contacts.sort((a, b) => a.name.localeCompare(b.name));
+
+            container.innerHTML = contacts.map(contact => `
+                <div style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <div style="font-weight: 700; font-size: 1.1rem;">${contact.name}</div>
+                                ${contact.category === 'business' ? '<span style="background: rgba(59,130,246,0.2); color: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">Business</span>' : '<span style="background: rgba(34,197,94,0.2); color: #22c55e; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">Privat</span>'}
                             </div>
-                        `;
-                    }).join('');
-                }
-            }
-
-            // Dashboard Preview
-            const preview = document.getElementById('dashboardHouseholdPreview');
-            if (preview) {
-                const items = (app.state.household || []).slice(0, 3);
-                if (items.length === 0) {
-                    preview.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:10px;">Keine Aufgaben</div>';
-                } else {
-                    preview.innerHTML = items.map(h => `
-                        <div style="font-size:0.85rem; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                            <span>${h.name}</span>
-                            <span class="text-xs text-muted">${h.frequency === 'keine' ? '' : h.frequency}</span>
+                            ${contact.phone ? `<div class="text-sm" style="margin-bottom: 4px;"><i data-lucide="phone" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.phone}</div>` : ''}
+                            ${contact.email ? `<div class="text-sm" style="margin-bottom: 4px;"><i data-lucide="mail" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.email}</div>` : ''}
+                            ${contact.address ? `<div class="text-sm text-muted"><i data-lucide="map-pin" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.address}</div>` : ''}
                         </div>
-                    `).join('');
-                }
-            }
-            if (window.lucide) lucide.createIcons();
-        }
-    },
+                        <button onclick="app.contacts.delete(${contact.id})" 
+                            style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); padding: 8px; border-radius: 8px; cursor: pointer;">
+                            <i data-lucide="trash-2" size="16"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
 
-    // --- JOURNAL MODULE ---
-    journal: {
-        add() {
-            const title = prompt('📖 Journal-Titel (z.B. Dankbarkeit, Gedanken, Erfolg):');
-            if (!title || !title.trim()) return;
-
-            const text = prompt('Was bewegt dich gerade?');
-            if (!text || !text.trim()) return;
-
-            const mood = prompt('Deine Stimmung (😀, 😎, 😌, 😤, 😔):', '😌');
-
-            if (!app.state.journal) app.state.journal = [];
-            app.state.journal.unshift({
-                id: Date.now(),
-                title: title.trim(),
-                text: text.trim(),
-                mood: mood || '😌',
-                date: new Date().toISOString()
-            });
-
-            app.saveState();
-            this.render();
-            app.renderDashboard();
-            app.gamification.addXP(25);
-        },
-
-        delete(id) {
-            if (confirm('Eintrag wirklich löschen?')) {
-                app.state.journal = app.state.journal.filter(j => j.id !== id);
-                app.saveState();
-                this.render();
-                app.renderDashboard();
-            }
-        },
-
-        render() {
-            const list = document.getElementById('journalEntriesList');
-            if (list) {
-                const entries = app.state.journal || [];
-                if (entries.length === 0) {
-                    list.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:40px;">Noch keine Einträge. Starte dein Journal heute! ✨</div>';
-                } else {
-                    list.innerHTML = entries.map(j => `
-                        <div class="card" style="background:rgba(255,255,255,0.03); cursor:default;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-                                <div>
-                                    <div style="font-weight:700; font-size:1.1rem; color:var(--accent);">${j.mood} ${j.title}</div>
-                                    <div class="text-xs text-muted">${new Date(j.date).toLocaleString('de-DE')}</div>
-                                </div>
-                                <button class="btn" onclick="app.journal.delete(${j.id})" style="opacity:0.4;"><i data-lucide="trash-2" size="14"></i></button>
-                            </div>
-                            <div style="font-size:0.95rem; line-height:1.5; white-space:pre-wrap;">${j.text}</div>
-                        </div>
-                    `).join('');
-                }
-            }
-
-            // Dashboard Preview
-            const preview = document.getElementById('dashboardJournalPreview');
-            if (preview) {
-                const entries = (app.state.journal || []).slice(0, 1);
-                if (entries.length === 0) {
-                    preview.innerHTML = `
-                        <div class="text-muted text-sm" style="text-align:center; padding:15px;">
-                            <i data-lucide="coffee" size="24" style="margin-bottom:8px; opacity:0.5;"></i>
-                            <div>Nimm dir Zeit für dich.</div>
-                            <button class="btn-small" style="margin-top:8px; background:rgba(255,255,255,0.1);" onclick="event.stopPropagation(); app.journal.add()">
-                                Eintrag erstellen
-                            </button>
-                        </div>`;
-                } else {
-                    preview.innerHTML = entries.map(j => `
-                        <div style="padding:5px;">
-                            <div style="font-weight:600; font-size:0.9rem;">${j.mood} ${j.title}</div>
-                            <div class="text-xs text-muted" style="margin-bottom:5px;">${new Date(j.date).toLocaleDateString()}</div>
-                            <div class="text-sm text-muted" style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${j.text}</div>
-                        </div>
-                    `).join('');
-                }
-            }
             if (window.lucide) lucide.createIcons();
         }
     }

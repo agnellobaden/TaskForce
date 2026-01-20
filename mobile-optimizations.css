@@ -2,34 +2,25 @@
 @media (max-width: 480px) {
 
     /* Extra small screens (phones in portrait) */
-    /* Extra small screens (phones in portrait) */
-    /* ENABLE SCROLLING ON MOBILE */
-    html,
-    body {
-        overflow-y: auto !important;
-        height: auto !important;
-        min-height: 100% !important;
-        overscroll-behavior-y: none;
-        /* Optional: prevents bounce if desired, but auto is key */
-    }
-
-    #app-layout {
-        height: auto !important;
-        overflow: visible !important;
-        display: block !important;
-    }
-
     .main-content {
-        height: auto !important;
-        overflow: visible !important;
-        padding: 8px;
-        padding-bottom: 110px;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 110px !important;
+        padding-top: 75px !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
     }
 
     .dashboard-grid {
-        gap: 10px;
-        padding-bottom: 110px;
+        gap: 4px !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        padding-bottom: 110px !important;
         /* Respects user's column preference */
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
     }
 
     /* Single column mode gets full width cards */
@@ -38,12 +29,26 @@
     }
 
     .card {
-        padding: 12px;
+        padding: 10px !important;
         border-radius: 12px;
+        margin: 0 !important;
+        width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #dashboardEventsCard {
+        grid-column: span 1 !important;
+        padding: 8px !important;
+    }
+
+    #dashboardEventsPreview > div {
+        padding: 12px 10px !important;
     }
 
     .card-title {
-        font-size: 0.8rem;
+        font-size: 0.75rem !important;
+        margin-bottom: 4px !important;
     }
 
     .card-value {
@@ -52,13 +57,30 @@
 
     /* Hero clock smaller on very small screens */
     .clock-large {
-        font-size: 2rem !important;
+        font-size: 1.8rem !important;
     }
 
     .hero-clock-card {
-        margin: -8px -8px 10px -8px !important;
-        grid-column: span 2 !important;
-        /* Hero always full width */
+        margin: -6px -6px 8px -6px !important;
+        grid-column: span 1 !important;
+        /* Full width single column */
+        min-height: 120px !important;
+        padding: 8px !important;
+    }
+
+    .card-clock-mega {
+        grid-column: span 1 !important;
+        min-height: 110px !important;
+        padding: 8px !important;
+        overflow: hidden !important;
+    }
+
+    .mega-time {
+        font-size: 1.8rem !important;
+    }
+
+    .mega-clock-footer {
+        display: none !important;
     }
 
     /* Smaller buttons on small screens */
@@ -77,247 +99,78 @@
         height: 32px;
     }
 
-
-    /* HAMBURGER BUTTON - ALWAYS VISIBLE ON MOBILE! */
-    .mobile-menu-toggle {
-        display: flex !important;
-        position: relative !important;
-        z-index: 9999 !important;
-        width: 50px !important;
-        height: 50px !important;
-        background: rgba(139, 92, 246, 0.3) !important;
-        border: 2px solid rgba(139, 92, 246, 0.6) !important;
-        border-radius: 12px !important;
-        flex-shrink: 0 !important;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
-    }
-
-    .mobile-menu-toggle i {
-        width: 28px !important;
-        height: 28px !important;
-        color: white !important;
-    }
-
     /* Compact top bar */
-    /* Fixed multi-row Layout for Mobile Header */
     .top-bar {
-        display: flex !important;
-        flex-direction: column !important;
-        /* Forces search to its own line */
-        align-items: stretch !important;
-        gap: 12px !important;
-        margin-bottom: 20px !important;
-        padding: 10px !important;
-        background: var(--bg-app) !important;
-        position: relative !important;
+        gap: 8px;
+        margin-bottom: 10px;
     }
 
-    .top-left-actions {
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        width: 100% !important;
-    }
-
-    .dash-mode-switcher {
-        flex: 1 !important;
-        display: flex !important;
-        justify-content: center !important;
-        margin: 0 10px !important;
-    }
-
-    /* Show Header Search on Mobile (Standard) */
-    .top-bar .top-command-field {
-        display: flex !important;
-        width: 100% !important;
-        max-width: none !important;
-        margin: 0 !important;
-    }
-
-    .top-command-field input {
-        width: 100% !important;
-        padding: 12px 40px !important;
-        /* Better touch target */
-    }
-
-    /* Hide Hero Search (Reverting move) */
-    .hero-clock-card .top-command-field {
-        display: none !important;
-    }
-
-
-    /* Dashboard Grid 2-Column Space Optimization (respects user preference) */
-    .dashboard-grid:not(.single-column-mode) {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-        padding: 5px !important;
-        padding-bottom: 110px !important;
-    }
-
-    /* Single column mode on mobile */
-    .dashboard-grid.single-column-mode {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 8px !important;
-        padding: 5px !important;
-        padding-bottom: 110px !important;
-    }
-
-    .dashboard-grid:not(.single-column-mode)>.card {
-        grid-column: span 1 !important;
-        padding: 10px !important;
-    }
-
-    .dashboard-grid.single-column-mode>.card {
-        grid-column: span 1 !important;
-        padding: 10px !important;
-    }
-
-    /* Keep certain cards full width for readability (only in 2-column mode) */
-    .dashboard-grid:not(.single-column-mode) .card-medium,
-    .dashboard-grid:not(.single-column-mode) .card-wide,
-    .dashboard-grid:not(.single-column-mode) .card-communication,
-    .dashboard-grid:not(.single-column-mode) #dashboardEventsCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardFinanceCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardSearchCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardAiCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardStatusCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardNotesCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardProjectsCard,
-    .dashboard-grid:not(.single-column-mode) #dashboardMeetingsCard,
-    .dashboard-grid:not(.single-column-mode) #view-contacts .card {
-        grid-column: span 2 !important;
-        /* display: flex !important; REMOVED to allow hiding */
-    }
-
-    /* Allow card visibility logic to work on mobile */
-
-    .card-value {
-        font-size: 1.2rem;
-    }
-
-    /* Calendar Standard Square View for Mobile */
-    .calendar-grid {
-        grid-template-columns: repeat(7, 1fr) !important;
-        gap: 2px !important;
-    }
-
-    .calendar-day.empty {
-        display: flex !important;
-        /* Show empty days to maintain grid alignment */
-        visibility: hidden;
-        /* Hide content but keep space */
-    }
-
+    /* Calendar optimization for small screens */
     .calendar-day {
-        min-height: 40px !important;
-        height: auto !important;
-        aspect-ratio: 1 / 1;
-        /* Force square shape */
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 2px !important;
-        padding: 4px !important;
-        font-size: 0.75rem !important;
+        min-height: 50px;
+        padding: 3px;
+        font-size: 0.7rem;
     }
 
     .day-number {
-        font-size: 0.8rem !important;
-        font-weight: 600;
+        font-size: 0.8rem;
     }
 
-    /* Hide day names if they take too much space, or make them tiny */
-    .day-header-mobile {
-        display: none !important;
+    .event-marker {
+        font-size: 0.6rem;
+        padding: 1px 3px;
     }
 
-    /* Toggle visibility for event markers */
-    .event-marker.desktop-only {
-        display: none !important;
+    /* Form elements */
+    .form-input,
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+        padding: 10px !important;
     }
 
-    .event-dot.mobile-only {
-        display: block !important;
+    /* Modal full screen on small devices */
+    #modalContent {
+        width: 98% !important;
+        max-height: 95vh;
+        padding: 12px;
     }
 
-    .event-markers {
-        flex: 1;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 3px;
-        margin-top: 2px !important;
-        align-content: flex-end;
-        /* Push dots to bottom */
+    /* Compact mobile nav */
+    .mobile-nav {
+        padding: 6px 0;
     }
 
-    .event-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        /* Background color is set inline by JS, but provide default */
-        background-color: var(--primary);
-        box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    .nav-item-mobile {
+        font-size: 0.65rem;
     }
 
-    .event-dot {
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        background-color: var(--primary);
+    .voice-inner {
+        width: 50px;
+        height: 50px;
     }
 
-    /* Contact View Fixes */
-    #view-contacts .card-header {
-        padding: 15px !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
+    /* Task and expense entries more compact */
+    .task-item,
+    .expense-entry,
+    .health-entry {
+        padding: 10px;
+        font-size: 0.9rem;
     }
 
-    #view-contacts h1 {
-        font-size: 1.4rem !important;
-    }
-
-    #view-contacts div[style*="display:flex; gap:10px;"] {
-        width: 100%;
-        flex-wrap: wrap;
-        margin-top: 10px;
-        gap: 5px !important;
-    }
-
-    #view-contacts .btn {
-        flex: 1 1 45%;
-        font-size: 0.75rem;
-        padding: 8px 4px;
-        white-space: nowrap;
-    }
-
-    /* Communication tiles LARGER for better visibility */
+    /* Communication tiles smaller */
     .comm-tile {
-        padding: 16px 12px !important;
-        min-height: 90px !important;
+        padding: 10px;
     }
 
     .tile-circle {
-        width: 50px !important;
-        height: 50px !important;
+        width: 36px;
+        height: 36px;
     }
 
     .comm-tile span {
-        font-size: 0.8rem !important;
-        font-weight: 700 !important;
-    }
-
-    /* Communication card always visible and prominent */
-    .card-communication {
-        padding: 18px !important;
-    }
-
-    .comm-grid {
-        gap: 12px !important;
+        font-size: 0.65rem;
     }
 }
 
@@ -328,13 +181,8 @@
         padding-bottom: 80px;
     }
 
-    .dashboard-grid:not(.single-column-mode) {
+    .dashboard-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 10px;
-    }
-
-    .dashboard-grid.single-column-mode {
-        grid-template-columns: 1fr !important;
         gap: 10px;
     }
 
@@ -366,31 +214,4 @@
     .top-bar {
         padding-top: max(0px, env(safe-area-inset-top));
     }
-}
-
-/* === TABLET OPTIMIZATIONS (Portrait & Small Laptop) === */
-@media (max-width: 1024px) {
-
-    /* Ensure scrolling works on tablets too */
-    html,
-    body {
-        overflow-y: auto !important;
-        height: auto !important;
-        min-height: 100% !important;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    #app-layout {
-        height: auto !important;
-        overflow: visible !important;
-        display: block !important;
-    }
-
-    .main-content {
-        height: auto !important;
-        overflow: visible !important;
-        padding-bottom: 120px;
-    }
-
-    /* Allow card visibility logic to work on tablets */
 }
