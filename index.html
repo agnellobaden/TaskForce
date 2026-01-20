@@ -681,27 +681,17 @@
                 <!-- TASKS VIEW - PROFESSIONAL UPGRADE -->
                 <div id="view-tasks" class="view-section hidden">
                     <div class="card-header" style="margin-bottom: 20px;">
-                        <div>
-                            <h1 style="margin-bottom: 5px;">Aufgaben & To-Do</h1>
-                            <p class="text-muted text-sm" style="margin: 0;">Organisiere deine Aufgaben professionell
-                            </p>
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn" onclick="app.modals.open('viewArchive')"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
-                                <i data-lucide="archive"></i> Archiv
-                            </button>
-                            <button class="btn-primary" onclick="app.modals.open('addTask')">
-                                <i data-lucide="plus"></i>
-                            </button>
-                        </div>
+                        <h1 style="margin-bottom: 5px;">Aufgaben</h1>
+                        <button class="btn-primary" onclick="app.modals.open('addTask')">
+                            <i data-lucide="plus"></i>
+                        </button>
                     </div>
 
                     <!-- Inline Add Task Form -->
                     <div
-                        style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:25px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
+                        style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:20px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
                         <input type="text" id="inlineTaskInput" class="form-input"
-                            placeholder="✨ Neue Aufgabe hinzufügen..."
+                            placeholder="Neue Aufgabe..."
                             style="background:transparent; border:none; padding:0; height:auto; font-size:1.1rem;"
                             onkeypress="if(event.key === 'Enter') app.tasks.addInline()">
                         <button class="btn-primary" onclick="app.tasks.addInline()"
@@ -709,79 +699,8 @@
                                 data-lucide="arrow-up"></i></button>
                     </div>
 
-                    <!-- Statistics Bar -->
-                    <div class="tasks-stats-bar">
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(59, 130, 246, 0.15);">
-                                <i data-lucide="list-todo" size="18" style="color: #3b82f6;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Offen</span>
-                                <span class="tasks-stat-value" id="tasksStatOpen">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(239, 68, 68, 0.15);">
-                                <i data-lucide="flame" size="18" style="color: #ef4444;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Dringend</span>
-                                <span class="tasks-stat-value" id="tasksStatUrgent" style="color: #ef4444;">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
-                                <i data-lucide="shopping-cart" size="18" style="color: #22c55e;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Einkauf</span>
-                                <span class="tasks-stat-value" id="tasksStatShopping" style="color: #22c55e;">0</span>
-                            </div>
-                        </div>
-                        <div class="tasks-stat-item">
-                            <div class="tasks-stat-icon" style="background: rgba(34, 197, 94, 0.15);">
-                                <i data-lucide="check-circle" size="18" style="color: #22c55e;"></i>
-                            </div>
-                            <div class="tasks-stat-content">
-                                <span class="tasks-stat-label">Erledigt</span>
-                                <span class="tasks-stat-value" id="tasksStatDone" style="color: #22c55e;">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filter Tabs -->
-                    <!-- Filter Tabs -->
-                    <div class="tabs"
-                        style="display:flex; gap:10px; margin-bottom: 20px; overflow-x:auto; padding-bottom:5px;">
-                        <button class="btn task-filter-btn active" data-filter="todo"
-                            style="background:rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); white-space:nowrap;"
-                            onclick="app.tasks.filter('todo')">
-                            <i data-lucide="check-square" size="14"></i> Offen
-                        </button>
-                        <button class="btn task-filter-btn" data-filter="urgent"
-                            style="background:rgba(255,255,255,0.05); white-space:nowrap;"
-                            onclick="app.tasks.filter('urgent')">
-                            <i data-lucide="flame" size="14"></i> Wichtig
-                        </button>
-                        <button class="btn task-filter-btn" data-filter="done"
-                            style="background:rgba(255,255,255,0.05); white-space:nowrap;"
-                            onclick="app.tasks.filter('done')">
-                            <i data-lucide="check-circle" size="14"></i> Erledigt
-                        </button>
-                    </div>
-
                     <!-- Tasks Table -->
                     <div class="tasks-table-container">
-                        <!-- Table Header -->
-                        <div class="tasks-table-header">
-                            <div>✓</div>
-                            <div>Aufgabe</div>
-                            <div class="task-category">Kategorie</div>
-                            <div class="task-priority">Priorität</div>
-                            <div class="task-date">Erstellt</div>
-                            <div style="text-align: right;">Aktionen</div>
-                        </div>
-
                         <!-- Table Body -->
                         <div id="taskListContainer">
                             <!-- Tasks will be rendered here -->

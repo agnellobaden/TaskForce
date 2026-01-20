@@ -606,30 +606,32 @@ const app = {
             f.sort((a, b) => (a.urgent === b.urgent) ? 0 : a.urgent ? -1 : 1);
 
             if (f.length === 0) {
-                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Einträge.</div>';
+                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.02); border-radius:16px; border:1px dashed rgba(255,255,255,0.05);">Keine Einträge.</div>';
             } else {
-                l.innerHTML = f.map(t => `
-                <div class="task-item ${t.urgent ? 'blink-urgent' : ''}" style="border-left: 3px solid var(--success);">
-                    <div style="display:flex;align-items:center;gap:10px; width:100%;">
-                        <div class="checkbox-circle" onclick="app.shopping.toggle(${t.id})"></div>
+                l.innerHTML = `<div style="display:flex; flex-direction:column; gap:8px; background:rgba(0,0,0,0.2); padding:10px; border-radius:16px; border:1px solid rgba(255,255,255,0.05);">
+                    ${f.map(t => `
+                    <div class="task-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:rgba(34, 197, 94, 0.08); border-radius:12px; border:1px solid rgba(34, 197, 94, 0.2); transition:all 0.2s; ${t.urgent ? 'border-color:rgba(239, 68, 68, 0.5); background:rgba(239, 68, 68, 0.1);' : ''}">
+                        <div class="checkbox-circle" onclick="app.shopping.toggle(${t.id})" style="flex-shrink:0; cursor:pointer;"></div>
                         
-                        <button class="btn-toggle-urgent ${t.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.shopping.toggleUrgency(${t.id})">
-                            <i data-lucide="flame" size="14"></i>
-                        </button>
-                        
-                        <div style="display:flex; flex-direction:column; flex:1;">
-                            <span style="font-weight:600; font-size:1.1rem;">${t.title}</span>
-                            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:2px;">
-                                ${t.isShared ? `<span class="badge-${t.type || 'team'}">${t.type === 'team' ? 'Team' : (t.type === 'public' ? 'Öffentlich' : 'Geteilt')}</span>` : ''}
-                                ${t.category === 'business' ? `<span class="badge-business">Business</span>` : ''}
+                        <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <span style="font-weight:600; color:white; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    ${t.title}
+                                </span>
+                                ${t.urgent ? `<span style="display:inline-block; padding:2px 8px; background:rgba(239, 68, 68, 0.3); color:#ff6b6b; border-radius:6px; font-size:0.65rem; font-weight:700;">🔥 Dringend</span>` : ''}
+                                ${t.isShared ? `<span class="badge-${t.type || 'team'}" style="font-size:0.65rem;">${t.type === 'team' ? 'Team' : (t.type === 'public' ? 'Öffentlich' : 'Geteilt')}</span>` : ''}
                             </div>
                         </div>
 
-                        <button class="btn" onclick="app.shopping.delete(${t.id})" style="color:var(--text-muted); opacity:0.7;">
+                        <button class="btn" onclick="event.stopPropagation(); app.shopping.toggleUrgency(${t.id}); app.shopping.render();" title="Dringend" style="flex-shrink:0; background:${t.urgent ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.05)'}; border:1px solid ${t.urgent ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255,255,255,0.1)'}; color:${t.urgent ? '#ff6b6b' : 'var(--text-muted)'}; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i data-lucide="flame" size="16"></i>
+                        </button>
+
+                        <button class="btn" onclick="app.shopping.delete(${t.id})" title="Löschen" style="flex-shrink:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
                             <i data-lucide="trash-2" size="16"></i>
                         </button>
-                    </div>
-                </div>`).join('');
+                    </div>`).join('')}
+                </div>`;
             }
 
             // Render active class on tabs
@@ -2350,53 +2352,42 @@ const app = {
         render() {
             const l = document.getElementById('taskListContainer'); if (!l) return;
 
-            let f = app.state.tasks;
+            let f = app.state.tasks.filter(t => t.category !== 'shopping');
 
             // Strict Tasks Logic (No Shopping)
             if (this.currentFilter === 'urgent') {
                 f = f.filter(t => t.urgent && !t.done);
             } else if (this.currentFilter === 'done') {
-                f = f.filter(t => t.done && t.category !== 'shopping');
+                f = f.filter(t => t.done);
             } else {
-                // Default 'todo' - Show ALL (Pending & Done) except shopping
-                f = f.filter(t => t.category !== 'shopping');
+                // Default 'todo' - Show only undone
+                f = f.filter(t => !t.done);
             }
 
-            // Sort: Urgent > Pending > Done
-            f.sort((a, b) => {
-                if (a.done !== b.done) return a.done ? 1 : -1;
-                if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
-                return 0;
-            });
+            // Sort: Urgent > Pending
+            f.sort((a, b) => (a.urgent === b.urgent) ? 0 : a.urgent ? -1 : 1);
 
             if (f.length === 0) {
-                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:20px;">Keine Aufgaben.</div>';
+                l.innerHTML = '<div class="text-muted text-sm" style="text-align:center; padding:40px 20px;">Keine Aufgaben.</div>';
             } else {
-                l.innerHTML = f.map(t => `
-                <div class="task-item ${t.done ? 'opacity-50' : ''} ${t.urgent ? 'blink-urgent' : ''}">
-                    <div style="display:flex;align-items:center;gap:10px; width:100%;">
-                        <div class="checkbox-circle ${t.done ? 'checked' : ''}" onclick="app.tasks.toggle(${t.id})"></div>
+                l.innerHTML = `<div style="display:flex; flex-direction:column; gap:8px;">
+                    ${f.map(t => `
+                    <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+                        <div class="checkbox-circle" onclick="app.tasks.toggle(${t.id})" style="flex-shrink:0; cursor:pointer;"></div>
                         
-                        <button class="btn-toggle-urgent ${t.urgent ? 'is-urgent' : ''}" onclick="event.stopPropagation(); app.tasks.toggleUrgency(${t.id})">
-                            <i data-lucide="flame" size="14"></i>
-                        </button>
-                        
-                        <div style="display:flex; flex-direction:column; flex:1;">
-                            <span style="${t.done ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">
-                                ${t.title}
-                            </span>
-                             <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:2px;">
-                                 ${t.isShared ? `<span class="badge-${t.type || 'team'}">${t.type === 'team' ? 'Team' : (t.type === 'public' ? 'Öffentlich' : 'Geteilt')}</span>` : ''}
-                                 ${t.category === 'business' ? `<span class="badge-business">Business</span>` : ''}
-                                 ${t.category && t.category !== 'todo' && t.category !== 'shopping' && t.category !== 'business' && t.category !== 'private' ? `<span class="text-xs text-muted">${t.category}</span>` : ''}
-                             </div>
-                        </div>
+                        <span style="font-weight:500; color:white; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            ${t.title}
+                        </span>
 
-                        <button class="btn" onclick="app.tasks.delete(${t.id})" title="Archivieren" style="color:var(--text-muted); opacity:0.7;">
-                            <i data-lucide="archive" size="16"></i>
+                        <button class="btn" onclick="event.stopPropagation(); app.tasks.toggleUrgency(${t.id}); app.tasks.render();" title="Dringend" style="flex-shrink:0; background:${t.urgent ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.05)'}; border:1px solid ${t.urgent ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255,255,255,0.1)'}; color:${t.urgent ? '#ff6b6b' : 'var(--text-muted)'}; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i data-lucide="flame" size="16"></i>
                         </button>
-                    </div>
-                </div>`).join('');
+
+                        <button class="btn" onclick="app.tasks.delete(${t.id})" title="Löschen" style="flex-shrink:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i data-lucide="trash-2" size="16"></i>
+                        </button>
+                    </div>`).join('')}
+                </div>`;
             }
 
             // Highlight active tab
