@@ -1190,7 +1190,7 @@ const app = {
                             <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <div style="text-transform: uppercase; font-size: 0.7rem; font-weight: 600; opacity: 0.8;">${dateLabel}</div>
-                                    ${e.location ? `<span style="opacity: 0.5;">•</span> <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">${e.location}</div>` : ''}
+                                    ${e.location ? `<span style="opacity: 0.5;">•</span> <div style="display: flex; align-items: center; gap: 4px; word-break: break-word; white-space: normal;">${e.location}</div>` : ''}
                                 </div>
                                 
                                 ${(e.location || e.phone || e.email) ? `<div style="flex: 1; min-width: 10px;"></div>` : ''}
@@ -5473,6 +5473,14 @@ const app = {
                                 <i data-lucide="map-pin" size="16" style="opacity:0.6;"></i>
                                 <span style="font-size:0.8rem; line-height:1.4;">${con.address}</span>
                             </div>
+                            <iframe 
+                                width="100%" 
+                                height="150" 
+                                style="border:0; border-radius:12px; margin-bottom:10px; opacity: 0.8;" 
+                                loading="lazy" 
+                                allowfullscreen 
+                                src="https://maps.google.com/maps?q=${encodeURIComponent(con.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed">
+                            </iframe>
                             <button class="btn btn-primary" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(con.address)}', '_blank')" style="width:100%; height:36px; border-radius:10px; font-size:0.85rem;">
                                 <i data-lucide="navigation" size="14"></i> Navigation starten
                             </button>
@@ -6019,10 +6027,20 @@ const app = {
                                 </button>
                             ` : ''}
                             ${c.address ? `
-                                <button onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}', '_blank')" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#ef4444; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-                                    <i data-lucide="map-pin" size="16"></i>
-                                    <span>Maps</span>
-                                </button>
+                                <div style="width:100%; margin-top: 8px;">
+                                    <iframe 
+                                        width="100%" 
+                                        height="120" 
+                                        style="border:0; border-radius:12px; margin-bottom:8px; opacity: 0.9;" 
+                                        loading="lazy" 
+                                        allowfullscreen 
+                                        src="https://maps.google.com/maps?q=${encodeURIComponent(c.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed">
+                                    </iframe>
+                                    <button onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}', '_blank')" style="width:100%; padding:10px 16px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#ef4444; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                                        <i data-lucide="map-pin" size="16"></i>
+                                        <span>Maps Navigation</span>
+                                    </button>
+                                </div>
                             ` : ''}
                             ${c.phone ? `
                                 <button onclick="window.open('https://wa.me/${c.phone.replace(/\\D/g, '')}', '_blank')" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:10px; color:#22c55e; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">

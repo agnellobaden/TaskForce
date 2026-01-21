@@ -514,7 +514,7 @@
                         </div>
 
                         <!-- 7. BOTTOM TOOLS: Drive & Apps Pay -->
-                        <div id="dashboardDriveCard" class="card dash-card card-medium"
+                        <div id="dashboardDriveCard" class="card dash-card card-mini"
                             style="grid-column: span 2; order: 51;" onclick="app.actions.toggleDriveMode()"
                             draggable="true">
                             <div style="display:flex; align-items:center; gap:12px;">
@@ -1146,34 +1146,37 @@
                 <div id="view-drive" class="view-section hidden"
                     style="position:fixed; inset:0; z-index:9999; background:#000; text-align:center; display:flex; flex-direction:column; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
 
-                    <!-- Header with Close & Clock -->
-                    <div style="padding: 20px; display:flex; justify-content:space-between; align-items:center;">
+                    <!-- Header with Close & Clock (Compact) -->
+                    <div style="padding: 10px 20px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="text-align:left;">
-                            <div style="font-size: 3.5rem; font-weight: 800; line-height:1; letter-spacing: -1px;"
+                            <div style="font-size: 2.2rem; font-weight: 800; line-height:1; letter-spacing: -1px;"
                                 id="driveClock">--:--</div>
-                            <div class="text-muted" id="driveDate" style="font-size: 1.1rem;">Lade Datum...</div>
+                            <div class="text-muted" id="driveDate" style="font-size: 0.9rem;">Lade Datum...</div>
                         </div>
                         <button class="nav-drive-close" onclick="app.actions.toggleDriveMode()">
-                            <i data-lucide="x" size="32"></i>
+                            <i data-lucide="x" size="24"></i>
                         </button>
                     </div>
 
-                    <!-- Location Status -->
-                    <div id="driveLocationStatus" style="padding: 0 20px; text-align: left; margin-bottom: 10px;">
+                    <!-- Location Status (Compact) -->
+                    <div id="driveLocationStatus" style="padding: 0 20px; text-align: left; margin-bottom: 5px;">
                         <div
-                            style="display:flex; align-items:center; gap:12px; background:rgba(34,197,94,0.15); padding:12px; border-radius:16px; border:1px solid rgba(34,197,94,0.3);">
-                            <div style="background:rgba(34,197,94,0.2); padding:8px; border-radius:50%; display:flex;">
-                                <i data-lucide="navigation" class="text-success" size="20"></i>
+                            style="display:flex; align-items:center; gap:8px; background:rgba(34,197,94,0.1); padding:8px 10px; border-radius:12px; border:1px solid rgba(34,197,94,0.2);">
+                            <div style="background:rgba(34,197,94,0.2); padding:6px; border-radius:50%; display:flex;">
+                                <i data-lucide="navigation" class="text-success" size="16"></i>
                             </div>
-                            <div style="flex:1;">
-                                <div class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:0.5px;">
-                                    Aktueller Standort</div>
-                                <div id="currentLocationText" style="font-weight:bold; font-size:1.1rem;">Suche
+                            <div style="flex:1; min-width: 0;">
+                                <div class="text-xs text-muted"
+                                    style="text-transform:uppercase; letter-spacing:0.5px; font-size: 0.65rem;">
+                                    Standort</div>
+                                <div id="currentLocationText"
+                                    style="font-weight:bold; font-size:0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    Suche
                                     GPS...
                                 </div>
                             </div>
                             <button class="btn-small" onclick="app.drive.askLocation()"
-                                style="width: auto; padding: 0 15px;">Ändern</button>
+                                style="width: auto; padding: 0 10px; font-size: 0.75rem; height: 28px;">Ändern</button>
                         </div>
                     </div>
 

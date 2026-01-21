@@ -143,9 +143,27 @@ svg {
 /* Mode Specific Styling */
 body.mode-business {
     --primary: #3b82f6;
-    /* Blue for Business */
+    /* Blue for Business (Buttons stay blue) */
     --primary-glow: rgba(59, 130, 246, 0.3);
-    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent), #000;
+    /* Gold Gradient matching Private Mode style (135deg) */
+    background-color: #1a1200 !important;
+    background-image: linear-gradient(135deg, #1a1200 0%, #5c4600 100%) !important;
+    background-attachment: fixed;
+}
+
+#dashboardDriveCard {
+    border: 1px solid #d4af37 !important;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(0, 0, 0, 0.6)) !important;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#dashboardDriveCard .card-title,
+#dashboardDriveCard div {
+    color: white !important;
 }
 
 body.mode-private {
