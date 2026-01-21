@@ -48,10 +48,15 @@
         padding: 8px !important;
     }
 
-    /* Kontakte-Ansicht Header */
+    /* Kontakte-Ansicht Header & Content */
     #view-contacts .card-header,
     .view-section .card-header {
-        padding: 20px !important;
+        padding: 15px !important;
+    }
+
+    #view-contacts>.card>div:nth-child(3) {
+        padding: 10px !important;
+        /* Reduce padding for content */
     }
 
     /* Button-Gruppen horizontal scrollbar wenn nötig */
@@ -133,12 +138,17 @@
         font-size: 0.7rem !important;
     }
 
-    /* Dashboard Mode Switcher */
+    /* Dashboard Mode Switcher - Fix padding and margin */
     #btnModeBusiness,
     #btnModePrivate {
         padding: 8px 16px !important;
         font-size: 0.85rem !important;
         white-space: nowrap !important;
+    }
+
+    /* Move switcher down on mobile */
+    .dash-mode-switcher {
+        margin-top: 10px !important;
     }
 
     /* Verhindere horizontales Scrollen der Hauptseite */
@@ -195,5 +205,12 @@
     .btn i {
         width: 14px !important;
         height: 14px !important;
+    }
+}
+
+/* Ensure menu works on desktop */
+@media (min-width: 769px) {
+    .mobile-menu-toggle {
+        display: flex !important;
     }
 }

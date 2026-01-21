@@ -6,7 +6,7 @@
         padding-left: 0 !important;
         padding-right: 0 !important;
         padding-bottom: 110px !important;
-        padding-top: 75px !important;
+        padding-top: 85px !important;
         width: 100% !important;
         overflow-x: hidden !important;
         box-sizing: border-box !important;
@@ -42,7 +42,7 @@
         padding: 8px !important;
     }
 
-    #dashboardEventsPreview > div {
+    #dashboardEventsPreview>div {
         padding: 12px 10px !important;
     }
 
@@ -212,6 +212,6 @@
     }
 
     .top-bar {
-        padding-top: max(0px, env(safe-area-inset-top));
+        padding-top: max(15px, env(safe-area-inset-top));
     }
 }

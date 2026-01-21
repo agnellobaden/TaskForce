@@ -306,6 +306,31 @@
                             </div>
                         </div>
 
+                        <!-- NEW CONTACTS WIDGET -->
+                        <div id="dashboardContactsCard" class="card dash-card card-medium"
+                            style="grid-column: span 2; order: 11; max-height: 400px; overflow-y: auto;"
+                            draggable="true">
+                            <div class="card-header">
+                                <span class="card-title"><i data-lucide="users" class="text-info"></i> Kontakte</span>
+                                <button class="btn-small" onclick="app.modals.open('addContact')"><i
+                                        data-lucide="plus"></i></button>
+                            </div>
+                            <!-- Filter for Widget -->
+                            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                                <button class="btn-small" onclick="app.contacts.filterContactsWidget('all')"
+                                    style="flex:1;">Alle</button>
+                                <button class="btn-small" onclick="app.contacts.filterContactsWidget('private')"
+                                    style="flex:1;">Privat</button>
+                                <button class="btn-small" onclick="app.contacts.filterContactsWidget('business')"
+                                    style="flex:1;">Business</button>
+                            </div>
+                            <!-- 2-Column Grid for Contacts -->
+                            <div id="dashboardContactsPreview"
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <!-- Contact Cards -->
+                            </div>
+                        </div>
+
                         <div id="dashboardSearchCard" class="card dash-card card-medium"
                             style="grid-column: span 2; order: 15; background: linear-gradient(135deg, rgba(30,30,30,0.8), rgba(10,10,10,0.95));"
                             draggable="true">
@@ -380,9 +405,15 @@
                             </div>
                             <!-- Filter Tabs -->
                             <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                                <button class="btn btn-secondary" id="dashboardFilterAllBtn" onclick="app.calendar.dashboardFilter('all'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterPrivateBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';" style="background:var(--primary); font-size:0.85rem; padding:6px 12px;">Alle</button>
-                                <button class="btn btn-secondary" id="dashboardFilterPrivateBtn" onclick="app.calendar.dashboardFilter('private'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';" style="font-size:0.85rem; padding:6px 12px;">Privat</button>
-                                <button class="btn btn-secondary" id="dashboardFilterBusinessBtn" onclick="app.calendar.dashboardFilter('business'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterPrivateBtn').style.background='';" style="font-size:0.85rem; padding:6px 12px;">Business</button>
+                                <button class="btn btn-secondary" id="dashboardFilterAllBtn"
+                                    onclick="app.calendar.dashboardFilter('all'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterPrivateBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';"
+                                    style="background:var(--primary); font-size:0.85rem; padding:6px 12px;">Alle</button>
+                                <button class="btn btn-secondary" id="dashboardFilterPrivateBtn"
+                                    onclick="app.calendar.dashboardFilter('private'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';"
+                                    style="font-size:0.85rem; padding:6px 12px;">Privat</button>
+                                <button class="btn btn-secondary" id="dashboardFilterBusinessBtn"
+                                    onclick="app.calendar.dashboardFilter('business'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterPrivateBtn').style.background='';"
+                                    style="font-size:0.85rem; padding:6px 12px;">Business</button>
                             </div>
                             <div id="dashboardEventsPreview" style="display:flex; flex-direction:column;">
                                 <!-- Filled by JS (Consolidated View) -->
@@ -690,8 +721,7 @@
                     <!-- Inline Add Task Form -->
                     <div
                         style="background:rgba(255,255,255,0.03); padding:15px; border-radius:16px; margin-bottom:20px; display:flex; gap:10px; border:1px solid rgba(255,255,255,0.05);">
-                        <input type="text" id="inlineTaskInput" class="form-input"
-                            placeholder="Neue Aufgabe..."
+                        <input type="text" id="inlineTaskInput" class="form-input" placeholder="Neue Aufgabe..."
                             style="background:transparent; border:none; padding:0; height:auto; font-size:1.1rem;"
                             onkeypress="if(event.key === 'Enter') app.tasks.addInline()">
                         <button class="btn-primary" onclick="app.tasks.addInline()"
@@ -803,9 +833,13 @@
 
                     <!-- Category Filter -->
                     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-                        <button class="btn btn-secondary" id="filterAllBtn" onclick="app.calendar.filterByCategory('all'); this.style.background='var(--primary)'; document.getElementById('filterPrivateBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';" style="background:var(--primary);">Alle</button>
-                        <button class="btn btn-secondary" id="filterPrivateBtn" onclick="app.calendar.filterByCategory('private'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';">Privat</button>
-                        <button class="btn btn-secondary" id="filterBusinessBtn" onclick="app.calendar.filterByCategory('business'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterPrivateBtn').style.background='';">Business</button>
+                        <button class="btn btn-secondary" id="filterAllBtn"
+                            onclick="app.calendar.filterByCategory('all'); this.style.background='var(--primary)'; document.getElementById('filterPrivateBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';"
+                            style="background:var(--primary);">Alle</button>
+                        <button class="btn btn-secondary" id="filterPrivateBtn"
+                            onclick="app.calendar.filterByCategory('private'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterBusinessBtn').style.background='';">Privat</button>
+                        <button class="btn btn-secondary" id="filterBusinessBtn"
+                            onclick="app.calendar.filterByCategory('business'); this.style.background='var(--primary)'; document.getElementById('filterAllBtn').style.background=''; document.getElementById('filterPrivateBtn').style.background='';">Business</button>
                     </div>
 
                     <div class="card" style="max-width: 1200px; margin: 0 auto;">
@@ -1028,7 +1062,8 @@
                                     <h1
                                         style="margin:0; font-size:2rem; background: linear-gradient(to right, #fff, var(--text-muted)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
                                         Kontakt Management</h1>
-                                    <p class="text-muted" style="margin:5px 0 0 0;">Verwalte deine privaten und geschäftlichen Kontakte.</p>
+                                    <p class="text-muted" style="margin:5px 0 0 0;">Verwalte deine privaten und
+                                        geschäftlichen Kontakte.</p>
                                 </div>
                                 <div style="display:flex; gap:10px;">
                                     <button class="btn btn-secondary" onclick="app.contacts.importFromPhone()"><i
@@ -1040,14 +1075,19 @@
                         </div>
 
                         <!-- Category Tabs -->
-                        <div style="display:flex; gap:10px; padding:20px 25px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2);">
-                            <button id="contactTabAll" class="btn btn-secondary" style="background:var(--primary); color:white; border:none;" onclick="app.contacts.filterContacts('all'); document.getElementById('contactTabAll').style.background='var(--primary)'; document.getElementById('contactTabPrivate').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
+                        <div
+                            style="display:flex; gap:10px; padding:20px 25px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2);">
+                            <button id="contactTabAll" class="btn btn-secondary"
+                                style="background:var(--primary); color:white; border:none;"
+                                onclick="app.contacts.filterContacts('all'); document.getElementById('contactTabAll').style.background='var(--primary)'; document.getElementById('contactTabPrivate').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
                                 <i data-lucide="users" size="16" style="margin-right:5px;"></i>Alle
                             </button>
-                            <button id="contactTabPrivate" class="btn btn-secondary" style="border:none;" onclick="app.contacts.filterContacts('private'); document.getElementById('contactTabPrivate').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
+                            <button id="contactTabPrivate" class="btn btn-secondary" style="border:none;"
+                                onclick="app.contacts.filterContacts('private'); document.getElementById('contactTabPrivate').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabBusiness').style.background='';">
                                 <i data-lucide="user" size="16" style="margin-right:5px;"></i>Privat
                             </button>
-                            <button id="contactTabBusiness" class="btn btn-secondary" style="border:none;" onclick="app.contacts.filterContacts('business'); document.getElementById('contactTabBusiness').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabPrivate').style.background='';">
+                            <button id="contactTabBusiness" class="btn btn-secondary" style="border:none;"
+                                onclick="app.contacts.filterContacts('business'); document.getElementById('contactTabBusiness').style.background='var(--primary)'; document.getElementById('contactTabAll').style.background=''; document.getElementById('contactTabPrivate').style.background='';">
                                 <i data-lucide="briefcase" size="16" style="margin-right:5px;"></i>Business
                             </button>
                         </div>

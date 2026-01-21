@@ -524,10 +524,18 @@ const app = {
         if (!sb) return;
 
         if (this.isSidebarOpen) {
-            sb.classList.add('open');
+            sb.classList.remove('hidden'); // Remove hidden to show
+            // Small delay to allow display:block to apply before transition
+            setTimeout(() => sb.classList.add('open'), 10);
+
             if (closeBtn) closeBtn.style.display = 'block';
         } else {
             sb.classList.remove('open');
+            // Wait for transition to finish before hiding
+            setTimeout(() => {
+                if (!this.isSidebarOpen) sb.classList.add('hidden');
+            }, 300);
+
             if (closeBtn) closeBtn.style.display = 'none';
         }
     },
@@ -1101,9 +1109,9 @@ const app = {
                                     <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
                                     ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
                                 </div>
-                                ${e.phone || e.email ? `<div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
-                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'" title="Anrufen"><i data-lucide="phone" size="12"></i> ${e.phone}</a>` : ''}
-                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'" title="E-Mail schreiben"><i data-lucide="mail" size="12"></i> ${e.email}</a>` : ''}
+                                ${e.phone || e.email ? `<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px;">
+                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s; max-width:100%; box-sizing:border-box;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'" title="Anrufen"><i data-lucide="phone" size="12" style="flex-shrink:0;"></i> <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.phone}</span></a>` : ''}
+                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s; max-width:100%; box-sizing:border-box;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'" title="E-Mail schreiben"><i data-lucide="mail" size="12" style="flex-shrink:0;"></i> <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.email}</span></a>` : ''}
                                 </div>` : ''}
                             </div>
                             <div style="display:flex; align-items:center; margin-left:10px;">
@@ -5057,7 +5065,14 @@ const app = {
                     { id: 'dashboardAlarmsCard', name: 'Wecker', icon: 'alarm-clock' },
                     { id: 'dashboardDriveCard', name: 'Drive / Fahrt-Modus', icon: 'navigation' },
                     { id: 'dashboardShortcutsCard', name: 'Apps & Links', icon: 'layers' },
-                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' }
+                    { id: 'dashboardSearchCard', name: 'Business Suche', icon: 'search' },
+                    { id: 'dashboardTimeTrackerCard', name: 'Zeit-Tracker', icon: 'clock' },
+                    { id: 'dashboardNotesCard', name: 'Notizen', icon: 'sticky-note' },
+                    { id: 'dashboardProjectsCard', name: 'Projekt-Management', icon: 'briefcase' },
+                    { id: 'dashboardMeetingsCard', name: 'Meeting-Protokolle', icon: 'users-2' },
+                    { id: 'dashboardHouseholdCard', name: 'Haushalt', icon: 'home' },
+                    { id: 'dashboardMealPlanCard', name: 'Wochenmenü', icon: 'utensils' },
+                    { id: 'dashboardPrivateDriveCard', name: 'Privater Drive Mode', icon: 'car' }
                 ];
 
                 c.innerHTML = `
@@ -6070,7 +6085,8 @@ const app = {
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
                 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
-                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard'
+                'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
+                'dashboardHouseholdCard', 'dashboardMealPlanCard', 'dashboardPrivateDriveCard'
             ];
 
             allCards.forEach(id => {
@@ -6464,6 +6480,52 @@ const app = {
 
     // --- CONTACTS MODULE ---
     contacts: {
+        currentFilter: 'all',
+        widgetFilter: 'all',
+
+        filterContactsWidget(category) {
+            this.widgetFilter = category;
+            this.renderQuick();
+        },
+
+        renderQuick() {
+            const container = document.getElementById('dashboardContactsPreview');
+            if (!container) return;
+
+            const contacts = app.state.contacts || [];
+            if (contacts.length === 0) {
+                container.innerHTML = '<div class="text-muted text-xs" style="grid-column:span 2; text-align:center;">Keine Kontakte.</div>';
+                return;
+            }
+
+            let filtered = contacts;
+            if (this.widgetFilter !== 'all') {
+                filtered = contacts.filter(c => (c.category || 'private') === this.widgetFilter);
+            }
+
+            // Always respect dashboard mode if widget is "all" or matching?
+            // Actually, let's keep the widget filter independent but default it to match dashboard mode on init if we wanted.
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-muted text-xs" style="grid-column:span 2; text-align:center;">Keine Kontakte in dieser Kategorie.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(c => `
+                <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; cursor:pointer; transition:all 0.2s;"
+                    onclick="app.contacts.edit(${c.id})"
+                    onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                    <div style="font-weight:600; font-size:0.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.name}</div>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        ${c.phone ? `<a href="tel:${c.phone}" onclick="event.stopPropagation()" style="color:var(--success);"><i data-lucide="phone" size="14"></i></a>` : ''}
+                        ${c.email ? `<a href="mailto:${c.email}" onclick="event.stopPropagation()" style="color:var(--primary);"><i data-lucide="mail" size="14"></i></a>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
+        },
         async importFromPhone() {
             try {
                 // Check if Contact Picker API is supported
@@ -6593,6 +6655,11 @@ const app = {
             this.render(query);
         },
 
+        filterContacts(category) {
+            this.currentFilter = category;
+            this.render();
+        },
+
         render(searchQuery = '') {
             const container = document.getElementById('contactsList');
             if (!container) return;
@@ -6603,6 +6670,11 @@ const app = {
             }
 
             let contacts = app.state.contacts;
+
+            // Filter by category
+            if (this.currentFilter && this.currentFilter !== 'all') {
+                contacts = contacts.filter(c => (c.category || 'private') === this.currentFilter);
+            }
 
             // Filter by search query
             if (searchQuery) {
