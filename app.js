@@ -988,8 +988,8 @@ const app = {
                     dayEvents.forEach(ev => {
                         const eventTime = new Date(ev.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                         const typeTag = ev.isShared ? `<span style="font-size:0.6rem; opacity:0.8; margin-left:4px; font-weight:800;">(${ev.type === 'team' ? 'T' : (ev.type === 'public' ? 'Ö' : 'G')})</span>` : '';
-                        const categoryIndicator = ev.category === 'business' 
-                            ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px; margin-left:2px;"></span>` 
+                        const categoryIndicator = ev.category === 'business'
+                            ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px; margin-left:2px;"></span>`
                             : `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#a78bfa; margin-right:4px; margin-left:2px;"></span>`;
                         dayContent += `<div class="event-marker ${ev.urgent ? 'urgent' : ''}" style="display:flex; align-items:center;" title="${ev.title} - ${eventTime} (${ev.category === 'business' ? 'Business' : 'Privat'})">${categoryIndicator}${ev.title}${typeTag}</div>`;
                     });
@@ -1079,7 +1079,7 @@ const app = {
                     }
 
                     // Create category badge
-                    const categoryBadge = e.category === 'business' 
+                    const categoryBadge = e.category === 'business'
                         ? `<span style="display: inline-block; padding: 3px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">Business</span>`
                         : `<span style="display: inline-block; padding: 3px 8px; background: rgba(139, 92, 246, 0.2); color: #a78bfa; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">Privat</span>`;
 
@@ -1089,7 +1089,7 @@ const app = {
                                 <div style="font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px; line-height:1;">${timeStr}</div>
                                 <div style="font-size: 0.7rem; color: var(--text-muted); text-transform:uppercase; margin-top:4px; font-weight:700;">${dateLabel}</div>
                             </div>
-                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 4px;">
+                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 6px;">
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 10px;">
                                     <div style="display:flex; align-items:center; flex: 1;">
                                         <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
@@ -1101,6 +1101,10 @@ const app = {
                                     <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
                                     ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
                                 </div>
+                                ${e.phone || e.email ? `<div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
+                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'" title="Anrufen"><i data-lucide="phone" size="12"></i> ${e.phone}</a>` : ''}
+                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'" title="E-Mail schreiben"><i data-lucide="mail" size="12"></i> ${e.email}</a>` : ''}
+                                </div>` : ''}
                             </div>
                             <div style="display:flex; align-items:center; margin-left:10px;">
                                  ${e.urgent || (diffMins > -15 && diffMins < 30) ? '<div style="width:10px; height:10px; border-radius:50%; background:#06b6d4; box-shadow: 0 0 12px #06b6d4; margin-right:15px;"></div>' : ''}
@@ -4134,37 +4138,41 @@ const app = {
             window.history.pushState({ modal: true, page: app.state.currentPage }, '', '');
 
             if (type === 'addContact') {
+                const isEditing = data && data.id;
+                const title = isEditing ? 'Kontakt bearbeiten' : 'Neuer Kontakt';
+                const icon = isEditing ? 'edit-2' : 'user-plus';
+
                 c.innerHTML = `
                     <div style="padding:24px;">
-                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="user-plus" class="text-primary"></i> Neuer Kontakt</h3>
+                        <h3 style="margin-bottom:20px; display:flex; align-items:center; gap:10px;"><i data-lucide="${icon}" class="text-primary"></i> ${title}</h3>
                         <div class="form-group">
                             <label class="form-label">Kategorie</label>
                             <select id="newContactCategory" class="form-input">
-                                <option value="private">Privat</option>
-                                <option value="business">Business</option>
+                                <option value="private" ${data.category === 'private' || !data.category ? 'selected' : ''}>Privat</option>
+                                <option value="business" ${data.category === 'business' ? 'selected' : ''}>Business</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Name / Firma</label>
-                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname">
+                            <input id="newContactName" class="form-input" placeholder="Nachname, Vorname oder Firmenname" value="${data.name || ''}">
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div class="form-group">
                                 <label class="form-label">Telefon</label>
-                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789">
+                                <input id="newContactPhone" class="form-input" placeholder="+49 123 456789" value="${data.phone || ''}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">E-Mail</label>
-                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de">
+                                <input id="newContactEmail" class="form-input" type="email" placeholder="email@firma.de" value="${data.email || ''}">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Adresse / Standort</label>
-                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt">
+                            <input id="newContactAddress" class="form-input" placeholder="Straße 1, 12345 Stadt" value="${data.address || ''}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Homepage (URL)</label>
-                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de">
+                            <input id="newContactHomepage" class="form-input" placeholder="https://www.beispiel.de" value="${data.homepage || ''}">
                         </div>
                         <div style="display:flex;justify-content:end;gap:12px;margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
                             <button class="btn" onclick="app.modals.close()">Abbrechen</button>
@@ -5435,11 +5443,11 @@ const app = {
             const allBtn = document.getElementById('contactTabAll');
             const privBtn = document.getElementById('contactTabPrivate');
             const bizBtn = document.getElementById('contactTabBusiness');
-            
+
             if (allBtn) allBtn.style.background = category === 'all' ? 'var(--primary)' : '';
             if (privBtn) privBtn.style.background = category === 'private' ? 'var(--primary)' : '';
             if (bizBtn) bizBtn.style.background = category === 'business' ? 'var(--primary)' : '';
-            
+
             this.render();
         },
         delete(id) {
@@ -6534,21 +6542,43 @@ const app = {
 
             if (!app.state.contacts) app.state.contacts = [];
 
-            app.state.contacts.push({
-                id: Date.now(),
-                name: name,
-                phone: phone,
-                email: email,
-                address: address,
-                homepage: homepage,
-                category: category,
-                createdAt: new Date().toISOString()
-            });
+            // Check if editing existing contact
+            if (app.editingId) {
+                const contact = app.state.contacts.find(c => c.id === app.editingId);
+                if (contact) {
+                    contact.name = name;
+                    contact.phone = phone;
+                    contact.email = email;
+                    contact.address = address;
+                    contact.homepage = homepage;
+                    contact.category = category;
+                }
+                app.editingId = null;
+            } else {
+                app.state.contacts.push({
+                    id: Date.now(),
+                    name: name,
+                    phone: phone,
+                    email: email,
+                    address: address,
+                    homepage: homepage,
+                    category: category,
+                    createdAt: new Date().toISOString()
+                });
+            }
 
             app.saveState();
             app.modals.close();
             this.render();
             app.gamification.addXP(10);
+        },
+
+        edit(id) {
+            const contact = app.state.contacts.find(c => c.id === id);
+            if (!contact) return;
+
+            app.editingId = id;
+            app.modals.open('addContact', contact);
         },
 
         delete(id) {
@@ -6594,7 +6624,10 @@ const app = {
             contacts.sort((a, b) => a.name.localeCompare(b.name));
 
             container.innerHTML = contacts.map(contact => `
-                <div style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: all 0.2s;" 
+                     onclick="app.contacts.edit(${contact.id})"
+                     onmouseover="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.1)'"
+                     onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.05)'">
                     <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
@@ -6604,11 +6637,26 @@ const app = {
                             ${contact.phone ? `<div class="text-sm" style="margin-bottom: 4px;"><i data-lucide="phone" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.phone}</div>` : ''}
                             ${contact.email ? `<div class="text-sm" style="margin-bottom: 4px;"><i data-lucide="mail" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.email}</div>` : ''}
                             ${contact.address ? `<div class="text-sm text-muted"><i data-lucide="map-pin" size="12" style="display: inline; opacity: 0.6;"></i> ${contact.address}</div>` : ''}
+                            
+                            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;" onclick="event.stopPropagation()">
+                                ${contact.phone ? `<a href="tel:${contact.phone}" style="display:flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; font-size:0.85rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'" title="Anrufen"><i data-lucide="phone" size="14"></i> Anrufen</a>` : ''}
+                                ${contact.email ? `<a href="mailto:${contact.email}" style="display:flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; font-size:0.85rem; font-weight:600; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'" title="E-Mail schreiben"><i data-lucide="mail" size="14"></i> E-Mail</a>` : ''}
+                            </div>
                         </div>
-                        <button onclick="app.contacts.delete(${contact.id})" 
-                            style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); padding: 8px; border-radius: 8px; cursor: pointer;">
-                            <i data-lucide="trash-2" size="16"></i>
-                        </button>
+                        <div style="display: flex; gap: 6px; flex-shrink: 0;" onclick="event.stopPropagation()">
+                            <button onclick="app.contacts.edit(${contact.id})" 
+                                style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #3b82f6; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.2)'" onmouseout="this.style.background='rgba(59,130,246,0.1)'"
+                                title="Bearbeiten">
+                                <i data-lucide="edit-2" size="16"></i>
+                            </button>
+                            <button onclick="app.contacts.delete(${contact.id})" 
+                                style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'"
+                                title="Löschen">
+                                <i data-lucide="trash-2" size="16"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
