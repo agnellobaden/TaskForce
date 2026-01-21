@@ -941,10 +941,11 @@ const app = {
                 }
 
                 // Automatic alarm before event (user-configurable)
-                const reminderMinutes = app.state.ui.eventReminderMinutes || 60;
-                const reminderWindow = 2; // 2-minute window to catch the alarm
+                const reminderMinutes = parseInt(app.state.ui.eventReminderMinutes || 60);
 
-                if (diffMins >= (reminderMinutes - reminderWindow) && diffMins <= (reminderMinutes + reminderWindow)) {
+                // Fix: Trigger if we are within the reminder timeframe (e.g. < 60 mins) and haven't notified yet.
+                // This catches cases where the app was closed during the exact "60 minute" mark.
+                if (diffMins > 0 && diffMins <= reminderMinutes) {
                     // Check if we already sent notification for this event
                     if (!e.notified1Hour) {
                         e.notified1Hour = true;
@@ -952,9 +953,17 @@ const app = {
 
                         // Send notification
                         const eventTime = start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        const timeText = reminderMinutes >= 60
-                            ? `${Math.floor(reminderMinutes / 60)} Stunde${Math.floor(reminderMinutes / 60) > 1 ? 'n' : ''}`
-                            : `${reminderMinutes} Minuten`;
+
+                        // Dynamic Time Text calculation
+                        let timeText = "";
+                        const hours = Math.floor(diffMins / 60);
+                        const mins = Math.round(diffMins % 60);
+
+                        if (hours > 0) {
+                            timeText = `${hours} Std. ${mins > 0 ? mins + ' Min.' : ''}`;
+                        } else {
+                            timeText = `${mins} Minuten`;
+                        }
 
                         app.notifications.send(
                             `⏰ Termin in ${timeText}`,
@@ -980,9 +989,29 @@ const app = {
             this.updateDashboardBlinking();
         },
         updateDashboardBlinking() {
-            // Whole card blinking disabled per user request
+            // Check if ANY event is imminent/urgent
+            const now = new Date();
+            const hasUrgent = app.state.events.some(e => {
+                const diffMins = (new Date(e.start) - now) / 1000 / 60;
+                return (diffMins > -15 && diffMins < 60) || e.urgent;
+            });
+
             const dashCard = document.getElementById('dashboardEventsCard');
-            if (dashCard) dashCard.classList.remove('appointment-imminent');
+            if (dashCard) {
+                if (hasUrgent) {
+                    // Apply user's chosen blink style (default to standard)
+                    const style = app.state.ui.blinkStyle || 'standard';
+                    dashCard.classList.add('appointment-imminent');
+
+                    // Remove old animation classes first
+                    dashCard.classList.remove('blink-standard', 'blink-flash', 'blink-neon', 'blink-shake', 'blink-extreme', 'blink-rainbow');
+
+                    // Add new animation class
+                    dashCard.classList.add(`blink-${style}`);
+                } else {
+                    dashCard.classList.remove('appointment-imminent', 'blink-standard', 'blink-flash', 'blink-neon', 'blink-shake', 'blink-extreme', 'blink-rainbow');
+                }
+            }
         },
         archiveOldEvents() {
             const now = new Date();
@@ -4364,6 +4393,15 @@ const app = {
 
             const voiceIconSelect = document.getElementById('voiceIconModeSelect');
             if (voiceIconSelect) voiceIconSelect.value = app.state.voiceIconMode || 'logo';
+
+
+            // Render Blink Style Preference
+            const blinkSelect = document.getElementById('blinkStyleSelect');
+            if (blinkSelect) blinkSelect.value = app.state.ui.blinkStyle || 'standard';
+
+            // Render Event Reminder Preference
+            const reminderSelect = document.getElementById('eventReminderSelect');
+            if (reminderSelect) reminderSelect.value = app.state.ui.eventReminderMinutes || 60;
 
             // Render Cloud Config
             if (app.state.cloud) {
