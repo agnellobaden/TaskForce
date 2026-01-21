@@ -1086,38 +1086,38 @@ const app = {
                         else countdown = `vor ${Math.floor(absM / 1440)} Tg.`;
                     }
 
-                    // Create category badge
                     const categoryBadge = e.category === 'business'
-                        ? `<span style="display: inline-block; padding: 3px 8px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">Business</span>`
-                        : `<span style="display: inline-block; padding: 3px 8px; background: rgba(139, 92, 246, 0.2); color: #a78bfa; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">Privat</span>`;
+                        ? `<span style="padding: 2px 6px; background: rgba(34, 197, 94, 0.15); color: #22c55e; border-radius: 4px; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.2); white-space: nowrap;">Business</span>`
+                        : `<span style="padding: 2px 6px; background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-radius: 4px; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); white-space: nowrap;">Privat</span>`;
 
                     return `
-                        <div style="display: flex; align-items: center; padding: 18px 15px; margin-bottom: 12px; background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}';">
-                            <div style="width: 75px; display:flex; flex-direction:column; align-items:flex-start;">
-                                <div style="font-weight: 800; font-size: 1.1rem; color: #ffffff; letter-spacing: -0.5px; line-height:1;">${timeStr}</div>
-                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform:uppercase; margin-top:4px; font-weight:700;">${dateLabel}</div>
-                            </div>
-                            <div style="flex: 1; margin-left: 15px; display: flex; flex-direction: column; gap: 6px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 10px;">
-                                    <div style="display:flex; align-items:center; flex: 1;">
-                                        <div style="font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
-                                        ${categoryBadge}
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: ${diffMins > -15 && diffMins < 30 ? '#06b6d4' : 'var(--text-muted)'}; font-weight: 600; white-space:nowrap;">${countdown}</div>
+                        <div style="display: flex; flex-direction: column; padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid ${e.urgent || (diffMins > -15 && diffMins < 30) ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ${e.urgent || (diffMins > -15 && diffMins < 30) ? 'animation: pulse-turquoise 2s infinite;' : ''}" onclick="app.calendar.editEvent(${e.id})">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <div style="background: var(--surface); padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; color: #ffffff; white-space: nowrap;">${timeStr}</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff; line-height: 1.2; word-break: break-word;">${e.title}${e.urgent ? ' <span class="text-danger">🔥</span>' : ''}</div>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${e.location || 'Kein Ort'}</div>
-                                    ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="color: var(--primary); display: flex; align-items:center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Auf Karte zeigen"><i data-lucide="map" size="14"></i></a>` : ''}
+                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                    ${categoryBadge}
+                                    <div style="font-size: 0.7rem; color: ${diffMins > -15 && diffMins < 30 ? '#06b6d4' : 'var(--text-muted)'}; font-weight: 600; white-space: nowrap;">${countdown}</div>
                                 </div>
-                                ${e.phone || e.email ? `<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px;">
-                                    ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s; max-width:100%; box-sizing:border-box;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'" title="Anrufen"><i data-lucide="phone" size="12" style="flex-shrink:0;"></i> <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.phone}</span></a>` : ''}
-                                    ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="display:flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; font-size:0.8rem; font-weight:600; text-decoration:none; transition:all 0.2s; max-width:100%; box-sizing:border-box;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'" title="E-Mail schreiben"><i data-lucide="mail" size="12" style="flex-shrink:0;"></i> <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.email}</span></a>` : ''}
-                                </div>` : ''}
                             </div>
-                            <div style="display:flex; align-items:center; margin-left:10px;">
-                                 ${e.urgent || (diffMins > -15 && diffMins < 30) ? '<div style="width:10px; height:10px; border-radius:50%; background:#06b6d4; box-shadow: 0 0 12px #06b6d4; margin-right:15px;"></div>' : ''}
-                                 <i data-lucide="chevron-right" size="18" class="text-muted" style="opacity:0.5;"></i>
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <div style="text-transform: uppercase; font-size: 0.7rem; font-weight: 600; opacity: 0.8;">${dateLabel}</div>
+                                    ${e.location ? `<span style="opacity: 0.5;">•</span> <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">${e.location}</div>` : ''}
+                                </div>
+                                
+                                ${(e.location || e.phone || e.email) ? `<div style="flex: 1; min-width: 10px;"></div>` : ''}
+                                
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                     ${e.location ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="event.stopPropagation()" style="padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 6px; color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; justify-content: center;"><i data-lucide="map" size="12"></i></a>` : ''}
+                                     ${e.phone ? `<a href="tel:${e.phone}" onclick="event.stopPropagation()" style="padding: 4px 8px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); border-radius: 6px; color: #22c55e; text-decoration: none; display: flex; align-items: center; gap: 4px;"><i data-lucide="phone" size="12"></i></a>` : ''}
+                                     ${e.email ? `<a href="mailto:${e.email}" onclick="event.stopPropagation()" style="padding: 4px 8px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; color: #3b82f6; text-decoration: none; display: flex; align-items: center; gap: 4px;"><i data-lucide="mail" size="12"></i></a>` : ''}
+                                </div>
                             </div>
+                        </div>
                         </div>
                      `;
                 }).join('');
@@ -5059,6 +5059,7 @@ const app = {
                     { id: 'dashboardEventsCard', name: 'Zeitplan / Termine', icon: 'calendar' },
                     { id: 'dashboardTasksCard', name: 'Aufgaben (To-Do)', icon: 'check-square' },
                     { id: 'dashboardShoppingCard', name: 'Einkaufsliste', icon: 'shopping-cart' },
+                    { id: 'dashboardContactsCard', name: 'Kontakte (Favoriten)', icon: 'users' },
                     { id: 'dashboardHealthCard', name: 'Gesundheits-Tracker', icon: 'heart' },
                     { id: 'dashboardHabitsCard', name: 'Gewohnheiten', icon: 'flame' },
                     { id: 'dashboardFinanceCard', name: 'Finanzen', icon: 'pie-chart' },
