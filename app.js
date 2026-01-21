@@ -77,8 +77,6 @@ const app = {
             this.dashboard.initDragAndDrop();
             this.dashboard.applyOrder();
             this.voice.init();
-            // Mobile Gestures (Swipe)
-            this.gestures.init();
 
             // Zeit-Tracker initialisieren (mit Persistenz)
             if (this.timeTracker) this.timeTracker.init();
@@ -124,83 +122,6 @@ const app = {
 
     // --- BROWSER BACK BUTTON SUPPORT ---
     navigationHistory: [],
-
-    // --- MOBILE HAPTICS & UX ---
-    feedback: {
-        vibrate(pattern = 10) {
-            if (navigator.vibrate) {
-                try { navigator.vibrate(pattern); } catch (e) { }
-            }
-        },
-        success() { this.vibrate([10, 30, 10]); },
-        error() { this.vibrate([50, 50, 50]); },
-        tap() { this.vibrate(5); },
-        heavy() { this.vibrate(20); }
-    },
-
-    // --- MOBILE GESTURES (Swipe) ---
-    gestures: {
-        touchStartX: 0,
-        touchStartY: 0,
-        activeElement: null,
-
-        init() {
-            // Global touch listener for swipe logic on task items
-            document.addEventListener('touchstart', (e) => {
-                const taskItem = e.target.closest('.list-item, .task-item');
-                if (taskItem) {
-                    this.activeElement = taskItem;
-                    this.touchStartX = e.changedTouches[0].screenX;
-                    this.touchStartY = e.changedTouches[0].screenY;
-                    taskItem.style.transition = 'none';
-                }
-            }, { passive: true });
-
-            document.addEventListener('touchmove', (e) => {
-                if (!this.activeElement) return;
-                const touchX = e.changedTouches[0].screenX;
-                const diffX = touchX - this.touchStartX;
-
-                // Only horizontally
-                if (Math.abs(diffX) > 20) {
-                    // Visual Feedback
-                    if (diffX > 0) { // Swipe Right (Complete)
-                        this.activeElement.style.transform = `translateX(${diffX}px)`;
-                        this.activeElement.style.background = `rgba(34, 197, 94, ${Math.min(diffX / 200, 0.2)})`;
-                    } else { // Swipe Left (Delete)
-                        this.activeElement.style.transform = `translateX(${diffX}px)`;
-                        this.activeElement.style.background = `rgba(239, 68, 68, ${Math.min(Math.abs(diffX) / 200, 0.2)})`;
-                    }
-                }
-            }, { passive: true });
-
-            document.addEventListener('touchend', (e) => {
-                if (!this.activeElement) return;
-                const touchX = e.changedTouches[0].screenX;
-                const diffX = touchX - this.touchStartX;
-
-                // Threshold to trigger action
-                if (diffX > 100) {
-                    // Swipe Right -> Complete
-                    app.feedback.success();
-                    const btn = this.activeElement.querySelector('.btn-check, .btn-complete');
-                    if (btn) btn.click();
-                } else if (diffX < -100) {
-                    // Swipe Left -> Delete
-                    app.feedback.heavy();
-                    const btn = this.activeElement.querySelector('.btn-delete, .btn-trash');
-                    if (btn) btn.click();
-                }
-
-                // Reset
-                this.activeElement.style.transition = 'all 0.3s ease';
-                this.activeElement.style.transform = 'translateX(0)';
-                this.activeElement.style.background = '';
-                this.activeElement = null;
-            });
-        }
-    },
-
     setupBackButton() {
         // Track initial state
         window.history.replaceState({ page: this.state.currentPage }, '', '');
