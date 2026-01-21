@@ -178,7 +178,18 @@ const app = {
 
         // UI Default State
         if (!this.state.ui) this.state.ui = {};
-        if (!this.state.ui.hiddenCards) this.state.ui.hiddenCards = [];
+
+        // Migration: Move legacy hiddenCards to new mode-specific keys if valid
+        if (this.state.ui.hiddenCards && Array.isArray(this.state.ui.hiddenCards)) {
+            if (!this.state.ui.hiddenCardsBusiness) this.state.ui.hiddenCardsBusiness = [...this.state.ui.hiddenCards];
+            if (!this.state.ui.hiddenCardsPrivate) this.state.ui.hiddenCardsPrivate = [...this.state.ui.hiddenCards];
+            delete this.state.ui.hiddenCards;
+        }
+
+        // Initialize defaults if missing
+        if (!this.state.ui.hiddenCardsBusiness) this.state.ui.hiddenCardsBusiness = [];
+        if (!this.state.ui.hiddenCardsPrivate) this.state.ui.hiddenCardsPrivate = [];
+
         if (!this.state.ui.dashboardMode) this.state.ui.dashboardMode = 'business';
 
         // Household Migration
@@ -293,8 +304,20 @@ const app = {
         if (!this.state.ui) this.state.ui = {};
         if (!this.state.ui.hiddenCards) {
             this.state.ui.hiddenCards = [];
-            this.saveState();
         }
+
+        // Ensure Blink Style is initialized
+        if (!this.state.ui.blinkStyle) {
+            this.state.ui.blinkStyle = 'standard';
+        }
+
+        this.saveState();
+
+        // --- UPDATE SETTINGS INPUTS (If validation passes) ---
+        setTimeout(() => {
+            const bSelect = document.getElementById('blinkStyleSelect');
+            if (bSelect && this.state.ui.blinkStyle) bSelect.value = this.state.ui.blinkStyle;
+        }, 100);
     },
 
     saveState(skipSync = false) {
@@ -758,6 +781,20 @@ const app = {
         },
         dashboardFilter(category) {
             this.dashboardEventFilter = category;
+
+            // Update button styles
+            const buttons = ['All', 'Today', 'Private', 'Business'];
+            buttons.forEach(btn => {
+                const el = document.getElementById(`dashboardFilter${btn}Btn`);
+                if (el) {
+                    if (btn.toLowerCase() === category || (btn === 'All' && category === 'all')) {
+                        el.style.background = 'var(--primary)';
+                    } else {
+                        el.style.background = '';
+                    }
+                }
+            });
+
             app.renderDashboard();
         },
         init() {
@@ -892,6 +929,7 @@ const app = {
             app.state.events.forEach(e => {
                 const start = new Date(e.start);
                 const diffMins = (start - now) / 1000 / 60;
+
                 // Blinking Logic
                 const isImminent = (diffMins > -15 && diffMins < 30) || (e.urgent && diffMins > -60 && diffMins < 120);
 
@@ -900,6 +938,41 @@ const app = {
                 if (el) {
                     if (isImminent) el.classList.add('event-imminent'); else el.classList.remove('event-imminent');
                     if (e.urgent) el.classList.add('event-urgent');
+                }
+
+                // Automatic alarm before event (user-configurable)
+                const reminderMinutes = app.state.ui.eventReminderMinutes || 60;
+                const reminderWindow = 2; // 2-minute window to catch the alarm
+
+                if (diffMins >= (reminderMinutes - reminderWindow) && diffMins <= (reminderMinutes + reminderWindow)) {
+                    // Check if we already sent notification for this event
+                    if (!e.notified1Hour) {
+                        e.notified1Hour = true;
+                        app.saveState();
+
+                        // Send notification
+                        const eventTime = start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const timeText = reminderMinutes >= 60
+                            ? `${Math.floor(reminderMinutes / 60)} Stunde${Math.floor(reminderMinutes / 60) > 1 ? 'n' : ''}`
+                            : `${reminderMinutes} Minuten`;
+
+                        app.notifications.send(
+                            `⏰ Termin in ${timeText}`,
+                            `${e.title} um ${eventTime}${e.location ? ' • ' + e.location : ''}`,
+                            true
+                        );
+
+                        // Optional: Trigger alarm sound
+                        if (app.alarms && app.alarms.trigger) {
+                            app.alarms.trigger(`Termin: ${e.title}`, 'gentle');
+                        }
+                    }
+                }
+
+                // Reset notification flag if event is far enough away
+                if (diffMins > (reminderMinutes + 60) && e.notified1Hour) {
+                    e.notified1Hour = false;
+                    app.saveState();
                 }
             });
 
@@ -1043,6 +1116,8 @@ const app = {
         if (dp) {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
             let up = app.state.events
                 .filter(e => new Date(e.start) >= startOfToday)
                 .sort((a, b) => new Date(a.start) - new Date(b.start))
@@ -1050,7 +1125,16 @@ const app = {
 
             // Apply dashboard filter
             if (app.calendar.dashboardEventFilter && app.calendar.dashboardEventFilter !== 'all') {
-                up = up.filter(e => (e.category || 'private') === app.calendar.dashboardEventFilter);
+                if (app.calendar.dashboardEventFilter === 'today') {
+                    // Show only today's events
+                    up = up.filter(e => {
+                        const eventDate = new Date(e.start);
+                        return eventDate >= startOfToday && eventDate <= endOfToday;
+                    });
+                } else {
+                    // Filter by category (private/business)
+                    up = up.filter(e => (e.category || 'private') === app.calendar.dashboardEventFilter);
+                }
             }
 
             if (up.length > 0) {
@@ -1291,13 +1375,20 @@ const app = {
             statusText.innerHTML = `<span class="text-primary">${openTasks} Offen</span> • <span class="text-danger">${urgentTasks} Dringend</span>`;
         }
 
-        // --- DASHBOARD CARD URGENCY BLINKING ---
         // --- DASHBOARD CARD URGENCY BLINKING & STYLING ---
         const toggleCardBlink = (id, condition) => {
             const el = document.getElementById(id);
             if (el) {
-                if (condition) el.classList.add('blink-urgent');
-                else el.classList.remove('blink-urgent');
+                // Remove all styles first
+                el.classList.remove('blink-urgent', 'blink-danger', 'blink-warning', 'blink-style-standard', 'blink-style-flash', 'blink-style-neon', 'blink-style-shake', 'blink-style-extreme', 'blink-style-rainbow');
+
+                if (condition) {
+                    const style = app.state.ui.blinkStyle || 'standard';
+                    // Add specific style class
+                    el.classList.add(`blink-style-${style}`);
+                    // Also add generic danger for good measure/fallbacks if needed, though specific style handles animation
+                    el.classList.add('blink-danger');
+                }
             }
         };
 
@@ -1326,6 +1417,19 @@ const app = {
             return txt.includes('anruf') || txt.includes('call') || txt.includes('telefon') || txt.includes('wichtig');
         });
         toggleCardBlink('dashboardCommunicationCard', hasImportantCall);
+
+        // 3b. Events (Urgent or Approaching within 1h)
+        const nowMsEvents = Date.now();
+        const oneHourEvents = 60 * 60 * 1000;
+        const hasUrgentEvt = (app.state.events || []).some(e => {
+            // Urgent flag and not too old (e.g. up to 1h past start)
+            if (e.urgent && new Date(e.start).getTime() > nowMsEvents - oneHourEvents) return true;
+
+            // Approaching within 1 hour
+            const diff = new Date(e.start).getTime() - nowMsEvents;
+            return diff > 0 && diff < oneHourEvents;
+        });
+        toggleCardBlink('dashboardEventsCard', hasUrgentEvt);
 
         // 4. Finance (Colors instead of blinking)
         const finCard = document.getElementById('dashboardFinanceCard');
@@ -1608,6 +1712,88 @@ const app = {
         }
     },
 
+    // --- ALARMS MODULE ---
+    alarms: {
+        currentAudio: null,
+        loopInterval: null,
+        trigger(title, type = 'melody') {
+            if (this.currentAudio) return;
+
+            console.log("ALARM TRIGGERED:", title);
+
+            // Audio Context for Sound
+            this.playAlarmSound(type);
+
+            // Visual Overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'alarmOverlay';
+            overlay.style.cssText = 'position:fixed; inset:0; background:rgba(220, 38, 38, 0.95); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; animation: flash-urgent 1s infinite;';
+            overlay.innerHTML = `
+                <div style="margin-bottom:20px; animation: pulse-urgent 0.5s infinite;">
+                    <i data-lucide="bell-ring" size="80" style="color:white;"></i>
+                </div>
+                <h1 style="color:white; font-size:2.5rem; text-align:center; margin-bottom:10px; padding:0 20px;">${title}</h1>
+                <p style="color:white; opacity:0.8; margin-bottom:40px;">Es ist Zeit!</p>
+                <button onclick="app.alarms.stop()" style="padding:20px 60px; font-size:1.5rem; border-radius:50px; border:none; background:white; color:var(--danger); font-weight:900; cursor:pointer; box-shadow:0 10px 25px rgba(0,0,0,0.3);">STOPP</button>
+             `;
+            document.body.appendChild(overlay);
+            if (window.lucide) lucide.createIcons();
+
+            // Native Vibrate
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+        },
+        stop() {
+            if (this.currentAudio) {
+                this.currentAudio.stop();
+                this.currentAudio = null;
+            }
+            if (this.loopInterval) {
+                clearInterval(this.loopInterval);
+                this.loopInterval = null;
+            }
+            const overlay = document.getElementById('alarmOverlay');
+            if (overlay) overlay.remove();
+            app.activeAlarm = false;
+        },
+        playAlarmSound(type) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+
+            const ctx = new AudioContext();
+
+            const playBeep = () => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.type = type === 'digital' ? 'square' : 'sine';
+                osc.frequency.setValueAtTime(type === 'digital' ? 800 : 440, ctx.currentTime);
+
+                gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.5);
+            };
+
+            playBeep();
+
+            this.loopInterval = setInterval(() => {
+                if (ctx.state === 'suspended') ctx.resume();
+                playBeep();
+            }, 1000);
+
+            this.currentAudio = {
+                stop: () => {
+                    ctx.close();
+                }
+            };
+        }
+    },
+
+
+
     // --- NOTIFICATIONS MODULE ---
     notifications: {
         lastCheck: 0,
@@ -1680,15 +1866,42 @@ const app = {
     // --- DRIVE ASSISTANT MODULE ---
     drive: {
         currentLocation: null,
+        map: null,
+        marker: null,
 
         init() {
             this.renderRoute();
+            // Async init map to allow DOM to settle
+            setTimeout(() => this.initMap(), 500);
             this.getLocation();
         },
 
         refresh() {
             this.getLocation();
             this.renderRoute();
+            if (this.map) {
+                setTimeout(() => this.map.invalidateSize(), 200);
+            }
+        },
+
+        initMap() {
+            const mapEl = document.getElementById('driveMap');
+            if (!mapEl || this.map) return;
+
+            // Reduce map height for better readability of data below on mobile
+            mapEl.style.height = "180px";
+
+            // Init Leaflet (Default Center: Berlin)
+            this.map = L.map('driveMap').setView([52.52, 13.40], 10);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(this.map);
+
+            // Force redraw
+            setTimeout(() => { this.map.invalidateSize(); }, 200);
         },
 
         getLocation() {
@@ -1698,19 +1911,46 @@ const app = {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        this.currentLocation = `${position.coords.latitude},${position.coords.longitude}`;
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        this.currentLocation = `${lat},${lon}`;
+
                         if (statusEl) statusEl.textContent = "GPS Gefunden ✅";
+                        this.updateMapPosition(lat, lon);
                     },
                     (error) => {
                         console.error("GPS Error", error);
                         if (statusEl) statusEl.textContent = "Kein GPS. Bitte eingeben.";
                         this.askLocation();
-                    }
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
                 );
             } else {
                 if (statusEl) statusEl.textContent = "GPS nicht verfügbar.";
                 this.askLocation();
             }
+        },
+
+        updateMapPosition(lat, lon) {
+            if (!this.map) this.initMap();
+            if (!this.map) return;
+
+            const latLng = [lat, lon];
+
+            if (this.marker) {
+                this.marker.setLatLng(latLng);
+            } else {
+                const carIcon = L.divIcon({
+                    html: '<div style="background:#3b82f6; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 15px #3b82f6;"></div>',
+                    className: 'custom-div-icon',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                this.marker = L.marker(latLng, { icon: carIcon }).addTo(this.map);
+            }
+
+            this.map.flyTo(latLng, 15);
+            this.map.invalidateSize();
         },
 
         askLocation() {
@@ -1733,11 +1973,8 @@ const app = {
             const routeEvents = app.state.events.filter(e => {
                 const eventDate = new Date(e.start);
                 const ed = new Date(e.start).setHours(0, 0, 0, 0);
-
-                // Only show events for today that haven't started yet
-                // This excludes all past/expired events from the drive mode route
                 return ed === today &&
-                    eventDate.getTime() > nowTime && // Event is in the future
+                    eventDate.getTime() > nowTime &&
                     e.location && e.location.trim().length > 0;
             });
             routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -1808,10 +2045,8 @@ const app = {
             const routeEvents = app.state.events.filter(e => {
                 const eventDate = new Date(e.start);
                 const ed = new Date(e.start).setHours(0, 0, 0, 0);
-
-                // Only include future events for today with a location
                 return ed === today &&
-                    eventDate.getTime() > nowTime && // Event is in the future
+                    eventDate.getTime() > nowTime &&
                     e.location && e.location.trim().length > 0;
             });
             routeEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -1821,8 +2056,6 @@ const app = {
                 return;
             }
 
-            // Construct Google Maps URL
-            // Format: https://www.google.com/maps/dir/Start/Stop1/Stop2/...
             const origin = encodeURIComponent(this.currentLocation);
             const destinations = routeEvents.map(e => encodeURIComponent(e.location)).join('/');
 
@@ -3678,6 +3911,197 @@ const app = {
         }
     },
 
+    // --- DRIVE MODE MODULE ---
+    drive: {
+        map: null,
+        markers: [],
+
+        init() {
+            this.updateClock();
+            this.updateLocation();
+            this.renderRoute();
+            this.initMap();
+
+            // Update clock every second
+            setInterval(() => this.updateClock(), 1000);
+        },
+
+        updateClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('driveClock');
+            const dateEl = document.getElementById('driveDate');
+
+            if (clockEl) {
+                clockEl.textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            }
+            if (dateEl) {
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                dateEl.textContent = now.toLocaleDateString('de-DE', options);
+            }
+        },
+
+        updateLocation() {
+            const locationEl = document.getElementById('currentLocationText');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        if (locationEl) {
+                            locationEl.textContent = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                        }
+                    },
+                    (error) => {
+                        if (locationEl) {
+                            locationEl.textContent = 'Standort nicht verfügbar';
+                        }
+                    }
+                );
+            }
+        },
+
+        askLocation() {
+            const newLocation = prompt('Aktuellen Standort eingeben:', 'Mein Standort');
+            if (newLocation) {
+                const locationEl = document.getElementById('currentLocationText');
+                if (locationEl) {
+                    locationEl.textContent = newLocation;
+                }
+            }
+        },
+
+        renderRoute() {
+            const routeList = document.getElementById('driveRouteList');
+            if (!routeList) return;
+
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+            // Get today's events with locations
+            const todayEvents = app.state.events
+                .filter(e => {
+                    const eventDate = new Date(e.start);
+                    return eventDate >= startOfToday && eventDate <= endOfToday && e.location && e.location.trim().length > 0;
+                })
+                .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (todayEvents.length === 0) {
+                routeList.innerHTML = `
+                    <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:16px;">
+                        <i data-lucide="map-pin-off" size="48" style="opacity:0.3; margin-bottom:15px;"></i>
+                        <div class="text-muted" style="font-size:1.1rem;">Keine Termine mit Ort für heute</div>
+                        <div class="text-muted text-sm" style="margin-top:8px; opacity:0.6;">Füge Termine mit Ortsangaben hinzu</div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            routeList.innerHTML = todayEvents.map((event, index) => {
+                const eventTime = new Date(event.start);
+                const timeStr = eventTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                const diffMins = Math.floor((eventTime - now) / 1000 / 60);
+
+                let statusBadge = '';
+                let statusColor = 'rgba(255,255,255,0.1)';
+
+                if (diffMins < 0) {
+                    statusBadge = 'Vorbei';
+                    statusColor = 'rgba(107, 114, 128, 0.2)';
+                } else if (diffMins < 15) {
+                    statusBadge = 'Jetzt!';
+                    statusColor = 'rgba(239, 68, 68, 0.2)';
+                } else if (diffMins < 60) {
+                    statusBadge = `in ${diffMins} Min`;
+                    statusColor = 'rgba(234, 179, 8, 0.2)';
+                } else {
+                    const hours = Math.floor(diffMins / 60);
+                    statusBadge = `in ${hours}h`;
+                    statusColor = 'rgba(59, 130, 246, 0.2)';
+                }
+
+                const categoryBadge = event.category === 'business'
+                    ? '<span style="padding:2px 6px; background:rgba(34,197,94,0.15); color:#22c55e; border-radius:4px; font-size:0.65rem; font-weight:700;">Business</span>'
+                    : '<span style="padding:2px 6px; background:rgba(139,92,246,0.15); color:#a78bfa; border-radius:4px; font-size:0.65rem; font-weight:700;">Privat</span>';
+
+                return `
+                    <div style="position:relative; padding:16px; background:${statusColor}; border-left:4px solid ${diffMins < 15 ? '#ef4444' : (diffMins < 60 ? '#eab308' : '#3b82f6')}; border-radius:12px; margin-bottom:12px; transition:all 0.3s;" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}', '_blank')">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                            <div style="background:rgba(255,255,255,0.1); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem;">
+                                ${index + 1}
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700; font-size:1.1rem; margin-bottom:4px;">${event.title}</div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="padding:4px 8px; background:rgba(0,0,0,0.3); border-radius:6px; font-weight:600; font-size:0.9rem;">${timeStr}</span>
+                                    <span style="padding:4px 8px; background:rgba(0,0,0,0.3); border-radius:6px; font-size:0.85rem; color:#06b6d4;">${statusBadge}</span>
+                                    ${categoryBadge}
+                                    ${event.urgent ? '<span style="padding:4px 8px; background:rgba(239,68,68,0.3); color:#ff6b6b; border-radius:6px; font-size:0.75rem; font-weight:700;">🔥 Dringend</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                            <i data-lucide="map-pin" size="16" class="text-primary"></i>
+                            <span style="font-size:0.95rem; font-weight:500;">${event.location}</span>
+                        </div>
+                        ${event.phone || event.email ? `
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                ${event.phone ? `<a href="tel:${event.phone}" onclick="event.stopPropagation()" style="padding:6px 12px; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.3); border-radius:8px; color:#22c55e; text-decoration:none; display:flex; align-items:center; gap:6px; font-size:0.85rem;"><i data-lucide="phone" size="14"></i> Anrufen</a>` : ''}
+                                ${event.email ? `<a href="mailto:${event.email}" onclick="event.stopPropagation()" style="padding:6px 12px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.3); border-radius:8px; color:#3b82f6; text-decoration:none; display:flex; align-items:center; gap:6px; font-size:0.85rem;"><i data-lucide="mail" size="14"></i> E-Mail</a>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons();
+        },
+
+        initMap() {
+            const mapEl = document.getElementById('driveMap');
+            if (!mapEl || !window.L) return;
+
+            // Clear existing map
+            if (this.map) {
+                this.map.remove();
+            }
+
+            // Initialize map
+            this.map = L.map('driveMap').setView([51.1657, 10.4515], 6); // Germany center
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(this.map);
+        },
+
+        openNavigation() {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+            const todayEvents = app.state.events
+                .filter(e => {
+                    const eventDate = new Date(e.start);
+                    return eventDate >= startOfToday && eventDate <= endOfToday && e.location && e.location.trim().length > 0;
+                })
+                .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (todayEvents.length === 0) {
+                alert('Keine Termine mit Ort für heute gefunden.');
+                return;
+            }
+
+            // Build Google Maps route
+            const destinations = todayEvents.map(e => encodeURIComponent(e.location)).join('/');
+            window.open(`https://www.google.com/maps/dir/Current+Location/${destinations}`, '_blank');
+        },
+
+        refresh() {
+            this.renderRoute();
+            this.updateLocation();
+            this.initMap();
+        }
+    },
+
     // --- CLOUD SYNC MODULE (Firebase) ---
     cloud: {
         db: null,
@@ -4045,6 +4469,23 @@ const app = {
             app.state.voiceIconMode = val;
             app.saveState();
             this.applyVoiceIconPreference();
+        },
+        saveBlinkStyle() {
+            const sel = document.getElementById('blinkStyleSelect');
+            if (sel) {
+                app.state.ui.blinkStyle = sel.value;
+                app.saveState();
+                app.renderDashboard(); // Re-render to apply new blinking style
+                alert(`Blinking-Stil auf "${sel.options[sel.selectedIndex].text}" gesetzt!`);
+            }
+        },
+        saveEventReminder() {
+            const sel = document.getElementById('eventReminderSelect');
+            if (sel) {
+                app.state.ui.eventReminderMinutes = parseInt(sel.value);
+                app.saveState();
+                alert(`Termin-Voralarm auf ${sel.options[sel.selectedIndex].text} gesetzt!`);
+            }
         },
         toggleLayoutQuick() {
             // Toggle between single and double column
@@ -5051,8 +5492,19 @@ const app = {
                     </div>
                 </div>`;
             } else if (type === 'configureWidgets') {
-                const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
-                const cards = [
+                const mode = app.state.ui && app.state.ui.dashboardMode ? app.state.ui.dashboardMode : 'business';
+                const modeKey = 'hiddenCards' + (mode.charAt(0).toUpperCase() + mode.slice(1));
+
+                // Migration: If old global array exists, distribute it
+                if (app.state.ui && app.state.ui.hiddenCards && Array.isArray(app.state.ui.hiddenCards)) {
+                    app.state.ui.hiddenCardsBusiness = [...app.state.ui.hiddenCards];
+                    app.state.ui.hiddenCardsPrivate = [...app.state.ui.hiddenCards];
+                    delete app.state.ui.hiddenCards;
+                    app.saveState();
+                }
+
+                const hidden = (app.state.ui && app.state.ui[modeKey]) ? app.state.ui[modeKey] : [];
+                let cards = [
                     { id: 'dashboardAiCard', name: 'AI Assistant', icon: 'sparkles' },
                     { id: 'dashboardCommunicationCard', name: 'Kommunikation', icon: 'message-square' },
                     { id: 'dashboardStatusCard', name: 'Tages-Check', icon: 'clipboard-check' },
@@ -5076,10 +5528,20 @@ const app = {
                     { id: 'dashboardPrivateDriveCard', name: 'Privater Drive Mode', icon: 'car' }
                 ];
 
+                // Strict Mode Filtering for Configuration
+                const businessOnly = ['dashboardProjectsCard', 'dashboardMeetingsCard', 'dashboardSearchCard', 'dashboardTimeTrackerCard', 'dashboardDriveCard'];
+                const privateOnly = ['dashboardHouseholdCard', 'dashboardMealPlanCard', 'dashboardPrivateDriveCard', 'dashboardHabitsCard', 'dashboardHealthCard', 'dashboardShoppingCard', 'dashboardAlarmsCard'];
+
+                if (mode === 'business') {
+                    cards = cards.filter(c => !privateOnly.includes(c.id));
+                } else {
+                    cards = cards.filter(c => !businessOnly.includes(c.id));
+                }
+
                 c.innerHTML = `
                 <div style="padding:20px; max-height:80vh; overflow-y:auto;">
-                    <h3><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets</h3>
-                    <p class="text-muted text-sm mb-4">Wähle aus, welche Karten angezeigt werden sollen.</p>
+                    <h3><i data-lucide="layout" class="text-primary"></i> Dashboard Widgets (${mode === 'business' ? 'Business' : 'Privat'})</h3>
+                    <p class="text-muted text-sm mb-4">Wähle aus, welche Karten im <strong>${mode === 'business' ? 'Business' : 'Privat'}</strong> Modus angezeigt werden sollen.</p>
                     <div style="display:flex; flex-direction:column; gap:10px;">
                         ${cards.map(card => {
                     const isVisible = !hidden.includes(card.id);
@@ -5517,34 +5979,57 @@ const app = {
             } else {
                 list.style.display = 'flex';
                 list.style.flexDirection = 'column';
-                list.style.gap = '8px';
+                list.style.gap = '12px';
                 list.style.background = 'rgba(0,0,0,0.2)';
-                list.style.padding = '10px';
+                list.style.padding = '15px';
                 list.style.borderRadius = '20px';
                 list.style.border = '1px solid rgba(255,255,255,0.05)';
 
                 list.innerHTML = contacts.map(c => `
-                    <div class="contact-list-item" style="display:flex; align-items:center; justify-content:space-between; gap:15px; padding:12px 20px; background:rgba(255,255,255,0.03); border-radius:14px; transition:all 0.2s ease; border:1px solid transparent;">
-                        <div onclick="app.contacts.openCard(${c.id})" style="flex:1; display:flex; align-items:center; gap:15px; cursor:pointer;">
-                            <div style="width:40px; height:40px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.1rem; flex-shrink:0;">
-                                ${c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div style="flex:1; min-width:0;">
-                                <div style="font-weight:700; font-size:1.1rem; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
-                                <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                    ${c.phone || c.email || 'Kontakt'}
+                    <div class="contact-list-item" style="display:flex; flex-direction:column; gap:12px; padding:16px 20px; background:rgba(255,255,255,0.05); border-radius:14px; transition:all 0.2s ease; border:1px solid rgba(255,255,255,0.08);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:15px;">
+                            <div onclick="app.contacts.openCard(${c.id})" style="flex:1; display:flex; align-items:center; gap:15px; cursor:pointer;">
+                                <div style="width:50px; height:50px; background:linear-gradient(135deg, var(--primary), var(--accent)); border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.3rem; flex-shrink:0;">
+                                    ${c.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-weight:700; font-size:1.2rem; color:white; margin-bottom:4px;">${c.name}</div>
+                                    <div style="font-size:0.85rem; color:var(--text-muted);">
+                                        ${c.phone || c.email || c.address || 'Kontakt'}
+                                    </div>
                                 </div>
                             </div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                 ${c.phone ? `<i data-lucide="phone" size="14" class="text-primary" style="opacity:0.6;"></i>` : ''}
-                                 ${c.email ? `<i data-lucide="mail" size="14" class="text-accent" style="opacity:0.6;"></i>` : ''}
-                                 <i data-lucide="chevron-right" size="18" style="opacity:0.3;"></i>
-                            </div>
-                        </div>
-                        <div style="flex-shrink:0;">
-                            <button onclick="event.stopPropagation(); app.contacts.editContact(${c.id})" style="background:rgba(59, 130, 246, 0.3); border:1px solid rgba(59, 130, 246, 0.5); color:var(--primary); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; display:flex; align-items:center; gap:6px; white-space:nowrap;" onmouseover="this.style.background='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.3)'">
+                            <button onclick="event.stopPropagation(); app.contacts.editContact(${c.id})" style="background:rgba(59, 130, 246, 0.2); border:1px solid rgba(59, 130, 246, 0.4); color:var(--primary); padding:10px 16px; border-radius:10px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s; display:flex; align-items:center; gap:6px; white-space:nowrap;" onmouseover="this.style.background='rgba(59, 130, 246, 0.4)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
                                 <i data-lucide="edit-2" size="14"></i>Bearbeiten
                             </button>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            ${c.phone ? `
+                                <button onclick="window.location.href='tel:${c.phone}'" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:10px; color:#22c55e; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">
+                                    <i data-lucide="phone" size="16"></i>
+                                    <span>Anrufen</span>
+                                </button>
+                            ` : ''}
+                            ${c.email ? `
+                                <button onclick="window.location.href='mailto:${c.email}'" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:10px; color:#3b82f6; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'">
+                                    <i data-lucide="mail" size="16"></i>
+                                    <span>E-Mail</span>
+                                </button>
+                            ` : ''}
+                            ${c.address ? `
+                                <button onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}', '_blank')" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#ef4444; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                                    <i data-lucide="map-pin" size="16"></i>
+                                    <span>Maps</span>
+                                </button>
+                            ` : ''}
+                            ${c.phone ? `
+                                <button onclick="window.open('https://wa.me/${c.phone.replace(/\\D/g, '')}', '_blank')" style="flex:1; min-width:120px; padding:12px 16px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); border-radius:10px; color:#22c55e; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.9rem; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">
+                                    <i data-lucide="message-circle" size="16"></i>
+                                    <span>WhatsApp</span>
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -5950,15 +6435,9 @@ const app = {
             document.body.classList.remove('mode-business', 'mode-private');
             document.body.classList.add(`mode-${mode}`);
 
-            // Define which cards belong to which mode
+            // Define which sidebar items belong to which mode
+            // Note: Dashboard cards are now handled exclusively by applyVisibility() based on user config
             const businessItems = [
-                'dashboardProjectsCard',
-                'dashboardCommunicationCard',
-                'dashboardFinanceCard',
-                'dashboardMeetingsCard',
-                'dashboardDriveCard',
-                'dashboardTimeTrackerCard',
-                'dashboardSearchCard',
                 // Sidebar items
                 'cat-business',
                 'nav-projects',
@@ -5970,15 +6449,6 @@ const app = {
             ];
 
             const privateItems = [
-                'dashboardTasksCard',
-                'dashboardShoppingCard',
-                'dashboardHabitsCard',
-                'dashboardHealthCard',
-                'dashboardMealPlanCard',
-                'dashboardHouseholdCard',
-                'dashboardShortcutsCard',
-                'dashboardNotesCard',
-                'dashboardAlarmsCard',
                 // Sidebar items
                 'cat-private',
                 'nav-tasks',
@@ -5990,11 +6460,8 @@ const app = {
                 'nav-tools'
             ];
 
-            // Always visible
+            // Always visible sidebar items
             const sharedItems = [
-                'dashboardEventsCard',
-                'dashboardStatusCard',
-                'dashboardAiCard',
                 'cat-general',
                 'nav-dashboard',
                 'nav-calendar'
@@ -6080,37 +6547,60 @@ const app = {
             }
         },
         applyVisibility() {
-            const hidden = app.state.ui && app.state.ui.hiddenCards ? app.state.ui.hiddenCards : [];
+            const mode = app.state.ui.dashboardMode || 'business';
+            const modeKey = 'hiddenCards' + (mode.charAt(0).toUpperCase() + mode.slice(1));
+
+            const hidden = (app.state.ui && app.state.ui[modeKey]) ? app.state.ui[modeKey] : [];
             const allCards = [
                 'dashboardAiCard', 'dashboardCommunicationCard', 'dashboardStatusCard', 'dashboardEventsCard',
                 'dashboardTasksCard', 'dashboardShoppingCard', 'dashboardHealthCard',
-                'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
+                'dashboardContactsCard', 'dashboardHabitsCard', 'dashboardFinanceCard', 'dashboardAlarmsCard',
                 'dashboardDriveCard', 'dashboardShortcutsCard', 'dashboardSearchCard',
                 'dashboardTimeTrackerCard', 'dashboardNotesCard', 'dashboardProjectsCard', 'dashboardMeetingsCard',
                 'dashboardHouseholdCard', 'dashboardMealPlanCard', 'dashboardPrivateDriveCard'
             ];
 
+            // Strict Mode Filtering Lists
+            const businessOnly = ['dashboardProjectsCard', 'dashboardMeetingsCard', 'dashboardSearchCard', 'dashboardTimeTrackerCard', 'dashboardDriveCard'];
+            const privateOnly = ['dashboardHouseholdCard', 'dashboardMealPlanCard', 'dashboardPrivateDriveCard', 'dashboardHabitsCard', 'dashboardHealthCard', 'dashboardShoppingCard', 'dashboardAlarmsCard'];
+
             allCards.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    if (hidden.includes(id)) el.classList.add('hidden');
-                    else el.classList.remove('hidden');
+                    let isStrictlyHidden = false;
+
+                    // Strict Mode Logic (Overrides User Preference)
+                    if (mode === 'business' && privateOnly.includes(id)) isStrictlyHidden = true;
+                    if (mode === 'private' && businessOnly.includes(id)) isStrictlyHidden = true;
+
+                    // Apply Visibility
+                    if (isStrictlyHidden || hidden.includes(id)) {
+                        el.style.display = 'none'; // Force hide
+                        el.classList.add('hidden');
+                    } else {
+                        el.style.display = 'flex'; // Force show (restores from display:none)
+                        el.classList.remove('hidden');
+                    }
                 }
             });
         },
         toggleCardVisibility(id) {
             if (!app.state.ui) app.state.ui = {};
-            if (!app.state.ui.hiddenCards) app.state.ui.hiddenCards = [];
+            const mode = app.state.ui.dashboardMode || 'business';
+            const modeKey = 'hiddenCards' + (mode.charAt(0).toUpperCase() + mode.slice(1));
 
-            const index = app.state.ui.hiddenCards.indexOf(id);
+            if (!app.state.ui[modeKey]) app.state.ui[modeKey] = [];
+
+            const index = app.state.ui[modeKey].indexOf(id);
             if (index > -1) {
-                app.state.ui.hiddenCards.splice(index, 1); // Remove from hidden (Show it)
+                app.state.ui[modeKey].splice(index, 1); // Remove from hidden (Show it)
             } else {
-                app.state.ui.hiddenCards.push(id); // Add to hidden
+                app.state.ui[modeKey].push(id); // Add to hidden
             }
             app.saveState();
-            this.applyVisibility();
-            // Re-render modal to update switch state
+            this.applyVisibility(); // Apply immediately
+
+            // Sync with modal if open
             app.modals.open('configureWidgets');
         },
         scrollToCard(id) {

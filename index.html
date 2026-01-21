@@ -29,6 +29,12 @@
     <link rel="stylesheet" href="button-toolbar.css">
     <link rel="stylesheet" href="styles/tasks-table.css">
     <link rel="stylesheet" href="private_styles.css">
+    <link rel="stylesheet" href="blinking.css">
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -406,13 +412,16 @@
                             <!-- Filter Tabs -->
                             <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
                                 <button class="btn btn-secondary" id="dashboardFilterAllBtn"
-                                    onclick="app.calendar.dashboardFilter('all'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterPrivateBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';"
+                                    onclick="app.calendar.dashboardFilter('all');"
                                     style="background:var(--primary); font-size:0.85rem; padding:6px 12px;">Alle</button>
+                                <button class="btn btn-secondary" id="dashboardFilterTodayBtn"
+                                    onclick="app.calendar.dashboardFilter('today');"
+                                    style="font-size:0.85rem; padding:6px 12px;">Heute</button>
                                 <button class="btn btn-secondary" id="dashboardFilterPrivateBtn"
-                                    onclick="app.calendar.dashboardFilter('private'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterBusinessBtn').style.background='';"
+                                    onclick="app.calendar.dashboardFilter('private');"
                                     style="font-size:0.85rem; padding:6px 12px;">Privat</button>
                                 <button class="btn btn-secondary" id="dashboardFilterBusinessBtn"
-                                    onclick="app.calendar.dashboardFilter('business'); this.style.background='var(--primary)'; document.getElementById('dashboardFilterAllBtn').style.background=''; document.getElementById('dashboardFilterPrivateBtn').style.background='';"
+                                    onclick="app.calendar.dashboardFilter('business');"
                                     style="font-size:0.85rem; padding:6px 12px;">Business</button>
                             </div>
                             <div id="dashboardEventsPreview" style="display:flex; flex-direction:column;">
@@ -1168,11 +1177,27 @@
                         </div>
                     </div>
 
+                    <!-- Map Container (Collapsible) -->
+                    <div style="padding: 0 20px; margin-bottom: 15px;">
+                        <button
+                            onclick="document.getElementById('driveMapContainer').classList.toggle('hidden'); this.querySelector('span').textContent = document.getElementById('driveMapContainer').classList.contains('hidden') ? 'Karte anzeigen' : 'Karte ausblenden';"
+                            style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem;">
+                            <i data-lucide="map" size="16"></i>
+                            <span>Karte ausblenden</span>
+                        </button>
+                    </div>
+                    <div id="driveMapContainer"
+                        style="padding: 0 20px; text-align: left; margin-bottom: 20px; height: 150px;">
+                        <div id="driveMap"
+                            style="width: 100%; height: 100%; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); position: relative; z-index: 1;">
+                        </div>
+                    </div>
+
                     <!-- Route / Timeline -->
                     <div
                         style="flex:1; overflow-y:auto; padding: 10px 20px; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;">
                         <h3
-                            style="text-align:left; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-size:1.4rem;">
+                            style="text-align:left; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-size:1.6rem; font-weight: 800; color: white;">
                             <i data-lucide="map" class="text-primary"></i> Deine Route Heute
                         </h3>
                         <div id="driveRouteList" style="display:flex; flex-direction:column; gap:0;">
@@ -1280,6 +1305,35 @@
                                     <option value="logo">TaskForce Logo (Blitz)</option>
                                     <option value="mic">Standard Mikrofon</option>
                                 </select>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label class="form-label">Alarm-Animation (Dringend)</label>
+                                <select id="blinkStyleSelect" class="form-input"
+                                    onchange="app.settings.saveBlinkStyle()">
+                                    <option value="standard">Standard (Pulsieren)</option>
+                                    <option value="flash">Blitzlicht (Strobe)</option>
+                                    <option value="neon">Neon Glow</option>
+                                    <option value="shake">Erdbeben (Rütteln)</option>
+                                    <option value="extreme">🔥 Extrem (Kombination)</option>
+                                    <option value="rainbow">🌈 Regenbogen</option>
+                                </select>
+                                <p class="text-muted text-xs" style="margin-top: 8px;">
+                                    Wähle, wie dringend Termine blinken sollen. "Extrem" und "Regenbogen" sind besonders
+                                    auffällig!
+                                </p>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label class="form-label">⏰ Termin-Voralarm</label>
+                                <select id="eventReminderSelect" class="form-input"
+                                    onchange="app.settings.saveEventReminder()">
+                                    <option value="15">15 Minuten vorher</option>
+                                    <option value="30">30 Minuten vorher</option>
+                                    <option value="60" selected>1 Stunde vorher</option>
+                                    <option value="120">2 Stunden vorher</option>
+                                </select>
+                                <p class="text-muted text-xs" style="margin-top: 8px;">
+                                    Du erhältst automatisch eine Benachrichtigung vor jedem Termin.
+                                </p>
                             </div>
                         </div>
 
