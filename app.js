@@ -1,4 +1,4 @@
-// TaskForce Pro Application Logic - v9 (Stable & Robust)
+﻿// TaskForce Pro Application Logic - v9 (Stable & Robust)
 
 const app = {
     // Default State
@@ -207,14 +207,7 @@ const app = {
         }
 
         if (this.state.events.length === 0) {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            this.state.events = [
-                { id: 1, title: 'Team Meeting', date: today.toISOString().split('T')[0], time: '10:00', category: 'business', start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0).toISOString() },
-                { id: 2, title: 'Kaffee mit Freund', date: today.toISOString().split('T')[0], time: '15:00', category: 'private', start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0).toISOString() },
-                { id: 3, title: 'Präsentation', date: tomorrow.toISOString().split('T')[0], time: '09:00', category: 'business', start: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 9, 0).toISOString() },
-            ];
+            this.state.events = [];
             this.saveState();
         }
 
@@ -4131,33 +4124,33 @@ const app = {
         }
     },
 
-    // --- CLOUD SYNC MODULE (Firebase) ---
+    // --- CLOUD SYNC MODULE (Gun.js) ---
     cloud: {
+        instance: null,
         db: null,
-        unsubscribe: null,
         init() {
-            if (app.state.cloud && app.state.cloud.firebaseConfig && window.firebase) {
+            if (window.Gun) {
                 try {
-                    const config = JSON.parse(app.state.cloud.firebaseConfig);
-                    if (!firebase.apps.length) {
-                        firebase.initializeApp(config);
-                    }
-                    this.db = firebase.firestore();
-                    console.log("Firebase Initialized");
+                    // Initialize Gun with public relay peers
+                    this.instance = Gun({
+                        peers: ['https://gun-manhattan.herokuapp.com/gun', 'https://gun-relay.herokuapp.com/gun']
+                    });
+                    this.db = this.instance.get('taskforce_v10_prod');
+                    console.log("Gun.js Initialized");
 
                     this.listen(); // Start Real-Time Listener
                     this.startPresence(); // Start Heartbeat
                 } catch (e) {
-                    console.error("Firebase Init Failed", e);
+                    console.error("Gun.js Init Failed", e);
                     this.updateIndicator(false);
                 }
             } else {
+                console.warn("Gun.js not found in window");
                 this.updateIndicator(false);
             }
         },
         activeMembers: [],
         presenceInterval: null,
-        presenceUnsubscribe: null,
         startPresence() {
             if (!this.db || !app.state.user.teamName) {
                 this.updateIndicator(false);
@@ -4167,15 +4160,11 @@ const app = {
             const team = app.state.user.teamName;
             const userName = app.state.user.name || 'Unbekannt';
 
-            const writePresence = async () => {
+            const writePresence = () => {
                 try {
-                    await this.db.collection('taskforce_presence')
-                        .doc(`${team}_${userName}`)
-                        .set({
-                            userName,
-                            team,
-                            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-                        }, { merge: true });
+                    this.db.get(team).get('presence').get(userName).put({
+                        lastSeen: Date.now()
+                    });
                 } catch (e) { console.error("Presence Write Failed", e); }
             };
 
@@ -4189,129 +4178,79 @@ const app = {
             if (!this.db || !app.state.user.teamName) return;
             const team = app.state.user.teamName;
 
-            if (this.presenceUnsubscribe) this.presenceUnsubscribe();
+            this.db.get(team).get('presence').map().on((data, name) => {
+                const now = Date.now();
+                if (name !== app.state.user.name) {
+                    const isOnline = now - data.lastSeen < 90000;
+                    const existingIdx = this.activeMembers.indexOf(name);
 
-            this.presenceUnsubscribe = this.db.collection('taskforce_presence')
-                .where('team', '==', team)
-                .onSnapshot((snapshot) => {
-                    const now = Date.now();
-                    const members = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.lastSeen && data.userName !== app.state.user.name) {
-                            const lastSeenMs = data.lastSeen.toMillis ? data.lastSeen.toMillis() : 0;
-                            // Active if seen in last 90 seconds
-                            if (now - lastSeenMs < 90000) {
-                                members.push(data.userName);
-                            }
-                        }
-                    });
-                    this.activeMembers = members;
-                    this.updateIndicator(true);
-
-                    // Simple live update in settings if possible
-                    const mList = document.getElementById('settingsPresenceList');
-                    if (mList) {
-                        mList.innerHTML = this.activeMembers.length > 0
-                            ? this.activeMembers.map(m => `<span style="background:rgba(34,197,94,0.15); color:var(--success); padding:2px 8px; border-radius:10px; font-size:0.8rem; border:1px solid var(--success);">🟢 ${m}</span>`).join(' ')
-                            : '<span class="text-muted text-xs">Keine anderen Mitglieder online.</span>';
+                    if (isOnline && existingIdx === -1) {
+                        this.activeMembers.push(name);
+                    } else if (!isOnline && existingIdx !== -1) {
+                        this.activeMembers.splice(existingIdx, 1);
                     }
-                });
+
+                    this.updateIndicator(true);
+                    this.renderPresenceList();
+                }
+            });
+        },
+        renderPresenceList() {
+            const mList = document.getElementById('settingsPresenceList');
+            if (mList) {
+                mList.innerHTML = this.activeMembers.length > 0
+                    ? this.activeMembers.map(m => `<span style="background:rgba(34,197,94,0.15); color:var(--success); padding:2px 8px; border-radius:10px; font-size:0.8rem; border:1px solid var(--success);">🟢 ${m}</span>`).join(' ')
+                    : '<span class="text-muted text-xs">Keine anderen Mitglieder online.</span>';
+            }
         },
         listen() {
             if (!this.db || !app.state.user.teamName) return;
-            if (this.unsubscribe) this.unsubscribe(); // Clear old listener
-
             const team = app.state.user.teamName;
-            console.log("Starting Sync Listener for Team:", team);
+            console.log("Starting Gun.js Sync Listener for Team:", team);
 
-            this.unsubscribe = this.db.collection('taskforce_sync').doc(team)
-                .onSnapshot((doc) => {
-                    if (doc.exists && !doc.metadata.hasPendingWrites) {
-                        const cloudState = doc.data().data;
-                        this.mergeIncoming(cloudState); // Load Cloud Data
+            this.db.get(team).get('sync_data').on((data) => {
+                if (data && data.payload) {
+                    try {
+                        const cloudState = JSON.parse(data.payload);
+                        this.mergeIncoming(cloudState);
 
                         const status = document.getElementById('syncStatus');
-                        if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Live Sync (${new Date().toLocaleTimeString()})</span>`;
-                    } else if (!doc.exists && !doc.metadata.hasPendingWrites) {
-                        // NEW TEAM DETECTED (No cloud data found)
-                        // "sollen meine ganzen anderen termine nicht drin stehen"
-                        // Clear local data to start fresh for this new individual team
-                        console.log("New Team detected. Clearing local state.");
-                        app.state.tasks = [];
-                        app.state.events = [];
-                        app.state.expenses = [];
-                        app.state.habits = [];
-                        app.state.healthData = [];
-                        app.state.alarms = [];
-
-                        app.saveState(); // Save empty state locally
-                        app.renderDashboard(); // Update UI
-
-                        // Optional: Create initial empty doc in cloud? 
-                        // Or wait for first user action to create it via pushState.
+                        if (status) status.innerHTML = `<span style="color:var(--success)">⚡ Gun Sync (${new Date().toLocaleTimeString()})</span>`;
+                    } catch (e) {
+                        console.error("Failed to parse cloud data", e);
                     }
-                });
+                }
+            });
         },
         mergeIncoming(cloudState) {
             if (!cloudState) return;
 
-            const merge = (key, fallback) => {
-                if (cloudState[key] !== undefined) return cloudState[key];
-                return app.state[key] || fallback;
-            };
+            // Simple merging logic: overwrite local if cloud is newer or different
+            // In a real app we'd compare timestamps per item, but here we do flat state sync
+            const keys = ['tasks', 'events', 'expenses', 'habits', 'healthData', 'alarms', 'contacts', 'xp', 'level', 'ui'];
+            let changed = false;
 
-            // Compare versions for quick dirty check
-            const localCompare = {
-                tasks: app.state.tasks,
-                events: app.state.events,
-                expenses: app.state.expenses,
-                habits: app.state.habits,
-                healthData: app.state.healthData || [],
-                alarms: app.state.alarms || [],
-                contacts: app.state.contacts || [],
-                shortcuts: app.state.shortcuts || [],
-                xp: app.state.xp || 0,
-                level: app.state.level || 1,
-                ui: app.state.ui || {}
-            };
+            keys.forEach(key => {
+                if (cloudState[key] !== undefined) {
+                    const cloudJson = JSON.stringify(cloudState[key]);
+                    const localJson = JSON.stringify(app.state[key]);
 
-            const cloudCompare = {
-                tasks: merge('tasks', []),
-                events: merge('events', []),
-                expenses: merge('expenses', []),
-                habits: merge('habits', []),
-                healthData: merge('healthData', []),
-                alarms: merge('alarms', []),
-                contacts: merge('contacts', []),
-                shortcuts: merge('shortcuts', []),
-                xp: merge('xp', 0),
-                level: merge('level', 1),
-                ui: merge('ui', {})
-            };
+                    if (cloudJson !== localJson) {
+                        app.state[key] = cloudState[key];
+                        changed = true;
+                    }
+                }
+            });
 
-            if (JSON.stringify(localCompare) !== JSON.stringify(cloudCompare)) {
-                app.state.tasks = cloudCompare.tasks;
-                app.state.events = cloudCompare.events;
-                app.state.expenses = cloudCompare.expenses;
-                app.state.habits = cloudCompare.habits;
-                app.state.healthData = cloudCompare.healthData;
-                app.state.alarms = cloudCompare.alarms;
-                app.state.contacts = cloudCompare.contacts;
-                app.state.shortcuts = cloudCompare.shortcuts;
-                app.state.xp = cloudCompare.xp;
-                app.state.level = cloudCompare.level;
-                app.state.ui = cloudCompare.ui;
-
-                app.saveState(true); // Skip Push to avoid loop
+            if (changed) {
+                console.log("☁️ Gun.js-Update empfangen");
+                app.saveState(true); // Don't push back immediately
                 app.renderDashboard();
                 if (app.tasks) app.tasks.render();
                 if (app.calendar) app.calendar.render();
                 if (app.finance) app.finance.render();
                 if (app.habits) app.habits.render();
                 if (app.health) app.health.render();
-                console.log("☁️ Data Synchronized from Cloud");
-
                 this.updateIndicator(true);
             }
         },
@@ -4322,12 +4261,9 @@ const app = {
 
             if (el) {
                 el.style.opacity = isActiveTeam ? '1' : '0.4';
-                el.title = isActiveTeam ? 'Team Verbindung aktiv: ' + teamName : 'Verbindung getrennt';
-
-                // Dot color
+                el.title = isActiveTeam ? 'Gun.js Sync aktiv: ' + teamName : 'Offline';
                 const dot = el.querySelector('div');
                 if (dot) dot.style.background = isActiveTeam ? 'var(--success)' : '#666';
-
                 if (isActiveTeam) el.classList.add('pulse-sync');
                 else el.classList.remove('pulse-sync');
             }
@@ -4337,46 +4273,49 @@ const app = {
             const syncStatusCard = document.getElementById('syncStatus');
             if (syncStatusCard) {
                 syncStatusCard.innerHTML = isActiveTeam
-                    ? `<span style="color:var(--success)">🟢 Team: ${teamName}</span>`
+                    ? `<span style="color:var(--success)">🟢 Gun.js Team: ${teamName}</span>`
                     : '<span style="color:var(--danger)">🔴 Nicht verbunden</span>';
             }
         },
         async push() {
-            if (!this.db || !app.state.user.teamName) { this.updateIndicator(false); return; }
+            if (!this.db || !app.state.user.teamName) return;
             const team = app.state.user.teamName;
 
             const payload = {
-                data: {
-                    tasks: app.state.tasks,
-                    events: app.state.events,
-                    expenses: app.state.expenses,
-                    habits: app.state.habits,
-                    healthData: app.state.healthData || [],
-                    alarms: app.state.alarms || [],
-                    contacts: app.state.contacts || [],
-                    shortcuts: app.state.shortcuts || [],
-                    xp: app.state.xp || 0,
-                    level: app.state.level || 1,
-                    ui: app.state.ui || {},
-                    last_updated: new Date().toISOString()
-                },
-                updated_at: new Date().toISOString()
+                tasks: app.state.tasks,
+                events: app.state.events,
+                expenses: app.state.expenses,
+                habits: app.state.habits,
+                healthData: app.state.healthData || [],
+                alarms: app.state.alarms || [],
+                contacts: app.state.contacts || [],
+                xp: app.state.xp || 0,
+                level: app.state.level || 1,
+                ui: app.state.ui || {},
+                last_updated: Date.now()
             };
 
             try {
-                await this.db.collection('taskforce_sync').doc(team).set(payload, { merge: true });
+                this.db.get(team).get('sync_data').put({
+                    payload: JSON.stringify(payload),
+                    updated_at: Date.now()
+                });
+
                 const status = document.getElementById('syncStatus');
-                if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gesendet (${new Date().toLocaleTimeString()})</span>`;
+                if (status) status.innerHTML = `<span style="color:var(--success)">⬆️ Gun Push (${new Date().toLocaleTimeString()})</span>`;
                 this.updateIndicator(true);
-            } catch (e) { console.error("Push Error", e); this.updateIndicator(false); }
+            } catch (e) {
+                console.error("Push Error", e);
+                this.updateIndicator(false);
+            }
         },
         async sync(manual = false) {
-            if (!this.db) { if (manual) alert("Kein Sync möglich (Config fehlt)."); return; }
+            if (!this.instance) { if (manual) alert("Sync nicht möglich."); return; }
             this.push();
-            this.listen();
-            if (manual) alert("Sync & Push ausgeführt.");
+            if (manual) alert("Synchronisation gestartet (Gun.js).");
         }
     },
+
 
     // --- SETTINGS MODULE ---
     settings: {
@@ -4403,14 +4342,12 @@ const app = {
             const reminderSelect = document.getElementById('eventReminderSelect');
             if (reminderSelect) reminderSelect.value = app.state.ui.eventReminderMinutes || 60;
 
-            // Render Cloud Config
-            if (app.state.cloud) {
-                const confInput = document.getElementById('firebaseConfigInput');
-                if (confInput) confInput.value = app.state.cloud.firebaseConfig || '';
-
-                if (app.state.cloud.firebaseConfig && app.cloud.db) {
-                    document.getElementById('syncStatus').innerHTML = '<span style="color:var(--success)">🟢 Bereit</span>';
-                }
+            // Render Cloud Status
+            const syncStatusCard = document.getElementById('syncStatus');
+            if (syncStatusCard) {
+                syncStatusCard.innerHTML = app.cloud.instance
+                    ? '<span style="color:var(--success)">🟢 Gun.js (Konto-frei) Aktiv</span>'
+                    : '<span style="color:var(--danger)">🔴 Offline</span>';
             }
 
             // Render Team & Password Info
@@ -4582,9 +4519,7 @@ const app = {
             }
         },
         saveCloudConfig() {
-            if (!app.state.cloud) app.state.cloud = {};
-            app.state.cloud.firebaseConfig = document.getElementById('firebaseConfigInput').value.trim();
-            app.saveState();
+            // Gun.js simple restart
             app.cloud.init();
             app.navigateTo('dashboard');
         },

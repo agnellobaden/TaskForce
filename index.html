@@ -1340,29 +1340,32 @@
                             </div>
                         </div>
 
-                        <!-- Firebase JS SDKs -->
-                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-                        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
                         <div class="card" style="border: 1px solid var(--accent);">
-                            <h3><i data-lucide="flame"></i> Team Sync (Firebase)</h3>
+                            <h3><i data-lucide="share-2"></i> Team Sync (Gun.js)</h3>
                             <p class="text-muted text-sm" style="margin-bottom:15px;">
-                                Verbinde dich mit deiner <b>Google Firebase</b> Datenbank.
-                                <br>Kopiere dein Konfigurations-Objekt (JSON) hier rein.
+                                Deine Daten werden automatisch dezentral über <b>Gun.js</b> synchronisiert.
+                                <br>Es ist keine Konfiguration oder Konto nötig. Dein Team-Name (Sync-Key) reicht aus.
                             </p>
-                            <div class="form-group">
-                                <label class="form-label">Firebase Config (JSON)</label>
-                                <textarea id="firebaseConfigInput" class="form-input" rows="6"
-                                    placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'
-                                    onchange="app.settings.saveCloudConfig()"></textarea>
+                            <div
+                                style="background:rgba(59, 130, 246, 0.05); padding:15px; border-radius:12px; border:1px solid rgba(59, 130, 246, 0.2); margin-bottom:15px;">
+                                <div
+                                    style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; margin-bottom:5px;">
+                                    Verbindungs-Status</div>
+                                <div id="syncStatus"
+                                    style="font-weight:bold; display:flex; align-items:center; gap:8px;">
+                                    <span class="status-dot pulse-sync"
+                                        style="background:var(--success); width:10px; height:10px; border-radius:50%;"></span>
+                                    Gun.js Aktiv
+                                </div>
                             </div>
                             <div
                                 style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                                <div id="syncStatus" class="text-sm text-muted">🔴 Nicht verbunden</div>
+                                <div class="text-sm text-muted">Echtzeit-Synchronisierung aktiv.</div>
                                 <button class="btn btn-primary" onclick="app.cloud.sync(true)"><i
-                                        data-lucide="refresh-cw"></i> Jetzt Syncen</button>
+                                        data-lucide="refresh-cw"></i> Jetzt Prüfen</button>
                             </div>
                         </div>
+
 
                         <div class="card">
                             <h3><i data-lucide="user"></i> Profil & Team</h3>
@@ -1428,7 +1431,9 @@
 
 
 
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="app.js"></script>
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
